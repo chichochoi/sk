@@ -1,0 +1,11 @@
+# ~/.codex/config.toml (컨테이너 내 Codex CLI 기본 프리셋)
+model = "sol-6.1"
+model_reasoning_effort = "xhigh"
+
+[profiles.main]
+model = "sol-6.1"
+model_reasoning_effort = "xhigh"
+
+[profiles.sub]
+model = "luna-6"
+model_reasoning_effort = "xhigh"
