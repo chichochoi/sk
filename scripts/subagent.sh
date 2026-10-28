@@ -31,7 +31,7 @@ cmd_run() {
     SUB_GUIDE_INSTRUCTION="${SUB_AGENTS_FILE} 지침과 "
   fi
 
-  PROMPT="[SUB] ${SUB_GUIDE_INSTRUCTION}${SPEC_FILE} 의 지시사항을 읽고 지정된 범위의 코드 구현 및 테스트 검증을 수행한 뒤, 결과를 10줄 이내로 ${RESULT_FILE} 에 기록해줘."
+  PROMPT="[SUB] ${SUB_GUIDE_INSTRUCTION}${SPEC_FILE} 의 지시사항을 읽고 지정된 범위의 코드 구현 및 테스트 검증을 수행한 뒤, 핵심 결과와 변경 사항 위주로 간결하고 명확하게 ${RESULT_FILE} 에 기록해줘 (불필요한 줄 수 제한 없음)."
 
   echo "=========================================================="
   echo "🚀 [Sub-Agent: Luna 6 (xhigh)] 작업 위임 시작"
