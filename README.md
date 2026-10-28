@@ -1,5 +1,7 @@
 # probe-kit — SK하이닉스 AI 해커톤 2차 예선(Cofa Probe) 메인/서브 하네스
 
+> **👑 수험생 실전 필독서:** 시험 당일 10:00부터 13:30까지 분초 단위로 그대로 따라 하는 올인원 실전 매뉴얼은 [`foruser.md`](./foruser.md)를 켜두고 진행하세요!
+
 ## ⚡ 시험 시작 직후 (과제 워크스페이스 루트에서 실행)
 
 ```bash
@@ -17,6 +19,7 @@ rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md
 
 | 파일 경로 | 구분 | 설명 |
 | :--- | :--- | :--- |
+| `foruser.md` | 수험생 실전 매뉴얼 | 시험 당일 10:00부터 13:30까지 그대로 따라 하는 인간 주도형 올인원 시나리오 |
 | `init.sh` | 하네스 설치 | 하네스·모델 설정 주입 + `.git/info/exclude` 오염 방지 + 초기 EDA 스캔 원클릭 실행 |
 | `config.toml` | 모델 프리셋 | 기본 모델(`Sol 6.1 xhigh`) 및 서브 프로필(`Luna 6 xhigh`) 설정 |
 | `AGENTS.md` | 공통 헌법 | 메인(`Sol 6.1 xhigh`) 설계/지시 전담 헌법 및 6대 오케스트레이션 통제 규칙 |
@@ -83,6 +86,7 @@ rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md
 ```text
 probe-kit/
 ├── README.md                     # 이 마스터 플레이북 전문 (에디터 우측에 띄워둘 총사령부 문서)
+├── foruser.md                    # [수험생 실전 매뉴얼] 10:00~13:30 인간 주도형 올인원 시나리오
 ├── init.sh                       # [원클릭 장착] 하네스·모델 설정 주입 + .git/info/exclude 오염 방지 + 초기 EDA 스캔
 ├── config.toml                   # [모델 설정] 기본 모델(Sol 6.1 xhigh) 및 서브 프로필(Luna 6 xhigh) 프리셋
 ├── AGENTS.md                     # [메인+공통 헌법] 역할 분담(Architect vs Worker) 및 6대 통제 규칙
