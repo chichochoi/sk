@@ -6,7 +6,7 @@ scripts/sample_check_template.py
 - 수동 계산된 기댓값(EXPECTED)과 실제 처리 함수 출력값 정밀 비교
 - 단계별(원본 -> 중복제거 -> 취소제외 -> 결측제외) 건수 추적 로깅
 - 불일치 시 직관적인 diff 출력
-- TARGET_MODULE / TARGET_FUNC 동적 로딩 지원 (미지정 시 내장 reference_impl로 즉시 PASS)
+- TARGET_MODULE / TARGET_FUNC 동적 로딩 지원 (미지정 시 Fail 보고, --demo 플래그 시 내장 reference_impl 검증)
 """
 
 import os
@@ -16,6 +16,13 @@ import importlib
 import difflib
 import json
 from typing import List, Dict, Any
+
+# 워크스페이스 루트 및 현재 작업 디렉토리 sys.path 등록 (루트 모듈 임포트 지원)
+WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if WORKSPACE_ROOT not in sys.path:
+    sys.path.insert(0, WORKSPACE_ROOT)
+if os.getcwd() not in sys.path:
+    sys.path.insert(0, os.getcwd())
 
 # Windows CP949 환경 대응
 if hasattr(sys.stdout, "reconfigure"):
@@ -28,6 +35,15 @@ if hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8")
     except Exception:
         pass
+
+# --------------------------------------------------------------------------
+# [0] 실행 모드 확인 (--demo 플래그 또는 DEMO_MODE 환경변수)
+#     - unittest.main() 인자 충돌 방지를 위해 sys.argv에서 사전 분리
+# --------------------------------------------------------------------------
+IS_DEMO = "--demo" in sys.argv or os.environ.get("DEMO_MODE", "0") == "1"
+if "--demo" in sys.argv:
+    while "--demo" in sys.argv:
+        sys.argv.remove("--demo")
 
 # --------------------------------------------------------------------------
 # [1] 테스트 대상 모듈 및 함수 설정 (환경 변수 또는 코드 수정)
@@ -225,6 +241,10 @@ EXPECTED: Dict[str, float] = {
 # [5] 동적 함수 로더
 # --------------------------------------------------------------------------
 def load_target_function():
+    if IS_DEMO:
+        print("[데모 모드] 내장 reference_impl 을 사용해 자체 검증을 수행합니다. (--demo 옵션 활성화)")
+        return reference_impl
+
     if TARGET_MODULE and TARGET_FUNC:
         try:
             mod = importlib.import_module(TARGET_MODULE)
@@ -232,17 +252,28 @@ def load_target_function():
             print(f"[타깃 로드 성공] {TARGET_MODULE}.{TARGET_FUNC} 함수를 사용합니다.")
             return fn
         except Exception as e:
-            print(f"[타깃 로드 실패] {TARGET_MODULE}.{TARGET_FUNC} 로드 불가 ({e}). 내장 reference_impl 을 사용합니다.")
-            return reference_impl
-    print("[알림] TARGET_MODULE/TARGET_FUNC 미지정. 내장 reference_impl 을 사용해 자체 검증합니다.")
-    return reference_impl
+            err_msg = f"[타깃 로드 실패] {TARGET_MODULE}.{TARGET_FUNC} 로드 불가 ({e}). 실제 구현 코드를 확인하세요."
+            print(f"❌ {err_msg}", file=sys.stderr)
+            raise ImportError(err_msg)
+
+    err_msg = (
+        "[설정 오류] TARGET_MODULE 및 TARGET_FUNC 환경변수가 설정되지 않았습니다. (가짜 통과 방지)\n"
+        "  - 실제 함수 검증 예시: TARGET_MODULE=src.solution TARGET_FUNC=process_orders python sample_check_template.py\n"
+        "  - 내장 데모 검증 실행: python sample_check_template.py --demo"
+    )
+    print(f"❌ {err_msg}", file=sys.stderr)
+    raise ValueError(err_msg)
 
 # --------------------------------------------------------------------------
 # [6] 단위 테스트 케이스 및 불일치 diff 출력
 # --------------------------------------------------------------------------
 class TestSampleCheck(unittest.TestCase):
     def test_pipeline_output_against_expected(self):
-        target_fn = load_target_function()
+        try:
+            target_fn = load_target_function()
+        except Exception as e:
+            self.fail(f"타깃 모듈 로드 실패: {e}")
+
         actual = target_fn(SAMPLES)
 
         print("\n[집계 결과]")

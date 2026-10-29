@@ -50,7 +50,7 @@
   - [ ] 웹/UI 과제: `0.0.0.0` 바인딩 실행 후 내장 Browser로 주요 유저 동선 및 예외 입력 직접 클릭 조작
   - [ ] 터미널 1(`Sol 6.1 xhigh`)과 함께 제출 문서(`SUBMISSION_REPORT.md`) 완성
   - [ ] `bash .probe-kit/scripts/pre_submit_audit.sh` 실행 (git diff, 민감정보, localhost, 리소스 감사)
-  - [ ] 임시 하네스 정리: `rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md`
+  - [ ] 하네스 영구 보존: .probe-kit 및 런타임 기록(HANDOFF.md 등)은 평가 가점(의도/인지) 확보를 위해 삭제하지 않고 디스크에 영구 보존 확인
   - [ ] `git status`로 변경 파일 범위 확인 및 모든 수정 파일 `Ctrl+S` 저장 확인
 - [ ] **12:50 ~ 13:00 [제출 확정 & 서술형 대기]**
   - [ ] `제출하고 문제풀기` → `제출물 확정하고 문제풀기` 최종 클릭

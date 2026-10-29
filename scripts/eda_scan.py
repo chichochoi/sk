@@ -36,6 +36,7 @@ MISSING_TOKENS = {
 }
 
 MAX_ROWS = 200000
+MAX_JSON_FILE_SIZE = 10 * 1024 * 1024  # 10MB 초과 대용량 JSON OOM 안전 가드
 
 def is_missing(val):
     if val is None:
@@ -55,15 +56,42 @@ def try_float(val):
         return None
 
 def open_with_encoding(filepath):
-    encodings = ['utf-8-sig', 'cp949', 'latin-1']
+    """
+    한글 인코딩 깨짐 및 Windows 개행 변형 방지:
+    - 64KB(65536) 바이너리 샘플 기반 인코딩 자동 감지
+    - utf-8-sig -> utf-8 -> cp949 -> euc-kr -> latin-1 순 strict 디코딩 검증
+    - newline='' 기본 적용으로 Windows CRLF 개행 변형 방지
+    """
+    encodings = ['utf-8-sig', 'utf-8', 'cp949', 'euc-kr']
+    try:
+        with open(filepath, 'rb') as f:
+            raw_sample = f.read(65536)
+    except Exception:
+        raw_sample = b''
+
+    if not raw_sample:
+        return open(filepath, 'r', encoding='utf-8', newline='', errors='replace'), 'utf-8'
+
+    # Non-ASCII 바이트 포함 여부 확인
+    has_non_ascii = any(b >= 128 for b in raw_sample)
+    if not has_non_ascii:
+        return open(filepath, 'r', encoding='utf-8', newline='', errors='replace'), 'utf-8'
+
+    # Non-ASCII 포함 시 strict 디코딩 순차 시도 (끝단 절단 방지 trim 포함)
     for enc in encodings:
-        try:
-            with open(filepath, 'r', encoding=enc) as f:
-                f.read(4096)
-            return open(filepath, 'r', encoding=enc, errors='replace'), enc
-        except (UnicodeDecodeError, LookupError):
-            continue
-    return open(filepath, 'r', encoding='latin-1', errors='replace'), 'latin-1'
+        success = False
+        for trim in range(4):
+            test_chunk = raw_sample if trim == 0 else raw_sample[:-trim]
+            try:
+                test_chunk.decode(enc)
+                success = True
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
+        if success:
+            return open(filepath, 'r', encoding=enc, newline='', errors='replace'), enc
+
+    return open(filepath, 'r', encoding='latin-1', newline='', errors='replace'), 'latin-1'
 
 def is_test_file(path_obj: Path) -> bool:
     name = path_obj.name.lower()
@@ -192,7 +220,44 @@ def scan_csv_tsv(full_path: Path):
         print(f"  * 구분자: '{delim}' | 인코딩: {enc}")
         analyze_tabular(headers, rows, full_path.name, truncated)
 
+def scan_large_json_safe(full_path: Path):
+    """
+    10MB 초과 대용량 JSON OOM 킬 방지 스트리밍 발췌 요약:
+    - json.load()로 전체 적재 시 메모리 고갈 방지
+    - 파일의 상위 50줄 또는 1,000자를 안전하게 스트리밍 발췌하여 요약
+    - [대용량 JSON 파일 - 안전 발췌 요약] 출력
+    """
+    file_size = os.path.getsize(full_path)
+    size_mb = file_size / (1024 * 1024)
+    print(f"  * ⚠️ 대용량 JSON 감지 ({size_mb:.2f} MB > 10MB)")
+    print("  * [대용량 JSON 파일 - 안전 발췌 요약]")
+    print(f"  * OOM 방지를 위해 상위 50줄 / 1,000자 안전 발췌 스트리밍 분석을 수행합니다.")
+
+    fp, enc = open_with_encoding(full_path)
+    lines = []
+    char_count = 0
+    with fp:
+        for idx, line in enumerate(fp):
+            if idx >= 50 or char_count >= 1000:
+                break
+            lines.append(line.rstrip('\r\n'))
+            char_count += len(line)
+
+    print(f"  * 인코딩: {enc} | 발췌 라인 수: {len(lines)}줄 (약 {char_count:,}자)")
+    print("  * 상위 내용 미리보기:")
+    preview_count = min(20, len(lines))
+    for idx in range(preview_count):
+        preview = lines[idx][:120] + ("..." if len(lines[idx]) > 120 else "")
+        print(f"    [{idx + 1:2d}] {preview}")
+    if len(lines) > preview_count:
+        print(f"    ... (+{len(lines) - preview_count}줄 추가 발췌 내용 생략)")
+
 def scan_json(full_path: Path):
+    file_size = os.path.getsize(full_path)
+    if file_size > MAX_JSON_FILE_SIZE:
+        scan_large_json_safe(full_path)
+        return
+
     fp, enc = open_with_encoding(full_path)
     with fp:
         print(f"  * 인코딩: {enc}")

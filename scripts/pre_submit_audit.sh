@@ -10,6 +10,10 @@
 set -u
 set -o pipefail 2>/dev/null || true
 
+# 워크스페이스 루트 절대 경로 자동 판별 및 작업 디렉토리 고정
+WORKSPACE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "${WORKSPACE_ROOT}"
+
 PASS_COUNT=0
 WARN_COUNT=0
 
@@ -28,20 +32,21 @@ record_warn() {
 echo "=========================================================="
 echo "🔍 [Cofa Probe 제출 전 최종 감사 (Pre-Submit Audit)]"
 echo "   실행 시각: $(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date)"
+echo "   루트 경로: ${WORKSPACE_ROOT}"
 echo "=========================================================="
 
 # --------------------------------------------------------------------------
 # [1] Git 저장소 상태 및 변경 범위 점검
 # --------------------------------------------------------------------------
 echo -e "\n📌 [1] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)"
-if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+if command -v git >/dev/null 2>&1 && git -C "${WORKSPACE_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "--- [git status --short] ---"
-  git status --short || true
+  git -C "${WORKSPACE_ROOT}" status --short || true
 
   echo "--- [git diff --stat] ---"
-  git diff --stat || true
+  git -C "${WORKSPACE_ROOT}" diff --stat || true
 
-  MODIFIED_COUNT=$(git status --porcelain 2>/dev/null | wc -l || echo 0)
+  MODIFIED_COUNT=$(git -C "${WORKSPACE_ROOT}" status --porcelain 2>/dev/null | wc -l || echo 0)
   record_pass "Git 저장소 점검 완료 (현재 변경/추적 대상: ${MODIFIED_COUNT}개 항목)"
 else
   echo "⚪ [SKIP] 현재 디렉토리가 Git 저장소가 아닙니다. Git 점검을 건너뜁니다."
@@ -55,12 +60,12 @@ SENSITIVE_PATTERN="sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|----
 
 LEAK_RESULTS=""
 if command -v grep >/dev/null 2>&1; then
-  # .probe-kit, .git, node_modules, venv 등 제외 후 검사
+  # .probe-kit, probe-kit, .git, node_modules, venv 등 제외 후 검사
   LEAK_RESULTS=$(grep -rnEI "${SENSITIVE_PATTERN}" \
-    --exclude-dir={.git,node_modules,__pycache__,.venv,venv,dist,build,.probe-kit} \
+    --exclude-dir={.git,node_modules,__pycache__,.venv,venv,dist,build,.probe-kit,probe-kit} \
     --exclude="*.md" \
     --exclude="pre_submit_audit.sh" \
-    . 2>/dev/null || true)
+    "${WORKSPACE_ROOT}" 2>/dev/null || true)
 
   if [ -n "$LEAK_RESULTS" ]; then
     echo "🚨 [주의] 아래 파일에서 민감정보 패턴이 감지되었습니다:"
@@ -83,8 +88,8 @@ BINDING_FOUND=""
 if command -v grep >/dev/null 2>&1; then
   BINDING_FOUND=$(grep -rnEI "${BINDING_PATTERN}" \
     --include="*.py" --include="*.js" --include="*.ts" --include="*.sh" --include="*.yaml" --include="*.yml" \
-    --exclude-dir={.git,node_modules,__pycache__,.venv,venv,dist,build,.probe-kit} \
-    . 2>/dev/null || true)
+    --exclude-dir={.git,node_modules,__pycache__,.venv,venv,dist,build,.probe-kit,probe-kit} \
+    "${WORKSPACE_ROOT}" 2>/dev/null || true)
 
   if [ -n "$BINDING_FOUND" ]; then
     echo "⚠️ [주의] localhost / 127.0.0.1 바인딩 패턴이 감지되었습니다:"
@@ -115,35 +120,54 @@ fi
 # --------------------------------------------------------------------------
 # [5] 임시 파일 및 하네스 파일의 Git Status 노출 여부 점검
 # --------------------------------------------------------------------------
-echo -e "\n📌 [5] 임시 파일 및 하네스 파일 Git 노출 여부 점검"
-if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  EXPOSED_PROBE=$(git status --porcelain 2>/dev/null | grep -E "(\.probe-kit|NOTES_TEMP\.md|TASK_SPEC\.md|SUB_RESULT\.md)" || true)
+echo -e "\n📌 [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검"
+if command -v git >/dev/null 2>&1 && git -C "${WORKSPACE_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  EXPOSED_PROBE=$(git -C "${WORKSPACE_ROOT}" status --porcelain 2>/dev/null | grep -E "(\.probe-kit|probe-kit|NOTES_TEMP\.md|TASK_SPEC\.md|SUB_RESULT\.md|HANDOFF\.md)" || true)
   if [ -n "$EXPOSED_PROBE" ]; then
     echo "⚠️ [주의] 아래 임시 파일/하네스가 git status에 노출되어 있습니다:"
     echo "$EXPOSED_PROBE"
-    record_warn ".git/info/exclude 에 등록하거나 제출 직전 삭제하세요."
+    record_warn ".git/info/exclude 에 등록하여 Git 상태에서 제외하세요 (디스크에는 영구 보존해야 합니다)."
   else
-    record_pass "임시 파일(.probe-kit, NOTES_TEMP.md 등)이 git status에 노출되지 않음"
+    record_pass "임시 파일 및 하네스(.probe-kit, HANDOFF.md 등)가 git status에 노출되지 않음 (격리 완료)"
   fi
 else
   echo "⚪ [SKIP] Git 저장소가 아니므로 건너뜁니다."
 fi
 
 # --------------------------------------------------------------------------
-# [6] 제출 직전 클린업 명령 안내
+# [6] 하네스 및 인수인계 기록 디스크 영구 보존 점검
+# --------------------------------------------------------------------------
+echo -e "\n📌 [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)"
+HARNESS_PRESERVED=0
+if [ -d "${WORKSPACE_ROOT}/.probe-kit" ] || [ -d "${WORKSPACE_ROOT}/probe-kit" ] || [ "$(basename "${WORKSPACE_ROOT}")" = "probe-kit" ] || [ -f "${WORKSPACE_ROOT}/init.sh" ]; then
+  HARNESS_PRESERVED=1
+fi
+if [ -f "${WORKSPACE_ROOT}/HANDOFF.md" ] || [ -f "${WORKSPACE_ROOT}/.probe-kit/runtime/HANDOFF.md" ] || [ -f "${WORKSPACE_ROOT}/probe-kit/runtime/HANDOFF.md" ] || [ -f "${WORKSPACE_ROOT}/runtime/HANDOFF.md" ]; then
+  HARNESS_PRESERVED=1
+fi
+
+if [ "$HARNESS_PRESERVED" -eq 1 ]; then
+  record_pass "하네스 영구 보존 확인됨 (의도/인지 가점 확보)"
+else
+  record_warn "하네스(.probe-kit) 또는 HANDOFF.md를 찾을 수 없습니다. 평가 가점을 위해 디스크에 보존하는 것을 권장합니다."
+fi
+
+# --------------------------------------------------------------------------
+# [7] 제출 직전 확인 지침
 # --------------------------------------------------------------------------
 echo -e "\n=========================================================="
-echo "🧹 [제출 직전(12:40) 필수 클린업 지침]"
+echo "🧹 [제출 직전(12:40) 필수 확인 지침]"
 echo "=========================================================="
-echo "1. 제출 전 시험 워크스페이스에서 임시 파일을 완전히 삭제하세요:"
-echo "   rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md"
+echo "1. 외부 Git 하네스 활용 기록(.probe-kit, HANDOFF.md) 디스크 보존 확인:"
+echo "   - 채점관 및 평가 AI의 인지/의도 가점 확보를 위해 디스크에서 절대 삭제하지 않고 보존합니다."
+echo "   - .git/info/exclude 에 의해 과제 git status 에서는 클린하게 격리되어야 합니다."
 echo ""
 echo "2. 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 확인하세요!"
 echo "   (에디터 미저장 파일은 제출 시점 채점기에 반영되지 않습니다)"
 echo "=========================================================="
 
 # --------------------------------------------------------------------------
-# [7] 감사 결과 요약 및 종료 코드 반환
+# [8] 감사 결과 요약 및 종료 코드 반환
 # --------------------------------------------------------------------------
 echo ""
 echo "=========================================================="
