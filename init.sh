@@ -35,16 +35,30 @@ fi
 echo "=== [2/6] probe-kit 하네스 파일을 워크스페이스(.probe-kit)로 배포 ==="
 TARGET_KIT="$WORKSPACE_DIR/.probe-kit"
 mkdir -p "$TARGET_KIT"
-if [ "$KIT_SRC" != "$TARGET_KIT" ]; then
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a --exclude='.git' "$KIT_SRC/" "$TARGET_KIT/"
-  else
-    cp -rf "$KIT_SRC"/. "$TARGET_KIT/" 2>/dev/null || cp -r "$KIT_SRC"/* "$TARGET_KIT/" 2>/dev/null || true
-    rm -rf "$TARGET_KIT/.git"
-  fi
-  echo "-> $TARGET_KIT 로 하네스 파일 복사 완료"
-else
+
+KIT_SRC_CANONICAL="$(cd "$KIT_SRC" 2>/dev/null && pwd -P || echo "$KIT_SRC")"
+TARGET_KIT_CANONICAL="$(cd "$TARGET_KIT" 2>/dev/null && pwd -P || echo "$TARGET_KIT")"
+
+if [ "$KIT_SRC_CANONICAL" = "$TARGET_KIT_CANONICAL" ]; then
   echo "-> 하네스가 이미 $TARGET_KIT 에 위치하고 있습니다."
+elif [ -d "$KIT_SRC_CANONICAL/.probe-kit" ] && [ "$KIT_SRC_CANONICAL/.probe-kit" = "$TARGET_KIT_CANONICAL" ]; then
+  echo "-> 하네스가 이미 $TARGET_KIT 에 위치하고 있습니다."
+else
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude='.probe-kit' --exclude='.git' "$KIT_SRC/" "$TARGET_KIT/"
+  else
+    # cp fallback: .probe-kit 및 .git 재귀 복사 방지
+    for item in "$KIT_SRC"/* "$KIT_SRC"/.[!.]* "$KIT_SRC"/..?*; do
+      [ -e "$item" ] || continue
+      base="$(basename "$item")"
+      if [ "$base" = ".probe-kit" ] || [ "$base" = ".git" ] || [ "$base" = "*" ]; then
+        continue
+      fi
+      cp -rf "$item" "$TARGET_KIT/" 2>/dev/null || true
+    done
+  fi
+  rm -rf "$TARGET_KIT/.git"
+  echo "-> $TARGET_KIT 로 하네스 파일 복사 완료"
 fi
 
 chmod +x "$TARGET_KIT/scripts/"*.sh "$TARGET_KIT/scripts/"*.py "$TARGET_KIT/init.sh" 2>/dev/null || true

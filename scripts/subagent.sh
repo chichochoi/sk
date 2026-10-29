@@ -3,21 +3,43 @@
 
 set -euo pipefail
 
-# 워크스페이스 또는 하네스 위치 자동 탐지
-if [ -d ".probe-kit/runtime" ]; then
-  RUNTIME_DIR=".probe-kit/runtime"
-  HARNESS_ROOT=".probe-kit"
-elif [ -d "runtime" ]; then
-  RUNTIME_DIR="runtime"
-  HARNESS_ROOT="."
+# 스크립트 절대 경로 기준 디렉터리 자동 계산 (어느 위치에서 실행해도 정상 동작)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# 워크스페이스 탐색
+if git rev-parse --show-toplevel >/dev/null 2>&1; then
+  WORKSPACE_DIR="$(git rev-parse --show-toplevel)"
+elif [ "$(basename "${HARNESS_ROOT}")" = ".probe-kit" ]; then
+  WORKSPACE_DIR="$(cd "${HARNESS_ROOT}/.." && pwd)"
 else
-  RUNTIME_DIR=".probe-kit/runtime"
-  HARNESS_ROOT=".probe-kit"
+  WORKSPACE_DIR="$(pwd)"
 fi
 
+# 런타임 디렉터리 탐색
+if [ -d "${HARNESS_ROOT}/runtime" ]; then
+  RUNTIME_DIR="${HARNESS_ROOT}/runtime"
+elif [ -d "${WORKSPACE_DIR}/.probe-kit/runtime" ]; then
+  RUNTIME_DIR="${WORKSPACE_DIR}/.probe-kit/runtime"
+else
+  RUNTIME_DIR="${HARNESS_ROOT}/runtime"
+fi
+mkdir -p "${RUNTIME_DIR}"
+
 SPEC_FILE="${RUNTIME_DIR}/TASK_SPEC.md"
+if [ ! -f "$SPEC_FILE" ] && [ -f "${WORKSPACE_DIR}/TASK_SPEC.md" ]; then
+  SPEC_FILE="${WORKSPACE_DIR}/TASK_SPEC.md"
+fi
+
 RESULT_FILE="${RUNTIME_DIR}/SUB_RESULT.md"
+if [ ! -f "$RESULT_FILE" ] && [ -f "${WORKSPACE_DIR}/SUB_RESULT.md" ]; then
+  RESULT_FILE="${WORKSPACE_DIR}/SUB_RESULT.md"
+fi
+
 SUB_AGENTS_FILE="${HARNESS_ROOT}/SUB_AGENTS.md"
+if [ ! -f "$SUB_AGENTS_FILE" ] && [ -f "${WORKSPACE_DIR}/.probe-kit/SUB_AGENTS.md" ]; then
+  SUB_AGENTS_FILE="${WORKSPACE_DIR}/.probe-kit/SUB_AGENTS.md"
+fi
 
 cmd_run() {
   if [ ! -f "$SPEC_FILE" ]; then
@@ -48,7 +70,7 @@ cmd_run() {
     echo "   --------------------------------------------------------"
     echo "   [SUB] TASK_SPEC 실행해"
     echo "   --------------------------------------------------------"
-    exit 1
+    exit 0
   fi
 
   echo ""
@@ -123,12 +145,12 @@ cmd_status() {
 cmd_usage() {
   echo "사용법: bash .probe-kit/scripts/subagent.sh [run|guide|status]"
   echo ""
-  echo "  run    : TASK_SPEC.md 기반으로 서브 에이전트(Luna 6 xhigh)를 호출하여 작업 수행"
+  echo "  run    : TASK_SPEC.md 기반으로 서브 에이전트(Luna 6 xhigh)를 호출하여 작업 수행 (기본값)"
   echo "  guide  : 메인(Sol)-서브(Luna) 듀얼 터미널 운용 지침 및 /clear 타이밍 안내"
   echo "  status : TASK_SPEC.md 및 SUB_RESULT.md 파일 상태와 최신 보고 내용 확인"
 }
 
-ACTION="${1:-}"
+ACTION="${1:-run}"
 
 case "$ACTION" in
   run)
@@ -140,7 +162,13 @@ case "$ACTION" in
   status)
     cmd_status
     ;;
+  -h|--help|help)
+    cmd_usage
+    exit 0
+    ;;
   *)
+    echo "❌ 알 수 없는 명령: $ACTION"
+    echo ""
     cmd_usage
     exit 1
     ;;

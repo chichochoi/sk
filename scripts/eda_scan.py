@@ -4,7 +4,8 @@ scripts/eda_scan.py
 무토큰 초고속 워크스페이스 EDA 스캐너 (표준 라이브러리 전용)
 - 테스트 파일 목록 자동 탐지
 - CSV / TSV / JSON / JSONL 스키마, 행 수, 결측치, 중복행, 3행 샘플, 수치 min/max 요약
-- 최대 200,000행 보호 제한 및 다중 인코딩(utf-8-sig, cp949, latin-1) 폴백 지원
+- 최대 200,000행 보호 제한 및 스트리밍 O(1) 메모리 분석 지원
+- 다중 인코딩(utf-8-sig, cp949, latin-1) 폴백 및 대용량 CSV 필드(2GB) 지원
 """
 
 import os
@@ -26,6 +27,18 @@ if hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
+# Major 7: CSV 기본 필드 크기 제한(128KB) 초과 예외 방지 (Windows/C long 호환)
+def _init_csv_field_size_limit():
+    max_limit = min(2147483647, sys.maxsize)
+    while max_limit > 131072:
+        try:
+            csv.field_size_limit(max_limit)
+            break
+        except OverflowError:
+            max_limit = int(max_limit / 10)
+
+_init_csv_field_size_limit()
+
 IGNORE_DIRS = {
     '.git', '.probe-kit', 'node_modules', 'venv', '.venv',
     '__pycache__', 'dist', 'build', '.next', '.idea', '.vscode'
@@ -36,6 +49,7 @@ MISSING_TOKENS = {
 }
 
 MAX_ROWS = 200000
+MAX_SEEN_HASHES = 20000  # 중복 행 체크용 해시셋 상한선 (메모리 고갈 방지)
 
 def is_missing(val):
     if val is None:
@@ -77,34 +91,47 @@ def is_test_file(path_obj: Path) -> bool:
             return True
     return False
 
-def analyze_tabular(headers, rows, file_label, truncated=False):
+def analyze_tabular(headers, row_iterator, file_label, truncated=False):
+    """
+    스트리밍 O(1) 메모리 기반 테이블 분석 함수
+    전체 행을 메모리에 적재하지 않고 한 행씩 누적 갱신하여 OOM을 방지합니다.
+    """
     num_cols = len(headers)
-    num_rows = len(rows)
+    num_rows = 0
+    is_truncated = truncated
 
-    print(f"  * 컬럼 수({num_cols}개): {headers}")
-    trunc_note = f" (최대 {MAX_ROWS:,}행 제한 적용)" if truncated else ""
-    print(f"  * 총 행 수(헤더 제외): {num_rows:,}행{trunc_note}")
-
-    if num_rows == 0:
-        print("  * 데이터가 비어 있습니다.")
-        return
-
-    # 결측치 집계 (컬럼별 & 전체)
     col_missing = [0] * num_cols
     total_missing = 0
-    col_numerics = [[] for _ in range(num_cols)]
+    col_numeric_count = [0] * num_cols
+    col_min = [None] * num_cols
+    col_max = [None] * num_cols
 
-    seen_rows = set()
+    samples = []
+    seen_hashes = set()
     dup_count = 0
+    seen_capped = False
 
-    for r in rows:
-        # 중복 행 체크
-        r_tuple = tuple(r)
-        if r_tuple in seen_rows:
+    for r in row_iterator:
+        if num_rows >= MAX_ROWS:
+            is_truncated = True
+            break
+        num_rows += 1
+
+        # 1) 앞 3행 샘플 보관
+        if len(samples) < 3:
+            samples.append(list(r))
+
+        # 2) 중복 행 해시 체크 (상한 제한으로 메모리 고갈 방지)
+        r_hash = hash(tuple(r))
+        if r_hash in seen_hashes:
             dup_count += 1
         else:
-            seen_rows.add(r_tuple)
+            if len(seen_hashes) < MAX_SEEN_HASHES:
+                seen_hashes.add(r_hash)
+            else:
+                seen_capped = True
 
+        # 3) 컬럼별 결측치 및 수치 min/max 집계 (O(1) 스트리밍)
         for col_idx in range(num_cols):
             val = r[col_idx] if col_idx < len(r) else ""
             if is_missing(val):
@@ -113,9 +140,24 @@ def analyze_tabular(headers, rows, file_label, truncated=False):
             else:
                 fv = try_float(val)
                 if fv is not None:
-                    col_numerics[col_idx].append(fv)
+                    col_numeric_count[col_idx] += 1
+                    cur_min = col_min[col_idx]
+                    if cur_min is None or fv < cur_min:
+                        col_min[col_idx] = fv
+                    cur_max = col_max[col_idx]
+                    if cur_max is None or fv > cur_max:
+                        col_max[col_idx] = fv
 
-    print(f"  * 중복 행 수: {dup_count:,}행 ({dup_count/num_rows*100:.2f}%)")
+    print(f"  * 컬럼 수({num_cols}개): {headers}")
+    trunc_note = f" (최대 {MAX_ROWS:,}행 제한 적용)" if is_truncated else ""
+    print(f"  * 총 행 수(헤더 제외): {num_rows:,}행{trunc_note}")
+
+    if num_rows == 0:
+        print("  * 데이터가 비어 있습니다.")
+        return
+
+    dup_note = f" (상위 {MAX_SEEN_HASHES:,}개 고유 행 기준)" if seen_capped else ""
+    print(f"  * 중복 행 수: {dup_count:,}행 ({dup_count/num_rows*100:.2f}%){dup_note}")
     print(f"  * 총 결측 셀 수: {total_missing:,}개 (전체 {num_rows * num_cols:,}셀 중 {total_missing/(num_rows*num_cols)*100:.2f}%)")
 
     # 컬럼별 결측치 상세
@@ -133,25 +175,26 @@ def analyze_tabular(headers, rows, file_label, truncated=False):
     # 수치 컬럼 min/max
     numeric_summaries = []
     for idx, name in enumerate(headers):
-        vals = col_numerics[idx]
         valid_count = num_rows - col_missing[idx]
-        if valid_count > 0 and len(vals) >= valid_count * 0.7:
-            min_v = min(vals)
-            max_v = max(vals)
-            min_str = f"{min_v:.2f}".rstrip('0').rstrip('.') if not min_v.is_integer() else f"{int(min_v)}"
-            max_str = f"{max_v:.2f}".rstrip('0').rstrip('.') if not max_v.is_integer() else f"{int(max_v)}"
-            numeric_summaries.append(f"{name}[min={min_str}, max={max_str}]")
+        if valid_count > 0 and col_numeric_count[idx] >= valid_count * 0.7:
+            min_v = col_min[idx]
+            max_v = col_max[idx]
+            if min_v is not None and max_v is not None:
+                min_str = f"{min_v:.2f}".rstrip('0').rstrip('.') if not min_v.is_integer() else f"{int(min_v)}"
+                max_str = f"{max_v:.2f}".rstrip('0').rstrip('.') if not max_v.is_integer() else f"{int(max_v)}"
+                numeric_summaries.append(f"{name}[min={min_str}, max={max_str}]")
 
     if numeric_summaries:
         print(f"  * 숫자 컬럼 범위(Min/Max): {', '.join(numeric_summaries)}")
 
     # 앞 3행 샘플
-    sample_count = min(3, len(rows))
+    sample_count = len(samples)
     print(f"  * 앞 {sample_count}행 샘플:")
     for s_idx in range(sample_count):
-        row_disp = [str(c)[:40] for c in rows[s_idx][:10]]
-        if len(rows[s_idx]) > 10:
-            row_disp.append(f"... (+{len(rows[s_idx]) - 10} cols)")
+        s_row = samples[s_idx]
+        row_disp = [str(c)[:40] for c in s_row[:10]]
+        if len(s_row) > 10:
+            row_disp.append(f"... (+{len(s_row) - 10} cols)")
         print(f"    [{s_idx + 1}] {row_disp}")
 
 def scan_csv_tsv(full_path: Path):
@@ -181,16 +224,8 @@ def scan_csv_tsv(full_path: Path):
             print("  * 빈 파일입니다.")
             return
 
-        rows = []
-        truncated = False
-        for idx, row in enumerate(reader):
-            if idx >= MAX_ROWS:
-                truncated = True
-                break
-            rows.append(row)
-
         print(f"  * 구분자: '{delim}' | 인코딩: {enc}")
-        analyze_tabular(headers, rows, full_path.name, truncated)
+        analyze_tabular(headers, reader, full_path.name)
 
 def scan_json(full_path: Path):
     fp, enc = open_with_encoding(full_path)
@@ -215,14 +250,15 @@ def scan_json(full_path: Path):
                         if k not in keys:
                             keys.append(k)
 
-            rows = []
-            truncated = len(data) > MAX_ROWS
-            for item in data[:MAX_ROWS]:
-                if isinstance(item, dict):
-                    rows.append([str(item.get(k, "")) if item.get(k) is not None else "" for k in keys])
-                else:
-                    rows.append([str(item)])
-            analyze_tabular(keys, rows, full_path.name, truncated)
+            # 불필요한 전체 리스트 복제를 피하고 제너레이터로 스트리밍 전달
+            def json_list_gen():
+                for item in data:
+                    if isinstance(item, dict):
+                        yield [str(item.get(k, "")) if item.get(k) is not None else "" for k in keys]
+                    else:
+                        yield [str(item)]
+
+            analyze_tabular(keys, json_list_gen(), full_path.name)
         else:
             print(f"  * 단일 값 리스트 샘플: {data[:5]}")
     elif isinstance(data, dict):
@@ -238,41 +274,61 @@ def scan_jsonl(full_path: Path):
     fp, enc = open_with_encoding(full_path)
     with fp:
         print(f"  * 형식: JSON Lines (JSONL) | 인코딩: {enc}")
-        items = []
-        truncated = False
-        for idx, line in enumerate(fp):
+
+        # 키 목록 및 형태 파악을 위해 상위 100행 탐색
+        keys = []
+        is_dict = False
+        non_dict_samples = []
+        preview_count = 0
+
+        for line in fp:
             line = line.strip()
             if not line:
                 continue
-            if len(items) >= MAX_ROWS:
-                truncated = True
-                break
             try:
                 obj = json.loads(line)
-                items.append(obj)
+                preview_count += 1
+                if isinstance(obj, dict):
+                    is_dict = True
+                    for k in obj.keys():
+                        if k not in keys:
+                            keys.append(k)
+                else:
+                    if len(non_dict_samples) < 3:
+                        non_dict_samples.append(obj)
             except Exception:
                 continue
+            if preview_count >= 100:
+                break
 
-    if not items:
-        print("  * 유효한 JSONL 레코드가 없습니다.")
-        return
+        if preview_count == 0:
+            print("  * 유효한 JSONL 레코드가 없습니다.")
+            return
 
-    if isinstance(items[0], dict):
-        keys = []
-        for item in items[:100]:
-            if isinstance(item, dict):
-                for k in item.keys():
-                    if k not in keys:
-                        keys.append(k)
-        rows = []
-        for item in items:
-            if isinstance(item, dict):
-                rows.append([str(item.get(k, "")) if item.get(k) is not None else "" for k in keys])
-            else:
-                rows.append([str(item)])
-        analyze_tabular(keys, rows, full_path.name, truncated)
-    else:
-        print(f"  * 총 {len(items):,}개 레코드, 샘플: {items[:3]}")
+        fp.seek(0)
+
+        if is_dict:
+            def jsonl_gen():
+                for line in fp:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    if isinstance(obj, dict):
+                        yield [str(obj.get(k, "")) if obj.get(k) is not None else "" for k in keys]
+                    else:
+                        yield [str(obj)]
+
+            analyze_tabular(keys, jsonl_gen(), full_path.name)
+        else:
+            total_items = 0
+            for line in fp:
+                if line.strip():
+                    total_items += 1
+            print(f"  * 총 {total_items:,}개 레코드, 샘플: {non_dict_samples[:3]}")
 
 def scan_workspace(root_path: str):
     root = Path(root_path).resolve()
