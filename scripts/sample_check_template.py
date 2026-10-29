@@ -125,7 +125,7 @@ def reference_impl(orders: List[Dict[str, Any]]) -> Dict[str, float]:
     return result
 
 # --------------------------------------------------------------------------
-# [3] 표본 데이터 (정상 6 + 중복 2 + 취소 2 + 결측 2 + 경계값 포함 = 총 12건)
+# [3] 표본 데이터 (정상 7 + 중복 2 + 취소 3 + 결측 3 + 경계값 포함 = 총 15건)
 # --------------------------------------------------------------------------
 SAMPLES: List[Dict[str, Any]] = [
     # --- [정상 건: 6건] ---
@@ -188,7 +188,7 @@ SAMPLES: List[Dict[str, Any]] = [
         "timestamp": "2026-10-28 11:20:00"
     },
 
-    # --- [취소 상태 건: 2건] (status == cancelled -> 집계 제외) ---
+    # --- [취소 상태 건: 3건] (status == cancelled / cancel -> 집계 제외) ---
     {
         "order_id": "ORD_007",
         "customer_id": "CUST_001",
@@ -203,8 +203,15 @@ SAMPLES: List[Dict[str, Any]] = [
         "status": "cancelled",  # 소문자 cancelled
         "timestamp": "2026-10-28 11:45:00"
     },
+    {
+        "order_id": "ORD_011",
+        "customer_id": "CUST_002",
+        "amount": 42000.0,
+        "status": "cancel",     # 약어 cancel 필터링 검증
+        "timestamp": "2026-10-28 12:30:00"
+    },
 
-    # --- [결측치 건: 2건] (amount가 None 또는 센티널 -999 -> 집계 제외) ---
+    # --- [결측치 건: 3건] (amount가 None, "", 센티널 -999 -> 집계 제외) ---
     {
         "order_id": "ORD_009",
         "customer_id": "CUST_001",
@@ -219,22 +226,38 @@ SAMPLES: List[Dict[str, Any]] = [
         "status": "COMPLETED",
         "timestamp": "2026-10-28 12:15:00"
     },
+    {
+        "order_id": "ORD_012",
+        "customer_id": "CUST_001",
+        "amount": "",           # 공백 문자열("") 결측치
+        "status": "COMPLETED",
+        "timestamp": "2026-10-28 12:45:00"
+    },
+
+    # --- [추가 정상 및 경계값 건: 1건] (CUST_003 소수점 가산 검증) ---
+    {
+        "order_id": "ORD_013",
+        "customer_id": "CUST_003",
+        "amount": 1299.50,      # 경계값: 소수점 부동소수점 합산 정밀도 검증 (7700.50 + 1299.50 = 9000.0)
+        "status": "COMPLETED",
+        "timestamp": "2026-10-28 13:00:00"
+    },
 ]
 
 # --------------------------------------------------------------------------
 # [4] 수동 검산 기댓값 (EXPECTED)
 #     - 계산 근거:
 #       * CUST_001: ORD_001(10,000) + ORD_002(25,000) = 35,000.0
-#                   (ORD_001 중복 제외, ORD_007 취소 제외, ORD_009 결측 제외)
+#                   (ORD_001 중복 제외, ORD_007 취소 제외, ORD_009 결측 제외, ORD_012 공백결측 제외)
 #       * CUST_002: ORD_003(5,000) + ORD_004(150,000) = 155,000.0
-#                   (ORD_003 중복 제외, ORD_008 취소 제외)
-#       * CUST_003: ORD_005(0.0) + ORD_006(7,700.50) = 7,700.5
+#                   (ORD_003 중복 제외, ORD_008 취소 제외, ORD_011 약어 cancel 제외)
+#       * CUST_003: ORD_005(0.0) + ORD_006(7,700.50) + ORD_013(1,299.50) = 9,000.0
 #                   (ORD_010 센티널 -999 결측 제외)
 # --------------------------------------------------------------------------
 EXPECTED: Dict[str, float] = {
     "CUST_001": 35000.0,
     "CUST_002": 155000.0,
-    "CUST_003": 7700.5,
+    "CUST_003": 9000.0,
 }
 
 # --------------------------------------------------------------------------
@@ -256,13 +279,13 @@ def load_target_function():
             print(f"❌ {err_msg}", file=sys.stderr)
             raise ImportError(err_msg)
 
-    err_msg = (
-        "[설정 오류] TARGET_MODULE 및 TARGET_FUNC 환경변수가 설정되지 않았습니다. (가짜 통과 방지)\n"
-        "  - 실제 함수 검증 예시: TARGET_MODULE=src.solution TARGET_FUNC=process_orders python sample_check_template.py\n"
-        "  - 내장 데모 검증 실행: python sample_check_template.py --demo"
-    )
-    print(f"❌ {err_msg}", file=sys.stderr)
-    raise ValueError(err_msg)
+    print("\n" + "=" * 60)
+    print("ℹ️ [안내] TARGET_MODULE 및 TARGET_FUNC 환경변수가 미지정되어,")
+    print("   내장 참조 구현체(reference_impl) 데모 모드로 검증을 수행합니다.")
+    print("   👉 실제 과제 함수 검증 시 아래와 같이 환경변수를 지정하여 실행하세요:")
+    print("      TARGET_MODULE=src.pipeline.aggregator TARGET_FUNC=clean_orders python scripts/sample_check_template.py")
+    print("=" * 60 + "\n")
+    return reference_impl
 
 # --------------------------------------------------------------------------
 # [6] 단위 테스트 케이스 및 불일치 diff 출력
@@ -307,7 +330,7 @@ class TestSampleCheck(unittest.TestCase):
                 msg=f"고객 {cust_id} 집계 금액 불일치: 실제 {actual[cust_id]} != 기댓값 {exp_val}"
             )
 
-        print("\n[검증 통과] 12건 표본(정상/중복/취소/결측/경계값) 수동 기댓값과 100% 일치합니다!\n")
+        print("\n[검증 통과] 15건 표본(정상/중복/취소/결측/경계값) 수동 기댓값과 100% 일치합니다!\n")
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

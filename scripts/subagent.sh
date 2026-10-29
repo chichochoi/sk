@@ -137,7 +137,7 @@ cmd_usage() {
   echo "  status : TASK_SPEC.md 및 SUB_RESULT.md 파일 상태와 최신 보고 내용 확인"
 }
 
-ACTION="${1:-}"
+ACTION="${1:-run}"
 
 case "$ACTION" in
   run)
@@ -148,6 +148,10 @@ case "$ACTION" in
     ;;
   status)
     cmd_status
+    ;;
+  help|--help|-h)
+    cmd_usage
+    exit 0
     ;;
   *)
     cmd_usage

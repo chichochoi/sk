@@ -378,7 +378,11 @@ Top3 랭커들은 단일 세션을 끝까지 고집하지 않고, 임계 시점�
 데이터 파이프라인 과제인 경우, 터미널에서 표본 수동 대조 스크립트를 실행합니다:
 
 ```bash
+# 1) 기본 15건 표본 데모 실행 (동작 확인)
 python .probe-kit/scripts/sample_check_template.py
+
+# 2) 실전 과제 구현체 직접 대조 실행 시 (예: src.pipeline 모듈의 process_orders 함수)
+TARGET_MODULE="src.pipeline" TARGET_FUNC="process_orders" python .probe-kit/scripts/sample_check_template.py
 ```
 * **검증 내용:** 정상 건, 중복 건, 취소 건, 결측치 건이 섞인 15개 샘플에 대해 수동 계산 기댓값(EXPECTED)과 코드 출력값이 100% 일치함을 터미널 테스트 로그로 명확히 남깁니다.
 * *(웹 과제인 경우: 서버를 `0.0.0.0`으로 실행해 두고 내장 Browser에서 주요 버튼 클릭, 데이터 입력, 예외 입력 시 에러 메시지 표출을 직접 눈으로 확인합니다.)*

@@ -145,6 +145,37 @@ fi
 # --------------------------------------------------------------------------
 # [5] SUB_RESULT.md 파싱
 # --------------------------------------------------------------------------
+# 언더스코어(____) 플레이스홀더를 빈 문자열로 정제하여 fallback 기본값을 발동시키는 헬퍼 함수
+clean_val() {
+  local val="$1"
+  if [[ "$val" =~ ^_+[[:space:]_]*$ ]]; then
+    echo ""
+  else
+    echo "$val"
+  fi
+}
+
+extract_sub_field() {
+  local pattern="$1"
+  local file="$2"
+  # [작성 예시] 섹션은 템플릿 예시이므로 실제 보고 추출 대상에서 제외
+  local content
+  content="$(awk '/###.*작성 예시/{exit} {print}' "$file" 2>/dev/null || cat "$file" 2>/dev/null || true)"
+
+  # 1. 파일에서 실제 작성된 행(언더스코어만 있는 양식 규격 행 제외) 검색
+  local filled
+  filled="$(echo "${content}" | grep -E "^[0-9]+\.[[:space:]]*${pattern}:" 2>/dev/null | grep -vE ':[[:space:]]*_+[[:space:]]*$' | tail -1 | sed -e "s#^[0-9]\+\.[[:space:]]*${pattern}:[[:space:]]*##" || true)"
+  if [ -n "$filled" ]; then
+    echo "$filled"
+    return
+  fi
+
+  # 2. 만약 양식 행만 존재한다면 첫 행을 가져와 clean_val로 정제 (언더스코어면 빈값 반환)
+  local raw
+  raw="$(echo "${content}" | grep -E "^[0-9]+\.[[:space:]]*${pattern}:" 2>/dev/null | head -1 | sed -e "s#^[0-9]\+\.[[:space:]]*${pattern}:[[:space:]]*##" || true)"
+  clean_val "$raw"
+}
+
 SUB_STATUS=""
 SUB_MODULE=""
 SUB_FILES=""
@@ -156,15 +187,15 @@ SUB_ISSUES=""
 SUB_NEXT=""
 
 if [ -n "${SUB_RESULT_FILE}" ] && [ -f "${SUB_RESULT_FILE}" ]; then
-  SUB_STATUS="$(grep -E '^[0-9]+\.[[:space:]]*작업 상태:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*작업 상태:[[:space:]]*//' || true)"
-  SUB_MODULE="$(grep -E '^[0-9]+\.[[:space:]]*대상 모듈:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*대상 모듈:[[:space:]]*//' || true)"
-  SUB_FILES="$(grep -E '^[0-9]+\.[[:space:]]*변경 파일:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*변경 파일:[[:space:]]*//' || true)"
-  SUB_CMD="$(grep -E '^[0-9]+\.[[:space:]]*실행 명령:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*실행 명령:[[:space:]]*//' || true)"
-  SUB_TEST="$(grep -E '^[0-9]+\.[[:space:]]*테스트 결과:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*테스트 결과:[[:space:]]*//' || true)"
-  SUB_DIFF="$(grep -E '^[0-9]+\.[[:space:]]*diff 요약:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*diff 요약:[[:space:]]*//' || true)"
-  SUB_SEC="$(grep -E '^[0-9]+\.[[:space:]]*바인딩/보안 점검:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*바인딩\/보안 점검:[[:space:]]*//' || true)"
-  SUB_ISSUES="$(grep -E '^[0-9]+\.[[:space:]]*미해결 이슈:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*미해결 이슈:[[:space:]]*//' || true)"
-  SUB_NEXT="$(grep -E '^[0-9]+\.[[:space:]]*메인 확인 요청:' "${SUB_RESULT_FILE}" | head -1 | sed -e 's/^[0-9]\+\.[[:space:]]*메인 확인 요청:[[:space:]]*//' || true)"
+  SUB_STATUS="$(extract_sub_field '작업 상태' "${SUB_RESULT_FILE}")"
+  SUB_MODULE="$(extract_sub_field '대상 모듈' "${SUB_RESULT_FILE}")"
+  SUB_FILES="$(extract_sub_field '변경 파일' "${SUB_RESULT_FILE}")"
+  SUB_CMD="$(extract_sub_field '실행 명령' "${SUB_RESULT_FILE}")"
+  SUB_TEST="$(extract_sub_field '테스트 결과' "${SUB_RESULT_FILE}")"
+  SUB_DIFF="$(extract_sub_field 'diff 요약' "${SUB_RESULT_FILE}")"
+  SUB_SEC="$(extract_sub_field '바인딩/보안 점검' "${SUB_RESULT_FILE}")"
+  SUB_ISSUES="$(extract_sub_field '미해결 이슈' "${SUB_RESULT_FILE}")"
+  SUB_NEXT="$(extract_sub_field '메인 확인 요청' "${SUB_RESULT_FILE}")"
 fi
 
 # --------------------------------------------------------------------------
