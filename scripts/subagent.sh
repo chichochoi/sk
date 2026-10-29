@@ -40,17 +40,16 @@ cmd_run() {
   echo "=========================================================="
 
   if command -v codex >/dev/null 2>&1 && codex exec --help </dev/null >/dev/null 2>&1; then
-    codex exec -m "luna-6" -c model_reasoning_effort="xhigh" --dangerously-bypass-confirmation --skip-git-repo-check "$PROMPT" < /dev/null 2>&1 || \
-    codex --profile sub exec --dangerously-bypass-confirmation --skip-git-repo-check "$PROMPT" < /dev/null 2>&1 || \
-    codex exec -y --skip-git-repo-check "$PROMPT" < /dev/null 2>&1 || \
-    codex --profile sub exec -y --skip-git-repo-check "$PROMPT" < /dev/null 2>&1 || {
-      echo "⚠️ [경고] codex CLI 자동 실행 실패. 대화형 수동 모드로 전환합니다."
-      echo "   우측 '터미널 2 (Luna 6 xhigh)' 창에 아래 1줄을 입력하세요:"
+    # 표준 codex CLI 단일 실행 (비표준 플래그 및 연쇄 호출 제거로 토큰 폭증/코드 오염 원천 차단)
+    if ! codex exec -m "luna-6" --dangerously-bypass-confirmation --skip-git-repo-check "$PROMPT" < /dev/null; then
+      echo ""
+      echo "⚠️ [경고] codex 서브 에이전트(Luna 6) 자동 실행 실패 또는 비정상 종료."
+      echo "   우측 '터미널 2 (Luna 6 xhigh)' 창에 아래 1줄을 입력하여 수동으로 실행하세요:"
       echo "   --------------------------------------------------------"
       echo "   [SUB] TASK_SPEC 실행해"
       echo "   --------------------------------------------------------"
       exit 1
-    }
+    fi
   else
     echo "💡 [안내] 현재 환경에 codex CLI가 없거나 대화형 TUI 전용 환경입니다."
     echo "   우측 '터미널 2 (Luna 6 xhigh)' 창에 아래 1줄을 입력하세요:"

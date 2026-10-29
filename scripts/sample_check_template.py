@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 scripts/sample_check_template.py
-데이터 과제용 표본 수동 대조 단위 테스트 템플릿 (Case 1 & Case 5 필수)
-- 12~20건의 정상, 중복, 취소, 결측, 경계값 표본 데이터 구성
+반도체 웨이퍼 센서 데이터 과제용 표본 수동 대조 단위 테스트 템플릿 (Case 1 & Case 5 필수)
+- 15건의 정상, 중복, 불량, 결측, 경계값 표본 데이터 구성 (SK하이닉스 웨이퍼 센서 도메인)
 - 수동 계산된 기댓값(EXPECTED)과 실제 처리 함수 출력값 정밀 비교
-- 단계별(원본 -> 중복제거 -> 취소제외 -> 결측제외) 건수 추적 로깅
+- 단계별(원본 -> 중복제거 -> 불량제외 -> 결측제외) 건수 추적 로깅
 - 불일치 시 직관적인 diff 출력
 - TARGET_MODULE / TARGET_FUNC 동적 로딩 지원 (미지정 시 Fail 보고, --demo 플래그 시 내장 reference_impl 검증)
 """
@@ -15,6 +15,7 @@ import unittest
 import importlib
 import difflib
 import json
+import math
 from typing import List, Dict, Any
 
 # 워크스페이스 루트 및 현재 작업 디렉토리 sys.path 등록 (루트 모듈 임포트 지원)
@@ -54,192 +55,193 @@ TARGET_FUNC = os.environ.get("TARGET_FUNC", "").strip()
 # --------------------------------------------------------------------------
 # [2] 내장 참조 구현체 (Reference Implementation)
 #     - 비즈니스 로직:
-#       1) order_id 기준 중복 제거 (최초 발생 건 유지)
-#       2) status == 'cancelled' (대소문자 무관) 제외
-#       3) amount 결측치(None, "", -999, NaN) 제외
-#       4) customer_id별 유효 주문 금액(amount) 합산
+#       1) wafer_id 기준 중복 제거 (최초 발생 건 유지)
+#       2) status가 scrap, discard, abnormal 불량 웨이퍼 제외
+#       3) thickness 결측치(None, "", -999, NaN) 제외
+#       4) lot_id별 유효 두께(thickness) 합산 (소수점 둘째자리 반올림)
 # --------------------------------------------------------------------------
-def reference_impl(orders: List[Dict[str, Any]]) -> Dict[str, float]:
+def reference_impl(wafers: List[Dict[str, Any]]) -> Dict[str, float]:
     """
-    주문 목록 정제 및 고객별 금액 합산 참조 함수
+    웨이퍼 센서 측정 데이터 정제 및 Lot별 두께(thickness) 합산 참조 함수
     단계별 필터링 카운트를 표준 출력으로 기록합니다.
     """
-    total_raw = len(orders)
+    total_raw = len(wafers)
 
-    # 1. 중복 order_id 제거 (최초 주문 유지)
-    seen_order_ids = set()
-    deduped_orders = []
+    # 1. wafer_id 기준 중복 제거 (최초 발생 건 유지)
+    seen_wafer_ids = set()
+    deduped_wafers = []
     dup_count = 0
-    for order in orders:
-        oid = order.get("order_id")
-        if oid in seen_order_ids:
+    for w in wafers:
+        wid = w.get("wafer_id")
+        if wid in seen_wafer_ids:
             dup_count += 1
             continue
-        seen_order_ids.add(oid)
-        deduped_orders.append(order)
+        seen_wafer_ids.add(wid)
+        deduped_wafers.append(w)
 
-    # 2. 취소 상태(cancelled) 제외
-    active_orders = []
-    cancelled_count = 0
-    for order in deduped_orders:
-        status = str(order.get("status", "")).strip().lower()
-        if status in ("cancelled", "cancel"):
-            cancelled_count += 1
+    # 2. 불량 웨이퍼(scrap, discard, abnormal) 제외
+    active_wafers = []
+    defect_count = 0
+    defect_statuses = {"scrap", "discard", "abnormal"}
+    for w in deduped_wafers:
+        status = str(w.get("status", "")).strip().lower()
+        if status in defect_statuses:
+            defect_count += 1
             continue
-        active_orders.append(order)
+        active_wafers.append(w)
 
-    # 3. amount 결측치 제외
-    valid_orders = []
-    missing_amount_count = 0
+    # 3. thickness 결측치(None, "", -999, NaN) 제외
+    valid_wafers = []
+    missing_thickness_count = 0
     missing_tokens = {None, "", "none", "nan", "null", "-999", "-999.0", -999, -999.0}
 
-    for order in active_orders:
-        amt_raw = order.get("amount")
-        if amt_raw in missing_tokens:
-            missing_amount_count += 1
+    for w in active_wafers:
+        thk_raw = w.get("thickness")
+        if thk_raw in missing_tokens:
+            missing_thickness_count += 1
             continue
         try:
-            amt = float(amt_raw)
-            if amt in (-999.0,):
-                missing_amount_count += 1
+            thk = float(thk_raw)
+            if thk in (-999.0,) or math.isnan(thk):
+                missing_thickness_count += 1
                 continue
-            valid_orders.append((order["customer_id"], amt))
+            valid_wafers.append((w["lot_id"], thk))
         except (ValueError, TypeError):
-            missing_amount_count += 1
+            missing_thickness_count += 1
             continue
 
     # 단계별 건수 로깅 출력
     print("\n" + "=" * 60)
     print("[파이프라인 단계별 처리 건수 로깅]")
-    print(f"  1. 원본 데이터 수              : {total_raw}건")
-    print(f"  2. 중복 order_id 제거 후       : {len(deduped_orders)}건 (중복 제거: {dup_count}건)")
-    print(f"  3. 취소 상태(cancelled) 제외 후  : {len(active_orders)}건 (취소 제외: {cancelled_count}건)")
-    print(f"  4. amount 결측치 제외 후 유효 건수: {len(valid_orders)}건 (결측 제외: {missing_amount_count}건)")
+    print(f"  1. 원본 데이터 수                  : {total_raw}건")
+    print(f"  2. 중복 wafer_id 제거 후           : {len(deduped_wafers)}건 (중복 제거: {dup_count}건)")
+    print(f"  3. 불량 웨이퍼 제외 후             : {len(active_wafers)}건 (불량 제외: {defect_count}건)")
+    print(f"  4. thickness 결측치 제외 후 유효 건수: {len(valid_wafers)}건 (결측 제외: {missing_thickness_count}건)")
     print("=" * 60)
 
-    # 4. 고객별 합계 집계
+    # 4. lot_id별 유효 두께(thickness) 합산 (소수점 둘째자리 반올림)
     result: Dict[str, float] = {}
-    for cid, amt in valid_orders:
-        result[cid] = round(result.get(cid, 0.0) + amt, 2)
+    for lid, thk in valid_wafers:
+        result[lid] = round(result.get(lid, 0.0) + thk, 2)
 
     return result
 
 # --------------------------------------------------------------------------
-# [3] 표본 데이터 (정상 7 + 중복 2 + 취소 3 + 결측 3 + 경계값 포함 = 총 15건)
+# [3] 표본 데이터 (정상 6 + 중복 2 + 불량 3 + 결측 3 + 경계값 1 = 총 15건)
 # --------------------------------------------------------------------------
 SAMPLES: List[Dict[str, Any]] = [
     # --- [정상 건: 6건] ---
     {
-        "order_id": "ORD_001",
-        "customer_id": "CUST_001",
-        "amount": 10000.0,
-        "status": "COMPLETED",
+        "wafer_id": "W-001",
+        "lot_id": "LOT-101",
+        "thickness": 100.0,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 09:00:00"
     },
     {
-        "order_id": "ORD_002",
-        "customer_id": "CUST_001",
-        "amount": 25000.0,
-        "status": "CONFIRMED",
+        "wafer_id": "W-002",
+        "lot_id": "LOT-101",
+        "thickness": 101.2,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 09:15:00"
     },
     {
-        "order_id": "ORD_003",
-        "customer_id": "CUST_002",
-        "amount": 5000.0,
-        "status": "COMPLETED",
+        "wafer_id": "W-003",
+        "lot_id": "LOT-102",
+        "thickness": 99.5,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 09:30:00"
     },
     {
-        "order_id": "ORD_004",
-        "customer_id": "CUST_002",
-        "amount": 150000.0,  # 정상 대용량 금액
-        "status": "SHIPPED",
+        "wafer_id": "W-004",
+        "lot_id": "LOT-102",
+        "thickness": 100.5,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 10:00:00"
     },
     {
-        "order_id": "ORD_005",
-        "customer_id": "CUST_003",
-        "amount": 0.0,       # 경계값: 0원 결제 (이벤트 무료 주문, 결측치 아님)
-        "status": "COMPLETED",
+        "wafer_id": "W-005",
+        "lot_id": "LOT-103",
+        "thickness": 98.0,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 10:30:00"
     },
     {
-        "order_id": "ORD_006",
-        "customer_id": "CUST_003",
-        "amount": 7700.50,   # 경계값: 소수점 포함 금액
-        "status": "COMPLETED",
+        "wafer_id": "W-006",
+        "lot_id": "LOT-103",
+        "thickness": 102.0,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 11:00:00"
     },
 
-    # --- [중복 유입 건: 2건] (이미 유입된 order_id 재유입 -> 제외되어야 함) ---
+    # --- [중복 유입 건: 2건] (이미 유입된 wafer_id 재유입 -> 최초 건 유지 원칙으로 제외) ---
     {
-        "order_id": "ORD_001",  # ORD_001 중복 (금액이 달라도 최초 건 유지 원칙)
-        "customer_id": "CUST_001",
-        "amount": 99999.0,
-        "status": "COMPLETED",
+        "wafer_id": "W-001",  # W-001 중복 (두께가 달라도 최초 건 유지 원칙)
+        "lot_id": "LOT-101",
+        "thickness": 150.0,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 11:15:00"
     },
     {
-        "order_id": "ORD_003",  # ORD_003 동일 내용 네트워크 재전송 중복
-        "customer_id": "CUST_002",
-        "amount": 5000.0,
-        "status": "COMPLETED",
+        "wafer_id": "W-003",  # W-003 동일 웨이퍼 센서 재전송 중복
+        "lot_id": "LOT-102",
+        "thickness": 99.5,
+        "status": "NORMAL",
         "timestamp": "2026-10-28 11:20:00"
     },
 
-    # --- [취소 상태 건: 3건] (status == cancelled / cancel -> 집계 제외) ---
+    # --- [불량 웨이퍼 건: 3건] (status in scrap, discard, abnormal -> 집계 제외) ---
     {
-        "order_id": "ORD_007",
-        "customer_id": "CUST_001",
-        "amount": 50000.0,
-        "status": "CANCELLED",  # 대문자 CANCELLED
+        "wafer_id": "W-007",
+        "lot_id": "LOT-101",
+        "thickness": 95.0,
+        "status": "SCRAP",     # 대문자 SCRAP
         "timestamp": "2026-10-28 11:30:00"
     },
     {
-        "order_id": "ORD_008",
-        "customer_id": "CUST_002",
-        "amount": 30000.0,
-        "status": "cancelled",  # 소문자 cancelled
+        "wafer_id": "W-008",
+        "lot_id": "LOT-102",
+        "thickness": 105.0,
+        "status": "discard",   # 소문자 discard
         "timestamp": "2026-10-28 11:45:00"
     },
     {
-        "order_id": "ORD_011",
-        "customer_id": "CUST_002",
-        "amount": 42000.0,
-        "status": "cancel",     # 약어 cancel 필터링 검증
+        "wafer_id": "W-009",
+        "lot_id": "LOT-103",
+        "thickness": 88.0,
+        "status": "abnormal",  # abnormal 상태 필터링 검증
         "timestamp": "2026-10-28 12:30:00"
     },
 
-    # --- [결측치 건: 3건] (amount가 None, "", 센티널 -999 -> 집계 제외) ---
+    # --- [결측치 건: 3건] (thickness가 None, 센티널 -999, 공백 "" -> 집계 제외) ---
     {
-        "order_id": "ORD_009",
-        "customer_id": "CUST_001",
-        "amount": None,         # Null / None 결측
-        "status": "COMPLETED",
+        "wafer_id": "W-010",
+        "lot_id": "LOT-101",
+        "thickness": None,     # Null / None 결측
+        "status": "NORMAL",
         "timestamp": "2026-10-28 12:00:00"
     },
     {
-        "order_id": "ORD_010",
-        "customer_id": "CUST_003",
-        "amount": -999.0,       # 시스템 센티널 결측 표기 (-999)
-        "status": "COMPLETED",
+        "wafer_id": "W-011",
+        "lot_id": "LOT-102",
+        "thickness": -999.0,   # 센티널 결측 표기 (-999.0)
+        "status": "NORMAL",
         "timestamp": "2026-10-28 12:15:00"
     },
     {
-        "order_id": "ORD_012",
-        "customer_id": "CUST_001",
-        "amount": "",           # 공백 문자열("") 결측치
-        "status": "COMPLETED",
+        "wafer_id": "W-012",
+        "lot_id": "LOT-103",
+        "thickness": "",       # 공백 문자열("") 결측치
+        "status": "NORMAL",
         "timestamp": "2026-10-28 12:45:00"
     },
 
-    # --- [추가 정상 및 경계값 건: 1건] (CUST_003 소수점 가산 검증) ---
+    # --- [경계값 건: 1건] (정상 상태 및 소수점 가산 정밀도 검증) ---
     {
-        "order_id": "ORD_013",
-        "customer_id": "CUST_003",
-        "amount": 1299.50,      # 경계값: 소수점 부동소수점 합산 정밀도 검증 (7700.50 + 1299.50 = 9000.0)
-        "status": "COMPLETED",
+        "wafer_id": "W-013",
+        "lot_id": "LOT-101",
+        "thickness": 98.8,     # 경계값: 소수점 정밀도 검증 (100.0 + 101.2 + 98.8 = 300.0)
+        "status": "NORMAL",
         "timestamp": "2026-10-28 13:00:00"
     },
 ]
@@ -247,17 +249,17 @@ SAMPLES: List[Dict[str, Any]] = [
 # --------------------------------------------------------------------------
 # [4] 수동 검산 기댓값 (EXPECTED)
 #     - 계산 근거:
-#       * CUST_001: ORD_001(10,000) + ORD_002(25,000) = 35,000.0
-#                   (ORD_001 중복 제외, ORD_007 취소 제외, ORD_009 결측 제외, ORD_012 공백결측 제외)
-#       * CUST_002: ORD_003(5,000) + ORD_004(150,000) = 155,000.0
-#                   (ORD_003 중복 제외, ORD_008 취소 제외, ORD_011 약어 cancel 제외)
-#       * CUST_003: ORD_005(0.0) + ORD_006(7,700.50) + ORD_013(1,299.50) = 9,000.0
-#                   (ORD_010 센티널 -999 결측 제외)
+#       * LOT-101: W-001(100.0) + W-002(101.2) + W-013(98.8) = 300.0
+#                  (W-001 중복 제외, W-007 SCRAP 불량 제외, W-010 None 결측 제외)
+#       * LOT-102: W-003(99.5) + W-004(100.5) = 200.0
+#                  (W-003 중복 제외, W-008 discard 불량 제외, W-011 -999.0 결측 제외)
+#       * LOT-103: W-005(98.0) + W-006(102.0) = 200.0
+#                  (W-009 abnormal 불량 제외, W-012 "" 결측 제외)
 # --------------------------------------------------------------------------
 EXPECTED: Dict[str, float] = {
-    "CUST_001": 35000.0,
-    "CUST_002": 155000.0,
-    "CUST_003": 9000.0,
+    "LOT-101": 300.0,
+    "LOT-102": 200.0,
+    "LOT-103": 200.0,
 }
 
 # --------------------------------------------------------------------------
@@ -283,7 +285,7 @@ def load_target_function():
     print("ℹ️ [안내] TARGET_MODULE 및 TARGET_FUNC 환경변수가 미지정되어,")
     print("   내장 참조 구현체(reference_impl) 데모 모드로 검증을 수행합니다.")
     print("   👉 실제 과제 함수 검증 시 아래와 같이 환경변수를 지정하여 실행하세요:")
-    print("      TARGET_MODULE=src.pipeline.aggregator TARGET_FUNC=clean_orders python scripts/sample_check_template.py")
+    print("      TARGET_MODULE=src.pipeline.aggregator TARGET_FUNC=process_wafers python scripts/sample_check_template.py")
     print("=" * 60 + "\n")
     return reference_impl
 
@@ -319,18 +321,19 @@ class TestSampleCheck(unittest.TestCase):
                 f"--------------------------------------------------\n"
                 f"{diff_text}\n"
                 f"--------------------------------------------------\n"
-                f"원인 점검: 중복 제거 누락, 취소 상태 필터 누락, 결측치(-999/None) 처리 누락 확인 요망"
+                f"원인 점검: 중복 제거 누락, 불량 상태(scrap/discard/abnormal) 필터 누락, 결측치(-999/None) 처리 누락 확인 요망"
             )
 
-        # 각 고객별 개별 검증
-        for cust_id, exp_val in EXPECTED.items():
-            self.assertIn(cust_id, actual, f"고객 ID {cust_id} 누락")
+        # 각 LOT별 개별 검증
+        for lot_id, exp_val in EXPECTED.items():
+            self.assertIn(lot_id, actual, f"LOT ID {lot_id} 누락")
             self.assertAlmostEqual(
-                actual[cust_id], exp_val, places=2,
-                msg=f"고객 {cust_id} 집계 금액 불일치: 실제 {actual[cust_id]} != 기댓값 {exp_val}"
+                actual[lot_id], exp_val, places=2,
+                msg=f"LOT {lot_id} 집계 두께 불일치: 실제 {actual[lot_id]} != 기댓값 {exp_val}"
             )
 
-        print("\n[검증 통과] 15건 표본(정상/중복/취소/결측/경계값) 수동 기댓값과 100% 일치합니다!\n")
+        print("\n[검증 통과] 15건 표본(정상/중복/불량/결측/경계값) 수동 기댓값과 100% 일치합니다!\n")
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+

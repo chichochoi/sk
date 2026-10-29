@@ -158,22 +158,65 @@ clean_val() {
 extract_sub_field() {
   local pattern="$1"
   local file="$2"
-  # [작성 예시] 섹션은 템플릿 예시이므로 실제 보고 추출 대상에서 제외
-  local content
-  content="$(awk '/###.*작성 예시/{exit} {print}' "$file" 2>/dev/null || cat "$file" 2>/dev/null || true)"
 
-  # 1. 파일에서 실제 작성된 행(언더스코어만 있는 양식 규격 행 제외) 검색
-  local filled
-  filled="$(echo "${content}" | grep -E "^[0-9]+\.[[:space:]]*${pattern}:" 2>/dev/null | grep -vE ':[[:space:]]*_+[[:space:]]*$' | tail -1 | sed -e "s#^[0-9]\+\.[[:space:]]*${pattern}:[[:space:]]*##" || true)"
-  if [ -n "$filled" ]; then
-    echo "$filled"
+  if [ -z "$file" ] || [ ! -f "$file" ]; then
     return
   fi
 
-  # 2. 만약 양식 행만 존재한다면 첫 행을 가져와 clean_val로 정제 (언더스코어면 빈값 반환)
-  local raw
-  raw="$(echo "${content}" | grep -E "^[0-9]+\.[[:space:]]*${pattern}:" 2>/dev/null | head -1 | sed -e "s#^[0-9]\+\.[[:space:]]*${pattern}:[[:space:]]*##" || true)"
-  clean_val "$raw"
+  awk -v pat="$pattern" '
+    BEGIN {
+      start_pat = "^[0-9]+\\.[[:space:]]*" pat ":"
+      in_field = 0
+      buf = ""
+      last_val = ""
+    }
+    # [작성 예시] 섹션은 템플릿 예시이므로 실제 보고 추출 대상에서 제외
+    /###.*작성 예시/ {
+      exit
+    }
+    # 대상 필드 시작 행 매칭
+    $0 ~ start_pat {
+      if (in_field && check_val(buf)) {
+        last_val = buf
+      }
+      in_field = 1
+      line = $0
+      sub(start_pat "[[:space:]]*", "", line)
+      buf = line
+      next
+    }
+    # 다음 필드(^[0-9]+\.) 또는 구분선(^---, ^###) 직전까지 캡처 후 종료
+    in_field && (/^[0-9]+\./ || /^---/ || /^###/) {
+      if (check_val(buf)) {
+        last_val = buf
+      }
+      in_field = 0
+      buf = ""
+    }
+    # 멀티라인 필드 내용 수집
+    in_field {
+      if (buf == "") {
+        if ($0 ~ /^[[:space:]]*$/) next
+        buf = $0
+      } else {
+        buf = buf "\n" $0
+      }
+    }
+    END {
+      if (in_field && check_val(buf)) {
+        last_val = buf
+      }
+      if (last_val != "") {
+        print last_val
+      }
+    }
+    # 플레이스홀더(공백 또는 _)만 있는 경우는 빈 값으로 정제
+    function check_val(val,   tmp) {
+      tmp = val
+      gsub(/[[:space:]_]/, "", tmp)
+      return (length(tmp) > 0)
+    }
+  ' "$file" 2>/dev/null || true
 }
 
 SUB_STATUS=""
@@ -190,10 +233,10 @@ if [ -n "${SUB_RESULT_FILE}" ] && [ -f "${SUB_RESULT_FILE}" ]; then
   SUB_STATUS="$(extract_sub_field '작업 상태' "${SUB_RESULT_FILE}")"
   SUB_MODULE="$(extract_sub_field '대상 모듈' "${SUB_RESULT_FILE}")"
   SUB_FILES="$(extract_sub_field '변경 파일' "${SUB_RESULT_FILE}")"
-  SUB_CMD="$(extract_sub_field '실행 명령' "${SUB_RESULT_FILE}")"
-  SUB_TEST="$(extract_sub_field '테스트 결과' "${SUB_RESULT_FILE}")"
-  SUB_DIFF="$(extract_sub_field 'diff 요약' "${SUB_RESULT_FILE}")"
-  SUB_SEC="$(extract_sub_field '바인딩/보안 점검' "${SUB_RESULT_FILE}")"
+  SUB_CMD="$(extract_sub_field '(실행 명령|베이스라인 테스트)' "${SUB_RESULT_FILE}")"
+  SUB_TEST="$(extract_sub_field '(테스트 결과|신규/예외 테스트)' "${SUB_RESULT_FILE}")"
+  SUB_DIFF="$(extract_sub_field '(diff 요약|git diff 통계)' "${SUB_RESULT_FILE}")"
+  SUB_SEC="$(extract_sub_field '(바인딩/보안 점검|웹서버/바인딩 확인)' "${SUB_RESULT_FILE}")"
   SUB_ISSUES="$(extract_sub_field '미해결 이슈' "${SUB_RESULT_FILE}")"
   SUB_NEXT="$(extract_sub_field '메인 확인 요청' "${SUB_RESULT_FILE}")"
 fi
@@ -316,9 +359,11 @@ cat <<EOF >> "${HANDOFF_ROOT_FILE}"
 
 - **직전 완료 마일스톤:** ${SPEC_GOAL:-Step 1 기본 기능 구현 및 예외 처리}
 - **직전 대상 파일 범위:**
-${SPEC_FILES:-  - \`src/pipeline/aggregator.py\`\n  - \`tests/test_edge_cases.py\`}
+${SPEC_FILES:-  - \`src/pipeline/aggregator.py\`
+  - \`tests/test_edge_cases.py\`}
 - **달성된 완료 기준 (DoD):**
-${SPEC_DOD:-  - [x] 베이스라인 회귀 테스트 100% 통과\n  - [x] 취소 주문 분모 제외 예외 검증 완료}
+${SPEC_DOD:-  - [x] 베이스라인 회귀 테스트 100% 통과
+  - [x] 취소 주문 분모 제외 예외 검증 완료}
 
 ---
 
