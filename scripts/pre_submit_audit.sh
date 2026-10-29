@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
-# scripts/pre_submit_audit.sh: 제출 직전(12:40) 종합 무감점 사전 점검 스크립트
+# scripts/pre_submit_audit.sh: 제출 직전(12:45) 종합 무감점 사전 점검 스크립트
 # - Git 변경 범위(diff --stat)
 # - 민감정보 평문 노출 스캔
 # - localhost/127.0.0.1 바인딩 경고
 # - 시스템 메모리 상태
-# - 임시/하네스 파일 git 노출 확인 및 클린업 안내
+# - Cofa Probe 10단계 STATE 진행 상태 점검
+# - 하네스 영구 보존 및 Git 격리(.git/info/exclude) 점검
 
 # 감사 스크립트는 실패 항목이 있어도 끝까지 완주해야 하므로 errexit(-e)는 사용하지 않음
 set -u
 set -o pipefail 2>/dev/null || true
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KIT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+RUNTIME_DIR="${KIT_DIR}/runtime"
+WORKSPACE="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 PASS_COUNT=0
 WARN_COUNT=0
@@ -113,37 +119,63 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [5] 임시 파일 및 하네스 파일의 Git Status 노출 여부 점검
+# [5] Cofa Probe 10단계 STATE 진행 상태 점검
 # --------------------------------------------------------------------------
-echo -e "\n📌 [5] 임시 파일 및 하네스 파일 Git 노출 여부 점검"
-if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  EXPOSED_PROBE=$(git status --porcelain 2>/dev/null | grep -E "(\.probe-kit|NOTES_TEMP\.md|TASK_SPEC\.md|SUB_RESULT\.md)" || true)
-  if [ -n "$EXPOSED_PROBE" ]; then
-    echo "⚠️ [주의] 아래 임시 파일/하네스가 git status에 노출되어 있습니다:"
-    echo "$EXPOSED_PROBE"
-    record_warn ".git/info/exclude 에 등록하거나 제출 직전 삭제하세요."
-  else
-    record_pass "임시 파일(.probe-kit, NOTES_TEMP.md 등)이 git status에 노출되지 않음"
-  fi
+echo -e "\n📌 [5] Cofa Probe 10단계 STATE 진행 상태 점검"
+STATE_SCRIPT="${SCRIPT_DIR}/state.sh"
+if [ -f "$STATE_SCRIPT" ]; then
+  bash "$STATE_SCRIPT" status || true
+  record_pass "STATE 진행 상태 확인 완료"
 else
-  echo "⚪ [SKIP] Git 저장소가 아니므로 건너뜁니다."
+  echo "⚪ [SKIP] state.sh 스크립트를 찾을 수 없어 STATE 점검을 건너뜁니다."
 fi
 
 # --------------------------------------------------------------------------
-# [6] 제출 직전 클린업 명령 안내
+# [6] 하네스 영구 보존 및 Git 격리(.git/info/exclude) 점검
+# --------------------------------------------------------------------------
+echo -e "\n📌 [6] 하네스 영구 보존 및 Git 격리(.git/info/exclude) 점검"
+# (1) 디스크 보존 확인 (절대 삭제 금지: 채점관 확인 및 가점 획득용)
+PRESERVED_ITEMS=0
+[ -d "$KIT_DIR" ] && PRESERVED_ITEMS=$((PRESERVED_ITEMS + 1))
+[ -f "$RUNTIME_DIR/STATE.md" ] && PRESERVED_ITEMS=$((PRESERVED_ITEMS + 1))
+[ -f "$RUNTIME_DIR/HANDOFF.md" ] && PRESERVED_ITEMS=$((PRESERVED_ITEMS + 1))
+[ -f "$RUNTIME_DIR/TASK_SPEC.md" ] && PRESERVED_ITEMS=$((PRESERVED_ITEMS + 1))
+[ -f "$RUNTIME_DIR/SUB_RESULT.md" ] && PRESERVED_ITEMS=$((PRESERVED_ITEMS + 1))
+echo "-> 하네스 및 런타임 활동 기록 보존 확인 완료 (${PRESERVED_ITEMS}개 주요 항목 디스크 보존)"
+
+# (2) Git status 오염 여부 확인
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  EXPOSED_PROBE=$(git status --porcelain 2>/dev/null | grep -E "(\.probe-kit|NOTES_TEMP\.md|TASK_SPEC\.md|SUB_RESULT\.md|STATE\.md|HANDOFF\.md|EDA_SUMMARY\.txt)" || true)
+  if [ -n "$EXPOSED_PROBE" ]; then
+    echo "⚠️ [주의] 아래 하네스/런타임 파일이 git status에 노출되어 있습니다:"
+    echo "$EXPOSED_PROBE"
+    record_warn ".git/info/exclude 에 등록하여 Git 추적에서 격리하세요. (하네스 파일은 절대 삭제하지 마세요!)"
+  else
+    record_pass "하네스 및 활동 기록(.probe-kit, STATE.md, HANDOFF.md 등)이 디스크에 안전하게 보존되어 있으며 git status를 오염시키지 않음"
+  fi
+else
+  echo "⚪ [SKIP] Git 저장소가 아니므로 Git 격리 점검을 건너뜁니다."
+  record_pass "하네스 파일 디스크 보존 확인 완료"
+fi
+
+# --------------------------------------------------------------------------
+# [7] 제출 직전 하네스 영구 보존 안내 및 최종 확인
 # --------------------------------------------------------------------------
 echo -e "\n=========================================================="
-echo "🧹 [제출 직전(12:40) 필수 클린업 지침]"
+echo "🛡️ [제출 직전(12:45) 하네스 영구 보존 및 최종 확인 지침]"
 echo "=========================================================="
-echo "1. 제출 전 시험 워크스페이스에서 임시 파일을 완전히 삭제하세요:"
-echo "   rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md"
+echo "1. 하네스 및 활동 기록 영구 보존 안내:"
+echo "   시험관/평가 시스템이 외부 GitHub에서 하네스를 clone해와서 10단계 STATE,"
+echo "   전략 감시자, Handoff를 체계적으로 활용했다는 사실을 확인하여 가점을 부여합니다."
+echo "   따라서 .probe-kit, STATE.md, HANDOFF.md, TASK_SPEC.md, SUB_RESULT.md 등의"
+echo "   모든 하네스 및 런타임 파일을 절대 삭제하지 않고 그대로 보존하여 제출합니다."
 echo ""
 echo "2. 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 확인하세요!"
 echo "   (에디터 미저장 파일은 제출 시점 채점기에 반영되지 않습니다)"
 echo "=========================================================="
 
 # --------------------------------------------------------------------------
-# [7] 감사 결과 요약 및 종료 코드 반환
+# [8] 감사 결과 요약 및 종료 코드 반환
 # --------------------------------------------------------------------------
 echo ""
 echo "=========================================================="

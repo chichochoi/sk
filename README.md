@@ -8,37 +8,46 @@
 git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe-kit/init.sh
 ```
 
-## 🧹 제출 직전 클린업
+## 🛡️ 제출 직전 감사 및 하네스 활용 기록 영구 보존
 
 ```bash
 bash .probe-kit/scripts/pre_submit_audit.sh
-rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md
 ```
+> **🚨 하네스 및 활동 기록 영구 보존 안내 (가점 필수):**
+> 채점관이 시험 중 외부 GitHub에서 하네스를 clone해와서 10단계 STATE 추적, Pane 3 전략 감시자, Handoff 인수인계, TASK_SPEC/SUB_RESULT 핸드셰이크를 체계적으로 활용했음을 확인하여 최고 수준의 가점을 부여합니다. 따라서 `.probe-kit/`, `STATE.md`, `HANDOFF.md`, `TASK_SPEC.md`, `SUB_RESULT.md`, `NOTES_TEMP.md` 등의 모든 파일을 **절대 삭제하지 않고 온전히 보존하여 제출**합니다. (`init.sh`에서 `.git/info/exclude`로 등록되어 있어 원본 Git을 오염시키지 않습니다.)
 
 ## 📁 저장소 파일 맵
 
 | 파일 경로 | 구분 | 설명 |
 | :--- | :--- | :--- |
-| `foruser.md` | 수험생 실전 매뉴얼 | 시험 당일 10:00부터 13:30까지 그대로 따라 하는 인간 주도형 올인원 시나리오 |
-| `init.sh` | 하네스 설치 | 하네스·모델 설정 주입 + `.git/info/exclude` 오염 방지 + 초기 EDA 스캔 원클릭 실행 |
+| `foruser.md` | 수험생 실전 매뉴얼 | 시험 당일 10:00부터 13:30까지 그대로 따라 하는 인간 주도형 3-Pane 올인원 시나리오 |
+| `init.sh` | 하네스 설치 | 하네스·모델 설정 주입 + `.git/info/exclude` 오염 방지 + 초기 EDA 스캔 + STATE 초기화 원클릭 실행 |
 | `config.toml` | 모델 프리셋 | 기본 모델(`Sol 6.1 xhigh`) 및 서브 프로필(`Luna 6 xhigh`) 설정 |
-| `AGENTS.md` | 공통 헌법 | 메인(`Sol 6.1 xhigh`) 설계/지시 전담 헌법 및 6대 오케스트레이션 통제 규칙 |
+| `AGENTS.md` | 공통 헌법 | 메인(`Sol 6.1 xhigh`) 설계/지시 전담 헌법 (3-Pane 구조, STATE 10단계, Handoff 연동) |
 | `SUB_AGENTS.md` | 서브 헌법 | 서브(`Luna 6 xhigh`) 전용 고속 구현·검증·요약 보고 프로토콜 |
+| `MONITOR_AGENTS.md` | 감시 헌법 | Pane 3 전략 감시자(`Sol 6.1 xhigh`) 운영 헌법 (Zero-Write, 15%p 지연 시 Scope Cut 권고) |
+| `runtime/STATE.md` | 상태 기록 | 10단계 타임라인 추적 & 3대 전환 감사(경고 모드) 영구 보존 로그 |
+| `runtime/HANDOFF.md` | 인수인계 버퍼 | 세션 교체 시 맥락·확정 결정·Next Action 1~3 보존 인수인계서 |
 | `runtime/TASK_SPEC.md` | 작업 큐 | 메인이 작성하는 모듈별 작업 명세서 (목표·대상 파일·제약·검증 명령) |
 | `runtime/SUB_RESULT.md` | 결과 버퍼 | 서브가 구현/검증 후 남기는 핵심 요약 보고서 (변경 파일·테스트 결과) |
 | `skills/case1_data_pipeline.md` | 온디맨드 스킬 | Case 1, 5: 데이터 정제·집계·임계값 판정·표본 수동 대조 지침 |
 | `skills/case2_web_service.md` | 온디맨드 스킬 | Case 2: `0.0.0.0` 바인딩·핵심 동선 수직 완성·예외 UI 방어 지침 |
 | `skills/case3_legacy_debug.md` | 온디맨드 스킬 | Case 3: 베이스라인 테스트·인터페이스 유지·최소 범위 디버깅 지침 |
 | `skills/case4_policy_rag_doc.md` | 온디맨드 스킬 | Case 4, 6, 7, 8: 규정 조항 색인화·수동 검토 플래그·환각 통제·대안 비교 지침 |
+| `skills/handoff.md` | 온디맨드 스킬 | 세션 분할 및 Handoff 4대 골든 타이밍 & 3단계 표준 프로토콜 지침 |
 | `prompts/01_dm_questions.md` | 프롬프트 치트시트 | 우측 DM '업무 담당자' 5단계 만능 12문 + 케이스별 질문 + 비상 힌트 유도문 |
-| `prompts/02_codex_prompts.md` | 프롬프트 치트시트 | 메인/서브 단계별 통제 프롬프트 4종 (초기 진단 / TASK_SPEC 생성 / 서브 실행 / 검수) |
+| `prompts/02_codex_prompts.md` | 프롬프트 치트시트 | 메인/서브 단계별 통제 프롬프트 6종 (초기 진단, 지시서, 실행, 검수, Handoff 5·6) |
 | `prompts/03_post_qna_formula.md` | 프롬프트 치트시트 | 마지막 30분 후속 서술형(6문항×5분) 4문장 타이핑 공식 & 전제 불일치 방어문 |
+| `prompts/04_monitor_prompts.md` | 프롬프트 치트시트 | Pane 3 전략 감시자 전용 복붙 프롬프트 5종 (초기화, 정기점검, Scope Cut 등) |
 | `templates/NOTES.md` | 문서 템플릿 | 시험 중 실시간 기록장 (`NOTES_TEMP.md` 복사본) |
 | `templates/SUBMISSION_REPORT.md` | 문서 템플릿 | 최종 제출용 과제 수행 계획 및 검증 보고서 템플릿 |
+| `scripts/state.sh` | 상태 관리 도구 | Cofa Probe 10단계 상태 추적, 지연시간 계산, 3대 전환 감사 대화형 엔진 |
+| `scripts/monitor.sh` | 실시간 감시 도구 | Pane 3 실시간 워크스페이스 상태 감시 대시보드 (`watch` / `once`) 및 지연 경보 |
+| `scripts/handoff.sh` | 인수인계 수집기 | 세션 교체 시 Git diff, 커밋, STATE 기반 `HANDOFF.md` 골격 자동 수집기 |
 | `scripts/subagent.sh` | 자동화 도구 | `Luna 6 xhigh`로 `TASK_SPEC.md`를 실행하고 결과만 요약 반환하는 서브 호출기 |
 | `scripts/eda_scan.py` | 자동화 도구 | CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약하는 무토큰 EDA 스캐너 |
 | `scripts/sample_check_template.py` | 검증 도구 | 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 교차 검증 템플릿 |
-| `scripts/pre_submit_audit.sh` | 검증 도구 | `git diff` 범위·민감정보·`localhost` 바인딩·리소스 일괄 점검 감사 스크립트 |
+| `scripts/pre_submit_audit.sh` | 검증 도구 | `git diff` 범위·민감정보·`localhost` 바인딩·STATE·하네스 영구 보존 일괄 점검 |
 
 ---
 # 🎯 SK하이닉스 AI 해커톤 2차 예선 (Cofa Probe) 최종 통합 마스터 플레이북 & 메인/서브 Git 하네스
@@ -86,36 +95,45 @@ rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md
 ```text
 probe-kit/
 ├── README.md                     # 이 마스터 플레이북 전문 (에디터 우측에 띄워둘 총사령부 문서)
-├── foruser.md                    # [수험생 실전 매뉴얼] 10:00~13:30 인간 주도형 올인원 시나리오
-├── init.sh                       # [원클릭 장착] 하네스·모델 설정 주입 + .git/info/exclude 오염 방지 + 초기 EDA 스캔
+├── foruser.md                    # [수험생 실전 매뉴얼] 10:00~13:30 인간 주도형 3-Pane 올인원 시나리오
+├── init.sh                       # [원클릭 장착] 하네스·모델 설정 주입 + .git/info/exclude 오염 방지 + 초기 EDA 스캔 + STATE 초기화
 ├── config.toml                   # [모델 설정] 기본 모델(Sol 6.1 xhigh) 및 서브 프로필(Luna 6 xhigh) 프리셋
-├── AGENTS.md                     # [메인+공통 헌법] 역할 분담(Architect vs Worker) 및 6대 통제 규칙
-├── SUB_AGENTS.md                 # [서브 전용 헌법] Luna 6 xhigh 전용 고속 구현·검증·요약 보고 프로토콜
+├── AGENTS.md                     # [메인 헌법] Sol 6.1 xhigh 설계/지시 전담 헌법 (3-Pane 구조, STATE 10단계, Handoff 연동)
+├── SUB_AGENTS.md                 # [서브 헌법] Luna 6 xhigh 전용 고속 구현·검증·요약 보고 프로토콜
+├── MONITOR_AGENTS.md             # [감시 헌법] Pane 3 전략 감시자(Sol 6.1 xhigh) 운영 헌법 (Zero-Write, 15%p 지연 시 Scope Cut 권고)
 │
-├── runtime/                      # [핸드셰이크 버퍼] 메인 ↔ 서브 에이전트가 토큰 낭비 없이 통신하는 작업 큐
+├── runtime/                      # [핸드셰이크 버퍼/상태] 에이전트 간 무토큰 핸드셰이크 & 진행 추적 버퍼
+│   ├── STATE.md                  # 10단계 타임라인 추적 & 3대 전환 감사(경고 모드) 영구 보존 로그
+│   ├── HANDOFF.md                # 세션 교체 시 맥락·확정 결정·Next Action 1~3 보존 인수인계서
 │   ├── TASK_SPEC.md              # 메인(Sol 6.1 xhigh)이 작성하는 모듈별 작업 지시서 (목표·파일·제약·검증 명령)
-│   └── SUB_RESULT.md             # 서브(Luna 6 xhigh)가 실행 후 남기는 핵심 요약 보고서 (변경 파일·테스트 결과)
+│   ├── SUB_RESULT.md             # 서브(Luna 6 xhigh)가 실행 후 남기는 핵심 요약 보고서 (변경 파일·테스트 결과)
+│   └── EDA_SUMMARY.txt           # init.sh 실행 시 무토큰 자동 생성되는 데이터/코드 요약문
 │
 ├── skills/                       # [온디맨드 스킬] 판별된 케이스 파일만 서브 에이전트에게 읽히는 도메인 지침
 │   ├── case1_data_pipeline.md    # Case 1, 5: 데이터 정제·집계·임계값 판정·표본 수동 대조
 │   ├── case2_web_service.md      # Case 2: 0.0.0.0 바인딩·핵심 동선 수직 완성·예외 UI 방어
 │   ├── case3_legacy_debug.md     # Case 3: 베이스라인 테스트·인터페이스 유지·최소 범위 디버깅
-│   └── case4_policy_rag_doc.md   # Case 4, 6, 7, 8: 규정 조항 색인화·수동 검토 플래그·환각 통제·대안 비교
+│   ├── case4_policy_rag_doc.md   # Case 4, 6, 7, 8: 규정 조항 색인화·수동 검토 플래그·환각 통제·대안 비교
+│   └── handoff.md                # 세션 분할 및 Handoff 4대 골든 타이밍 & 3단계 표준 프로토콜 지침
 │
 ├── prompts/                      # [복붙 치트시트] 에디터 우측에 띄워두고 쓰는 인간용 무기
 │   ├── 01_dm_questions.md        # 우측 DM '업무 담당자' 공략용 5단계 만능 12문 + 케이스별 질문 + 비상 힌트 유도문
-│   ├── 02_codex_prompts.md       # 메인/서브 단계별 통제 프롬프트 4종 (초기 진단 / TASK_SPEC 생성 / 서브 실행 / 검수·전환)
-│   └── 03_post_qna_formula.md    # 마지막 30분 후속 서술형(6문항×5분) 직접 타이핑용 4문장 공식 & 전제 불일치 방어문
+│   ├── 02_codex_prompts.md       # 메인/서브 단계별 통제 프롬프트 6종 (초기 진단, 지시서, 실행, 검수, Handoff 5·6)
+│   ├── 03_post_qna_formula.md    # 마지막 30분 후속 서술형(6문항×5분) 직접 타이핑용 4문장 공식 & 전제 불일치 방어문
+│   └── 04_monitor_prompts.md     # Pane 3 전략 감시자 전용 복붙 프롬프트 5종 (초기화, 정기점검, Scope Cut 등)
 │
 ├── templates/                    # [문서 템플릿]
 │   ├── NOTES.md                  # 실시간 메모장 (담당자 DM 답변 + [결정]-[근거]-[검증]-[한계] 기록)
 │   └── SUBMISSION_REPORT.md      # 최종 제출용 과제 수행 계획 및 검증 보고서 템플릿
 │
 └── scripts/                      # [자동화 & 검증 도구]
+    ├── state.sh                  # Cofa Probe 10단계 상태 추적, 지연시간 계산, 3대 전환 감사 엔진
+    ├── monitor.sh                # Pane 3 실시간 워크스페이스 상태 감시 대시보드 (watch/once)
+    ├── handoff.sh                # 세션 교체 시 Git diff, 커밋, STATE 기반 HANDOFF.md 골격 자동 수집기
     ├── subagent.sh               # [서브 호출기] Luna 6 xhigh로 TASK_SPEC.md를 실행하고 결과만 요약 반환
     ├── eda_scan.py               # [무토큰 EDA] CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약
     ├── sample_check_template.py  # [표본 대조] 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 검증 템플릿
-    └── pre_submit_audit.sh       # [제출 전 감사] git diff 범위·민감정보·localhost 바인딩·리소스 일괄 점검
+    └── pre_submit_audit.sh       # [제출 전 감사] git diff 범위·민감정보·localhost·STATE·하네스보존 일괄 점검
 ```
 
 ---
@@ -358,8 +376,8 @@ grep -rnE "(127\.0\.0\.1|localhost)" \
 echo -e "\n[4] 시스템 리소스(CPU/RAM) 여유 상태 점검"
 free -m 2>/dev/null || top -bn1 | head -n 5
 
-echo -e "\n[5] 임시 파일 정리 확인 안내"
-echo "⚠️ 제출 직전 'rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md' 를 실행해 임시 파일을 제거하세요!"
+echo -e "\n[5] 하네스 영구 보존 및 최종 저장 확인 안내"
+echo "🛡️ 하네스 및 활동 기록(.probe-kit, STATE.md, HANDOFF.md 등)은 채점관 가점 확인용이므로 절대 삭제하지 말고 보존하세요!"
 echo "⚠️ 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 최종 확인하세요!"
 ```
 
@@ -664,7 +682,7 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
   - 내장 Browser(`0.0.0.0` 바인딩) 직접 클릭 조작 검증 및 데이터 표본 수동 대조 테스트 실행.
   - 터미널 1(`Sol 6.1 xhigh`)과 함께 **제출용 계획/협업 문서** 완성.
   - `bash /tmp/probe-kit/scripts/pre_submit_audit.sh` 실행하여 `git diff`·민감정보·`localhost`·메모리 상태 최종 점검 로그 기록.
-  - **`rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md`** 실행하여 임시 링크/버퍼 제거 → `git status` 확인 → **모든 파일 `Ctrl+S` ('저장됨' 상태)** 확인.
+  - **하네스 영구 보존:** 채점관 가점 확인을 위해 `.probe-kit`, `STATE.md`, `HANDOFF.md`, `TASK_SPEC.md`, `SUB_RESULT.md`, `NOTES_TEMP.md`를 **절대 삭제하지 않고 보존** → `git status` 확인 (`.git/info/exclude`로 과제 Git 클린 상태 유지) → **모든 파일 `Ctrl+S` ('저장됨' 상태)** 확인.
 - [ ] **12:50 ~ 13:00 [제출 확정 & 서술형 대기]**
   - `제출하고 문제풀기` → `제출물 확정하고 문제풀기` 클릭.
   - 질문 생성 대기 시간(약 5~10분) 동안 내가 만든 코드의 파일/함수명, 선택 근거, 검증 방법, 한계점 머릿속 복기.

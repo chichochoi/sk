@@ -1,6 +1,6 @@
-# Cofa Probe Dual-Agent Orchestration Harness (Main: Sol 6.1 xhigh / Sub: Luna 6 xhigh)
+# Cofa Probe 3-Pane Multi-Agent Orchestration Harness (Main: Sol 6.1 xhigh / Sub: Luna 6 xhigh / Monitor: Sol 6.1 xhigh)
 
-이 작업 공간은 토큰 효율(Cost Engineering)과 설계 정합성을 극대화하기 위해 **메인 아키텍트(Main Agent)**와 **서브 워커(Sub-Agent)** 이원화 체제로 운영됩니다.
+이 작업 공간은 토큰 효율(Cost Engineering), 설계 정합성 및 실시간 페이스 조율을 극대화하기 위해 **메인 아키텍트(Main Agent)**, **서브 워커(Sub-Agent)**, **전략 감시자(Strategy Monitor)** 3-Pane 멀티 에이전트 체제로 운영됩니다.
 
 ---
 
@@ -20,6 +20,9 @@
 3. **서브 에이전트 호출 및 결과 검수:**
    - `TASK_SPEC.md` 작성 후, `bash .probe-kit/scripts/subagent.sh` 실행을 제안하거나 사용자가 서브 터미널(`Luna 6 xhigh`)에서 실행하도록 안내하세요.
    - 서브 작업이 끝나면 전체 코드를 다 읽지 말고 `.probe-kit/runtime/SUB_RESULT.md`와 `git diff --stat`만 확인하여 다음 단계 지시서(`TASK_SPEC.md`)를 수립하세요.
+4. **STATE 10단계 추적 및 Handoff 프로토콜 준수:**
+   - `scripts/state.sh` 기반으로 과제 진행 단계(1~10단계)와 타임라인을 확인하고, 단계 전환 시 3대 전환 감사(드리프트, 증거 누락, 과도한 순조로움)를 성실히 기록하세요.
+   - 4대 골든 타이밍(MVP 완료, 제약 망각, 방향 전환, 최종 검증 진입) 도래 시 `scripts/handoff.sh` 및 `skills/handoff.md` 프로토콜에 따라 인수인계서(`HANDOFF.md`)를 구조화하여 세션 바통 터치를 수행하세요.
 
 ---
 
@@ -36,11 +39,12 @@
 
 ---
 
-## 🛡️ 공통 4대 절대 불변 규칙 (All Agents)
+## 🛡️ 공통 5대 절대 불변 규칙 (All Agents)
 1. **오버엔지니어링 금지 (Cognition):** 사용자가 후속 서술형 평가(6문항×5분)에서 4문장으로 모든 동작 원리와 한계를 설명할 수 있는 단순하고 명확한 구조만 사용하세요.
 2. **보안 및 인터페이스 유지 (Technique):** 기존 인증 방식·라우터·API 스키마를 깨뜨리지 말고, API 키나 개인정보를 절대 평문으로 하드코딩하지 마세요.
 3. **대용량 데이터 프롬프트 덤프 금지:** CSV/JSON/로그 원문을 프롬프트에 통째로 출력하지 말고 Python 스크립트로 집계/검증만 수행하세요.
 4. **제출 문서 정직성:** 제출용 보고서 작성 시 실제 구현된 코드와 실제 실행한 테스트 로그만을 근거로 `[결정] - [근거] - [검증] - [한계]` 구조에 맞춰 작성하세요.
+5. **하네스 및 활동 기록 영구 보존 (평가 가점 확보):** 시험관이 10단계 STATE 로그, 감시 이력, Handoff 인수인계, 모듈 핸드셰이크 기록을 검증하여 가점을 부여하므로, `.probe-kit/` 및 런타임 파일(`STATE.md`, `HANDOFF.md`, `TASK_SPEC.md`, `SUB_RESULT.md`, `NOTES_TEMP.md`)을 절대 삭제하지 않고 보존하여 제출하세요 (`.git/info/exclude`로 Git 클린 격리).
 
 ---
 
@@ -66,10 +70,11 @@
 
 ---
 
-## 📌 메인/서브 이원화 통제 5대 원칙 (의도 축 + 토큰 비용 극소화)
-1. **터미널 2개 분리 운용 (가장 확실하고 빠른 방법):**
-   - **터미널 1 (`Main - Sol 6.1 xhigh`):** 아키텍트 전용. 비즈니스 코드를 직접 짜게 하지 말고, 구조 진단·작업 분할·`.probe-kit/runtime/TASK_SPEC.md` 작성·최종 제출 문서 초안 작성만 수행합니다.
-   - **터미널 2 (`Sub - Luna 6 xhigh`):** 워커 전용. `TASK_SPEC.md`를 읽고 실제 파일 수정·단위 테스트 실행·디버깅만 수행하게 한 뒤, 모듈 1개가 끝날 때마다 `/clear`를 입력해 컨텍스트를 초기화합니다 (토큰 절약 핵심).
+## 📌 3-Pane 멀티 에이전트 통제 5대 원칙 (의도 축 + 토큰 비용 극소화)
+1. **터미널 3개(3-Pane) 분리 운용 (가장 확실하고 빠른 방법):**
+   - **Pane 1 (`Main - Sol 6.1 xhigh`):** 아키텍트 전용. 비즈니스 코드를 직접 짜게 하지 말고, 구조 진단, 10단계 STATE 추적·전환, 작업 분할, `.probe-kit/runtime/TASK_SPEC.md` 작성, Handoff 인수인계, 최종 제출 문서 초안 작성만 수행합니다.
+   - **Pane 2 (`Sub - Luna 6 xhigh`):** 워커 전용. `TASK_SPEC.md`를 읽고 실제 파일 수정·단위/예외 테스트 실행·디버깅만 수행하게 한 뒤, 모듈 1개가 끝날 때마다 `/clear`를 입력해 컨텍스트를 초기화합니다 (토큰 절약 핵심).
+   - **Pane 3 (`Monitor - Sol 6.1 xhigh` & `monitor.sh`):** 전략 감시자 & 페이스메이커. Zero-Write 원칙으로 코드 수정을 일체 금지하며, `monitor.sh watch`로 실시간 지연을 감시하고, 15%p 지연 발생 시 즉시 🚨 긴급 범위축소(Scope Cut) 권고를 발령합니다.
 2. **모든 `TASK_SPEC.md`에 4요소 강제:**
    - ① 이번 단계 목표, ② 유지할 제약(담당자 DM 조건), ③ 변경 파일 범위, ④ 검증 테스트 명령어를 반드시 명시합니다.
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:**

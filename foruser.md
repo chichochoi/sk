@@ -2,7 +2,7 @@
 > **시험장에서 오직 이 문서 하나만 켜두고 10:00부터 13:30까지 그대로 따라 하는 올인원 실전 매뉴얼**
 > 
 > * **목표:** 크래프톤 KOPA(Cofa) Probe 3대 평가축(**기술 40% · 의도 30% · 인지 30%**) 만점 획득
-> * **핵심 전략:** 수험생(인간)이 주도적으로 가설을 제시하고, 메인 에이전트(`Sol 6.1 xhigh`)와 트레이드오프를 논의하여 결정을 내린 뒤, 서브 에이전트(`Luna 6 xhigh`)에 모듈별 구현을 위임하여 토큰 70% 절감과 환각 0%를 달성하는 오케스트레이션
+> * **핵심 전략:** 수험생(인간)이 주도적으로 가설을 제시하고, 메인 에이전트(`Sol 6.1 xhigh`)와 트레이드오프를 논의하여 결정을 내린 뒤, 서브 에이전트(`Luna 6 xhigh`)에 모듈별 구현을 위임하고, 전략 감시자(`Sol 6.1 xhigh` + `monitor.sh`)가 페이스와 드리프트를 통제하는 3-Pane 오케스트레이션으로 토큰 70% 절감과 환각 0% 달성
 
 ---
 
@@ -12,15 +12,15 @@
 | :--- | :--- | :--- | :--- |
 | **사전** | **[0] 사전 이해** | probe-kit 저장소 파일 맵 및 역할 이해 | 파일 3분류 (내 무기 vs 에이전트 헌법 vs 자동화) |
 | **10:00** | **[1단계] 시작 0초** | 원클릭 클론 & 하네스 장착 스크립트 실행 | `git clone ... && bash /tmp/probe-kit/init.sh` |
-| **10:03** | **[2단계] 환경 확인** | 워크스페이스 Git 보호 및 무토큰 EDA 확인 | `git status` & `cat .probe-kit/runtime/EDA_SUMMARY.txt` |
-| **10:05** | **[3단계] 듀얼 터미널** | 터미널 1(메인 Sol) ↔ 터미널 2(서브 Luna) 분리 | `codex` / `/status` / `/model` 설정 |
-| **10:08** | **[4단계] DM 실무자 공략** | 산출물 형식·결측치/취소·인터페이스 3종 질문 질의 | 우측 DM 창 + `NOTES_TEMP.md` 기록 |
-| **10:15** | **[5단계] 인간 주도 협업** | 가설 제시 ➔ 대안 트레이드오프 비교 ➔ 결정 및 지시 | 메인 Sol 티키타카 3단계 프롬프트 (가산점 핵심) |
-| **10:25** | **[6단계] 케이스 매핑** | 데이터/웹/디버깅/규정 케이스 판별 및 스킬 연동 | `.probe-kit/skills/case*.md` 지정 |
-| **10:30~12:20** | **[7단계] 핑퐁 구현 루프** | 메인 `TASK_SPEC` ➔ 서브 실행 ➔ `SUB_RESULT` ➔ `/clear` | 터미널 1 ↔ 터미널 2 핑퐁 사이클 반복 |
-| **12:20~12:45** | **[8단계] 최종 검증 & 보고서** | 표본 15건 수동 대조 및 최종 보고서 초안 생성 | `sample_check_template.py` + `SUBMISSION_REPORT.md` |
-| **12:45~12:55** | **[9단계] 감사 & 최종 제출** | 사전 감사 ➔ 하네스 삭제 ➔ 12:55 과제 최종 제출 | `pre_submit_audit.sh` ➔ `rm -rf` ➔ `제출물 확정` |
-| **13:00~13:30** | **[10단계] 후속 서술형** | 6문항 × 5분 4문장 공식 직접 타이핑 | 4문장 공식 ([결정]-[근거]-[검증]-[한계]) |
+| **10:03** | **[2단계] 환경 확인** | 워크스페이스 Git 보호, 무토큰 EDA & STATE 확인 | `git status` & `cat .probe-kit/runtime/EDA_SUMMARY.txt` & `state.sh status` |
+| **10:05** | **[3단계] 3-Pane 분리** | 터미널 1(메인 Sol) ↔ 터미널 2(서브 Luna) ↔ 터미널 3(감시자 Sol) 분리 | `codex` / `/model` / `monitor.sh watch` |
+| **10:08** | **[4단계] DM 실무자 공략** | 산출물 형식·결측치/취소·인터페이스 3종 질문 질의 | 우측 DM 창 + `NOTES_TEMP.md` 기록 (`state.sh next`) |
+| **10:15** | **[5단계] 인간 주도 협업** | 가설 제시 ➔ 대안 트레이드오프 비교 ➔ 결정 및 지시 | 메인 Sol 티키타카 3단계 프롬프트 (가산점 핵심, `state.sh next`) |
+| **10:25** | **[6단계] 케이스 매핑** | 데이터/웹/디버깅/규정 케이스 판별 및 스킬 연동 | `.probe-kit/skills/case*.md` 지정 (`state.sh next`) |
+| **10:30~12:20** | **[7단계] 핑퐁 구현 루프** | 메인 `TASK_SPEC` ➔ 서브 실행 ➔ `SUB_RESULT` ➔ `/clear`<br>+ `state.sh next` 3대 전환 감사 + Handoff 바통 터치 | 터미널 1 ↔ 터미널 2 핑퐁 사이클 반복 + 터미널 3 감시 |
+| **12:20~12:45** | **[8단계] 최종 검증 & 보고서** | 표본 15건 수동 대조 및 최종 보고서 초안 생성 | `sample_check_template.py` + `SUBMISSION_REPORT.md` (`state.sh next`) |
+| **12:45~12:55** | **[9단계] 감사 & 최종 제출** | 사전 감사 ➔ 하네스 영구 보존 ➔ 12:55 과제 최종 제출 | `pre_submit_audit.sh` ➔ 하네스 영구 보존 ➔ `제출물 확정` |
+| **13:00~13:30** | **[10단계] 후속 서술형** | 6문항 × 5분 4문장 공식 직접 타이핑 | 4문장 공식 ([결정]-[근거]-[검증]-[한계], `state.sh next`) |
 
 ---
 
@@ -31,45 +31,53 @@
 ```text
 probe-kit/
 ├── foruser.md                       # 👑 [수험생 전용] 지금 읽고 있는 실전 마스터 매뉴얼
-├── init.sh                          # [원클릭 장착] 하네스 설치 + Git 보호 + 무토큰 EDA 스캔
+├── init.sh                          # [원클릭 장착] 하네스 설치 + Git 보호 + 무토큰 EDA 스캔 + STATE 초기화
 ├── config.toml                      # [모델 프리셋] Sol 6.1 xhigh & Luna 6 xhigh 기본 설정
-├── AGENTS.md                        # [메인 헌법] Sol 6.1에게 코드 작성 금지 & 설계·지시 강제
+├── AGENTS.md                        # [메인 헌법] Sol 6.1에게 코드 작성 금지 & 설계·지시 강제 (3-Pane 구조)
 ├── SUB_AGENTS.md                    # [서브 헌법] Luna 6에게 지시서 엄수 & 구현·테스트 전담 강제
+├── MONITOR_AGENTS.md                # [감시 헌법] Sol 6.1 전략 감시자·페이스메이커 운영 헌법
 │
-├── runtime/                         # [작업 큐] 메인 ↔ 서브가 통신하는 무토큰 핸드셰이크 버퍼
+├── runtime/                         # [작업 큐/상태] 에이전트 간 무토큰 핸드셰이크 & 진행 추적 버퍼
+│   ├── STATE.md                     # 10단계 타임라인 추적 & 3대 전환 감사 로그
+│   ├── HANDOFF.md                   # 세션 교체 시 맥락·결정·Next Action 보존 인수인계서
 │   ├── TASK_SPEC.md                 # 메인(Sol)이 작성하는 단일 모듈 작업 지시서
 │   ├── SUB_RESULT.md                # 서브(Luna)가 실행 후 기록하는 요약 결과 보고서
 │   └── EDA_SUMMARY.txt              # init.sh 실행 시 무토큰 자동 생성되는 데이터/코드 요약문
 │
 ├── prompts/                         # [인간용 무기] 상황별로 에디터 우측에서 즉시 복붙할 프롬프트
 │   ├── 01_dm_questions.md           # 우측 DM 실무자 공략 12문 + 비상 힌트 유도문
-│   ├── 02_codex_prompts.md          # 메인/서브 단계별 통제 프롬프트 4종
-│   └── 03_post_qna_formula.md       # 후속 서술형 6문항 4문장 타이핑 공식 & 전제 불일치 치트키
+│   ├── 02_codex_prompts.md          # 메인/서브 단계별 통제 프롬프트 6종 (초기 진단, 지시서, 실행, 검수, Handoff 5·6)
+│   ├── 03_post_qna_formula.md       # 후속 서술형 6문항 4문장 타이핑 공식 & 전제 불일치 치트키
+│   └── 04_monitor_prompts.md        # 전략 감시자(Pane 3) 전용 복붙 프롬프트 5종 (초기화, 정기점검, Scope Cut 등)
 │
 ├── skills/                          # [도메인 지침] 문제 유형별로 서브 에이전트에게 읽힐 전문 규칙
 │   ├── case1_data_pipeline.md       # Case 1, 5: 데이터 정제·집계·표본 수동 대조 지침
 │   ├── case2_web_service.md         # Case 2: 0.0.0.0 바인딩·핵심 동선 수직 완성 지침
 │   ├── case3_legacy_debug.md        # Case 3: 베이스라인 테스트·인터페이스 불변 디버깅 지침
-│   └── case4_policy_rag_doc.md      # Case 4, 6, 7, 8: 규정 색인·수동 검토 플래그·환각 통제 지침
+│   ├── case4_policy_rag_doc.md      # Case 4, 6, 7, 8: 규정 색인·수동 검토 플래그·환각 통제 지침
+│   └── handoff.md                   # 세션 분할 및 Handoff 4대 골든 타이밍 & 3단계 표준 프로토콜
 │
 ├── templates/                       # [문서 템플릿]
 │   ├── NOTES.md                     # 실시간 의사결정 메모장 (루트의 NOTES_TEMP.md 원본)
 │   └── SUBMISSION_REPORT.md         # 최종 제출용 계획 및 검증 보고서 템플릿
 │
 └── scripts/                         # [자동화 & 검증 도구]
+    ├── state.sh                     # Cofa Probe 10단계 상태 추적, 지연 계산, 3대 전환 감사 도구
+    ├── monitor.sh                   # 실시간 워크스페이스 상태 감시 및 메타 대시보드 (watch/once)
+    ├── handoff.sh                   # 세션 교체 시 Git diff, 커밋, STATE 기반 인수인계서 자동 수집기
     ├── subagent.sh                  # 서브 에이전트 자동 호출 래퍼 스크립트
     ├── eda_scan.py                  # 토큰 0원으로 CSV/JSON/테스트 파일 구조 분석 스캐너
     ├── sample_check_template.py     # 15건 표본 수동 기댓값 vs 스크립트 출력 교차 검증 도구
-    └── pre_submit_audit.sh          # 최종 제출 전 git diff·민감정보·localhost 점검 감사 도구
+    └── pre_submit_audit.sh          # 최종 제출 전 git diff·민감정보·localhost·STATE·하네스보존 감사 도구
 ```
 
 ### 📌 파일 역할 3분류 요약
 
 | 분류 | 대상 파일 | 사용 주체 및 용도 |
 | :--- | :--- | :--- |
-| **① 내가 직접 쓸 파일 (수험생 무기)** | `foruser.md`<br>`prompts/*.md`<br>`NOTES_TEMP.md` | 수험생이 화면 한쪽에 열어두고 타임라인에 맞춰 프롬프트를 복붙하거나 실시간 결정을 메모하는 파일 |
-| **② AI 에이전트가 읽을 파일 (헌법/버퍼)** | `AGENTS.md`<br>`SUB_AGENTS.md`<br>`TASK_SPEC.md`<br>`SUB_RESULT.md`<br>`skills/*.md` | Codex 에이전트 시스템 프롬프트 및 메인-서브 간 작업 지시/결과 보고 핸드셰이크 파일 |
-| **③ 자동화 스크립트 (검증 도구)** | `init.sh`<br>`scripts/eda_scan.py`<br>`scripts/sample_check_template.py`<br>`scripts/pre_submit_audit.sh` | 터미널에서 명령어로 실행하여 무토큰 분석, 표본 검증, 제출 전 감사를 수행하는 도구 |
+| **① 내가 직접 쓸 파일 (수험생 무기)** | `foruser.md`<br>`prompts/*.md` (01~04)<br>`NOTES_TEMP.md` | 수험생이 화면 한쪽에 열어두고 타임라인에 맞춰 프롬프트를 복붙하거나 실시간 결정을 메모하는 파일 |
+| **② AI 에이전트가 읽을 파일 (헌법/버퍼)** | `AGENTS.md`<br>`SUB_AGENTS.md`<br>`MONITOR_AGENTS.md`<br>`TASK_SPEC.md`<br>`SUB_RESULT.md`<br>`STATE.md`<br>`HANDOFF.md`<br>`skills/*.md` (case1~4, handoff.md) | Codex 에이전트 시스템 프롬프트, 10단계 STATE/인수인계 버퍼 및 메인-서브 간 작업 지시/결과 보고 핸드셰이크 파일 |
+| **③ 자동화 스크립트 (검증 도구)** | `init.sh`<br>`scripts/state.sh`<br>`scripts/monitor.sh`<br>`scripts/handoff.sh`<br>`scripts/subagent.sh`<br>`scripts/eda_scan.py`<br>`scripts/sample_check_template.py`<br>`scripts/pre_submit_audit.sh` | 터미널에서 명령어로 실행하여 무토큰 분석, 10단계 상태 전환 감사, 실시간 감시, Handoff 수집, 표본 검증, 사전 감사를 수행하는 도구 |
 
 ---
 
@@ -112,15 +120,15 @@ git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe
 
 ---
 
-## [2단계] 10:03 에이전트 설정 및 워크스페이스 보호 확인
+## [2단계] 10:03 에이전트 설정, 워크스페이스 보호 및 STATE 확인
 
-하네스 설치 직후 터미널에서 다음 2가지 명령어를 입력하여 정상 장착 상태를 검증합니다.
+하네스 설치 직후 터미널에서 다음 3가지 명령어를 입력하여 정상 장착 상태를 검증합니다.
 
 ### 1) Git 워크스페이스 오염 방지 검증
 ```bash
 git status
 ```
-* **정상 결과:** 워크스페이스 루트에 `.probe-kit` 심볼릭 링크와 `NOTES_TEMP.md`가 생성되었음에도, `Untracked files`에 **아무것도 나타나지 않아야 합니다.**
+* **정상 결과:** 워크스페이스 루트에 `.probe-kit` 및 `NOTES_TEMP.md`가 존재함에도, `Untracked files`에 **아무것도 나타나지 않아야 합니다.**
 * **이유:** `.git/info/exclude`에 등록되어 원본 과제 저장소의 Git 변경 내역을 100% 클린하게 보호합니다.
 
 ### 2) 무토큰 EDA 요약문 확인
@@ -130,55 +138,90 @@ cat .probe-kit/runtime/EDA_SUMMARY.txt
 * **정상 결과:** 과제에 포함된 데이터 파일(CSV, JSON)의 컬럼 구성, 총 행 수, 결측치 의심 개수 및 기존 테스트 파일 목록이 출력됩니다.
 * **효과:** AI 프롬프트에 수천 줄의 대용량 데이터를 넣지 않고도, 토큰 0원으로 데이터의 기본 스펙을 완벽히 파악할 수 있습니다.
 
+### 3) 10단계 STATE 추적 엔진 상태 확인 및 2단계 전환
+```bash
+bash .probe-kit/scripts/state.sh status
+```
+* **정상 결과:** 현재 단계 `[1/10] 설치`, 목표 시각, 과제 진척 0%, 지연 상태 등이 출력됩니다.
+* 확인이 끝나면 2단계(환경확인)로 전환합니다:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
+
 ---
 
-## [3단계] 10:05 듀얼 터미널 분리: 메인(Sol) × 서브(Luna)
+## [3단계] 10:05 3-Pane 트리플 터미널 분리: 메인(Sol) × 서브(Luna) × 전략 감시자(Sol)
 
 Cofa 시험에서 단일 터미널로 AI와 대화하면 코드 수정본, 테스트 로그, 에러 트레이스가 컨텍스트에 계속 누적되어 **토큰 비용이 기하급수적으로 폭발하고 후반부에 치명적인 환각(Hallucination)**이 발생합니다.
 
-반드시 **터미널을 2개 분리**하여 운영하세요!
+반드시 **터미널을 3개 창(Pane 1, Pane 2, Pane 3)으로 분리**하여 운영하세요!
 
 ```mermaid
 flowchart LR
     subgraph Human["수험생 (인간)"]
         H1["가설 제시 & DM 조건 확인"]
         H2["최종 방향 결정 & 지시"]
-        H3["엣지 케이스 비판적 검토"]
+        H3["3대 전환 감사 수행"]
     end
 
-    subgraph T1["터미널 1 (Main: Sol 6.1 xhigh)"]
+    subgraph T1["Pane 1 (Main: Sol 6.1 xhigh)"]
         M1["요구사항 구조화 & 트레이드오프 분석"]
         M2["TASK_SPEC.md 작성 (코드 작성 금지!)"]
-        M3["SUB_RESULT.md 검수 & 다음 단계 계획"]
+        M3["SUB_RESULT.md 검수 & Handoff"]
     end
 
-    subgraph T2["터미널 2 (Sub: Luna 6 xhigh)"]
+    subgraph T2["Pane 2 (Sub: Luna 6 xhigh)"]
         S1["TASK_SPEC.md 읽고 최소 구현 (MVP)"]
         S2["정상/예외 테스트 터미널 직접 실행"]
-        S3["SUB_RESULT.md 요약 기록 후 /clear 실행!"]
+        S3["SUB_RESULT.md 요약 후 /clear 리셋!"]
+    end
+
+    subgraph T3["Pane 3 (Monitor: Sol 6.1 xhigh & monitor.sh)"]
+        O1["monitor.sh watch (실시간 지연/상태 감시)"]
+        O2["드리프트 감지 & 15%p 지연 시 Scope Cut"]
+        O3["Zero-Write (코드/파일 수정 일체 금지)"]
     end
 
     Human <-->|"설계·판단 대화"| T1
     T1 -->|"작업 지시서"| S1
     S3 -->|"핵심 결과만 보고"| T1
     T2 -.->|"/clear 로 토큰 리셋"| T2
+    T3 -.->|"페이스 조언 & 긴급 권고"| Human
 ```
 
-### 🖥️ 터미널 1 설정 (메인 아키텍트 전담)
-1. 현재 터미널 창에서 `codex` 입력 후 Enter.
+### 🖥️ Pane 1 설정 (메인 아키텍트 전담)
+1. 첫 번째 터미널 창에서 `codex` 입력 후 Enter.
 2. `/status` 명령어로 현재 상태 확인.
 3. `/model` 입력 후 **`Sol 6.1 (xhigh)`** 선택 (`sol-6.1`, reasoning `xhigh`).
-4. **절대 규칙:** 메인에게는 비즈니스 소스 코드를 직접 짜게 하지 않습니다. 오직 설계, 실무자 질의 분석, 작업 지시서(`.probe-kit/runtime/TASK_SPEC.md`) 작성만 시킵니다.
+4. **절대 규칙:** 메인에게는 비즈니스 소스 코드를 직접 짜게 하지 않습니다. 오직 설계, 실무자 질의 분석, 작업 지시서(`.probe-kit/runtime/TASK_SPEC.md`) 작성, Handoff 인수인계만 시킵니다.
 
-### 🖥️ 터미널 2 설정 (서브 워커 전담)
-1. 터미널 창 우측 상단의 `+` (새 탭) 버튼을 눌러 새 터미널 생성.
+### 🖥️ Pane 2 설정 (서브 워커 전담)
+1. 터미널 창 우측 상단의 `+` (새 탭) 버튼을 눌러 새 터미널 창 생성.
 2. 새 터미널 창에서 `codex` 입력 후 Enter.
 3. `/status` 명령어로 현재 상태 확인.
 4. `/model` 입력 후 **`Luna 6 (xhigh)`** 선택 (`luna-6`, reasoning `xhigh`).
 5. **절대 규칙:** 서브는 오직 `TASK_SPEC.md`에 지정된 파일만 수정하고, 정상/예외 테스트를 직접 돌린 뒤, 결과를 `SUB_RESULT.md`에 기록하고 **반드시 `/clear`로 초기화**합니다.
 
+### 🖥️ Pane 3 설정 (전략 감시자 & 페이스메이커)
+1. 세 번째 터미널 창(Pane 3)을 열거나 화면을 분할합니다.
+2. **실시간 모니터 대시보드 실행:**
+   ```bash
+   bash .probe-kit/scripts/monitor.sh watch
+   ```
+   * 30초마다 현재 STATE(1~10단계), 경과/잔여 시간, 지연 여부, 최근 수정 파일, TASK_SPEC/SUB_RESULT 변경 내역을 실시간 감시합니다.
+3. **전략 감시 AI 운용 시 (별도 탭 또는 Pane 3 분할):**
+   * `codex` 실행 후 `/model`에서 **`Sol 6.1 (xhigh)`** 선택.
+   * `.probe-kit/prompts/04_monitor_prompts.md`의 **[감시 프롬프트 1]** 주입:
+     - Zero-Write 헌법(코드/파일 수정 일체 금지, 순수 조언 전용) 확립.
+     - 시간 소진율이 진척률보다 15%p 앞서면 즉시 🚨 긴급 범위축소(Scope Cut) 권고 발령.
+
 > [!CAUTION]
 > **모델 선택 주의:** `Astra` 모델이나 자동 화면 조작(`Computer Use`) 기능은 Cofa 규정상 사용이 엄격히 금지되어 있으며 감점 또는 실격 처리됩니다.
+
+* 터미널 3개 구성 완료 후 다음 단계(DM공략)로 전환:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
 
 ---
 
@@ -221,6 +264,11 @@ flowchart LR
 - [인터페이스] - 기존 src/process.py 내 run_pipeline() 함수의 파라미터 및 반환 형식 변경 금지
 ```
 
+* 실무자 질의 및 메모 작성이 완료되면 5단계(아이디어토론)로 전환합니다:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
+
 ---
 
 ## [5단계] 10:15 인간 주도 아이디어 제시 & 메인 Sol과의 티키타카 (핵심 가점)
@@ -258,6 +306,11 @@ flowchart LR
 - 서브가 실행할 정상 경로 및 예외 케이스(빈 값, 결측, 중복) 테스트 명령어와 참고할 스킬(.probe-kit/skills/case1_data_pipeline.md)을 반드시 포함해.
 ```
 
+* 아이디어 확정 및 지시서 작성 지시 후 6단계(케이스매핑)로 전환합니다:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
+
 ---
 
 ## [6단계] 케이스별 확인 폴더 및 스킬 매핑
@@ -270,6 +323,11 @@ flowchart LR
 | **Case 2** | **웹 서비스**<br>실무형 웹앱 구축 | `app/`<br>`frontend/`<br>`server/`<br>`templates/` | `.probe-kit/skills/case2_web_service.md` | - 서버 실행 시 반드시 `0.0.0.0` 바인딩<br>- 핵심 유저 동선 1개 수직 완성 (화면~DB)<br>- 내장 Browser에서 직접 클릭 조작<br>- 검증 중 서버 터미널 탭 유지 |
 | **Case 3** | **레거시 디버깅**<br>기능 확장 | `tests/`<br>`src/`<br>`README.md` | `.probe-kit/skills/case3_legacy_debug.md` | - 코딩 전 기존 베이스라인 테스트 1회 먼저 실행<br>- 기존 API 스키마/인증 방식 절대 불변<br>- 합의된 최소 범위만 수정 (`git diff` 확인) |
 | **Case 4, 6, 7, 8** | **업무 자동화 / RAG**<br>규정 색인 / 의사결정 | `docs/`<br>`policies/`<br>`rules/`<br>`config/` | `.probe-kit/skills/case4_policy_rag_doc.md` | - 문서 통째 요약 금지 (조항·위치 색인화)<br>- 애매한 케이스는 '수동 검토 필요' 플래그 분리<br>- AI 챗봇 시 근거 없는 질문 '확인 불가' 응답<br>- 대안 비교 시 장단점 + 버린 이유 명시 |
+
+* 문제 유형 판별 및 스킬 매핑 완료 후 7단계(핑퐁구현)로 본격 진입합니다:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
 
 ---
 
@@ -331,11 +389,64 @@ sequenceDiagram
 
 ---
 
+### 🔄 `state.sh next` 3대 전환 감사 (경고 모드) 운용법
+모듈 작업이 완료되어 다음 하위 단계로 넘어갈 때마다 터미널에서 아래 명령을 실행합니다:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
+스크립트는 다음 3대 자기감사 질문을 대화형으로 제시합니다:
+1. **드리프트 없나?** — 5단계(아이디어토론)에서 내가 결정한 방향과 지금 구현이 어긋나지 않았나?
+2. **증거 없는 체크 없나?** — '완료'라고 한 항목마다 실행 로그·테스트 결과가 실제로 있나?
+3. **너무 순조롭지 않았나?** — 실패 경로(빈 입력·결측·경계값)를 안 돌려봐서 순조로웠던 건 아닌가?
+
+> [!TIP]
+> **경고 모드 작동 원리:**
+> 감사 질문에 구체적 답변을 입력하면 `runtime/STATE.md`에 영구 보존되어 채점관에게 높은 인지 가점을 부여합니다. 만약 시간이 촉박하여 엔터(`Enter`)만 치거나 `--yes`로 실행하더라도 **전환을 차단하지 않고 `⚠️ 미응답` 경고 로그만 남긴 채 안전하게 다음 단계로 진행**합니다.
+
+---
+
+### 🎽 세션 분할 및 Handoff (인수인계) 프로토콜 (`skills/handoff.md` 연동)
+장시간 개발 시 메인 세션에 수만 토큰의 로그와 임시 에러가 누적되면 **응답 지연, 제약 망각(Drift), 토큰 폭발**이 발생합니다.
+따라서 다음 4대 골든 타이밍에 맞추어 세션을 교체하고 바통 터치를 수행합니다.
+
+#### ⏱️ Handoff 4대 골든 타이밍
+1. **Step 1 MVP 구현 완료 직후 (약 11:15 ~ 11:30):** 초기 탐색 로그를 털어내고 후속 확장을 위한 깨끗한 컨텍스트 확보
+2. **제약 망각 감지 시:** 메인이 취소건 제외 등 실무자 DM 제약을 잊고 지시서를 쓰기 시작할 때 즉시 중단 및 리셋
+3. **대규모 방향 전환 시:** A안을 폐기하고 B안으로 피벗할 때, 구 세션의 실패 잔재 소거
+4. **구현 종료 및 최종 검증 모드 진입 직전 (약 12:15):** 코드 수정을 동결하고 오직 검증/보고서에만 집중하는 전담 세션 전환
+
+#### 📋 Handoff 3단계 실행 절차
+1. **[1단계: Pane 1] 인수인계서 자동 수집 및 보강**
+   ```bash
+   bash .probe-kit/scripts/handoff.sh
+   ```
+   * Git diff, 최근 커밋, STATE 기반으로 `.probe-kit/runtime/HANDOFF.md` 골격 자동 수집.
+   * Pane 1 메인(`Sol 6.1 xhigh`)에게 `.probe-kit/prompts/02_codex_prompts.md`의 **[메인 프롬프트 5]**를 주입하여 [결정-근거-포기한대안], 실무자 제약, Next Actions 1~3가지를 보강.
+2. **[2단계: 전환] 기존 세션 종료 및 신규 세션 기동**
+   * Pane 1 터미널 종료 후 새 터미널에서 `codex` 기동 -> `/model`에서 **`Sol 6.1 (xhigh)`** 지정.
+   * (Pane 2 서브 에이전트에서도 `/clear` 입력하여 컨텍스트 비우기)
+3. **[3단계: 신규 세션] 인수인계서 인수 및 상태 복창**
+   * 신규 Pane 1 세션에 **[메인 프롬프트 6]** 주입:
+     *"코드를 건드리지 말고 HANDOFF.md를 정독한 뒤 (1) 현재 단계, (2) 확정된 결정 및 실무자 제약, (3) 착수할 Next Actions 3가지를 복창하라"*
+   * 메인의 복창을 확인하고 사용자가 *"승인 완료, 1번부터 착수하라"*고 확인한 후 작업을 재개합니다.
+
+---
+
+### 🛰️ Pane 3 전략 감시자 수시 점검 (15분 주기)
+- 15분마다 또는 모듈 완료 시 Pane 3에서 `bash .probe-kit/scripts/monitor.sh once` 출력을 확인하거나, 감시 AI에게 `.probe-kit/prompts/04_monitor_prompts.md`의 **[감시 프롬프트 2]**(정기 상태 점검) 또는 **[감시 프롬프트 3]**(긴급 범위축소 판정)을 입력하여 객관적 조언을 받습니다.
+
+---
+
 ## [8단계] 12:20~12:45 검증 및 제출 보고서 작성
 
 > [!WARNING]
 > **12:20 데드라인 규칙 (새 기능 추가 금지):**
 > 12:20(시험 종료 70분 전)이 되면 아무리 욕심이 나더라도 **새로운 기능 추가를 전면 중단**해야 합니다. Probe 평가는 불완전한 5개 기능보다 **완벽하게 검증되고 한계가 명시된 2~3개 핵심 기능(MVP)**에 훨씬 높은 점수를 부여합니다.
+
+* 12:20이 되면 8단계(검증보고서)로 전환합니다:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
 
 ### 1) 표본 15건 수동 대조 교차 검증 (기술 축 만점 공략)
 데이터 파이프라인 과제인 경우, 터미널에서 표본 수동 대조 스크립트를 실행합니다:
@@ -363,9 +474,14 @@ python .probe-kit/scripts/sample_check_template.py
 - 현재 구현의 한계점(예: 메모리 초과 가능성, 대용량 스트림 처리 불가 등)이 솔직하게 적혀 있는가?
 를 확인하고 어색한 표현을 다듬습니다.
 
+* 보고서 작성이 완료되면 9단계(감사제출)로 전환합니다:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
+
 ---
 
-## [9단계] 12:45~12:55 사전 감사 & 하네스 흔적 삭제 & 과제 최종 제출
+## [9단계] 12:45~12:55 사전 감사 & 하네스 영구 보존 & 과제 최종 제출
 
 > [!CAUTION]
 > **12:55 칼제출 필수:**
@@ -377,24 +493,27 @@ python .probe-kit/scripts/sample_check_template.py
 ```bash
 bash .probe-kit/scripts/pre_submit_audit.sh
 ```
-* **확인 항목:**
+* **점검 항목 (PASS/WARN 자동 판정):**
   1. `git diff --stat`: 과제 요구 외의 엉뚱한 파일이 수정되지 않았는가?
   2. 민감정보 노출: API 키, 패스워드, 주민등록번호가 하드코딩되지 않았는가?
   3. `localhost` 바인딩: 웹 서버가 `0.0.0.0`으로 바인딩되어 있는가?
   4. 메모리 상태: 시스템 리소스가 부족하지 않은가?
+  5. **STATE 진행 상태:** `scripts/state.sh status` 호출하여 10단계 진행 상황 및 지연 여부 점검
+  6. **하네스 보존 및 Git 격리:** `.probe-kit/`, `STATE.md`, `HANDOFF.md`, `TASK_SPEC.md`, `SUB_RESULT.md` 등이 디스크에 정상 보존되어 있으며 `.git/info/exclude`로 과제 Git status를 오염시키지 않는지 검증
 
-### 2) 하네스 흔적 및 임시 버퍼 파일 삭제
-시험 채점 환경에 우리가 사용한 하네스 파일이 남지 않도록 깔끔하게 제거합니다:
+### 2) 하네스 및 활동 기록 영구 보존 (채점관 가점 확보)
+> [!IMPORTANT]
+> **하네스 파일 절대 삭제 금지 (영구 보존 원칙):**
+> 기존의 하네스 삭제(`rm -rf .probe-kit ...`) 절차는 **완전 폐기**되었습니다.
+> 채점관 및 Cofa 평가 시스템은 **수험생이 외부 GitHub에서 하네스를 clone해와서 10단계 STATE 추적, Pane 3 전략 감시자, Handoff 인수인계, TASK_SPEC/SUB_RESULT 핸드셰이크를 체계적으로 활용했다는 사실을 확인하여 가점을 부여**합니다.
+> 따라서 `.probe-kit/`, `runtime/STATE.md`, `runtime/HANDOFF.md`, `runtime/TASK_SPEC.md`, `runtime/SUB_RESULT.md`, `NOTES_TEMP.md` 등의 모든 하네스 및 활동 기록 파일을 **절대 삭제하지 않고 그대로 둔 채 보존하여 제출**합니다.
+> (`init.sh`에서 `.git/info/exclude`로 등록해 두었으므로 과제 원본 저장소의 `git diff`를 오염시키지 않습니다.)
 
-```bash
-rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md
-```
-
-### 3) 워크스페이스 클린 상태 최종 확인
+### 3) 워크스페이스 상태 최종 확인
 ```bash
 git status
 ```
-* **확인:** 불필요한 임시 파일이 없고 과제 제출 산출물만 정상적으로 존재하는지 확인합니다.
+* **확인:** `.git/info/exclude` 덕분에 하네스 파일이 디스크에 안전하게 보존되어 있으면서도 과제 Git status에는 순수 과제 제출 파일만 깨끗하게 표시되는지 확인합니다.
 
 ### 4) 모든 열린 에디터 탭 `Ctrl+S` 저장
 * 에디터 상단 탭에 하얀 동그라미(수정 후 미저장 상태)가 남아 있으면 채점 시 반영되지 않습니다.
@@ -404,6 +523,10 @@ git status
 1. 시험 플랫폼 우측 상단의 **`제출하고 문제풀기`** 버튼 클릭.
 2. 팝업창에서 **`제출물 확정하고 문제풀기`** 클릭.
 3. 화면이 전환되며 **"맞춤형 확인 문제를 생성 중입니다 (약 5~10분 소요)"** 안내가 뜹니다.
+4. 제출 완료 후 10단계(서술형)로 전환:
+```bash
+bash .probe-kit/scripts/state.sh next
+```
 
 ---
 

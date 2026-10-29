@@ -47,8 +47,9 @@ else
   echo "-> 하네스가 이미 $TARGET_KIT 에 위치하고 있습니다."
 fi
 
+chmod +x "$TARGET_KIT/scripts/"*.sh "$TARGET_KIT/scripts/"*.py "$TARGET_KIT/init.sh" 2>/dev/null || true
 find "$TARGET_KIT" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} + 2>/dev/null || true
-echo "-> 스크립트 실행 권한(chmod +x) 설정 완료"
+echo "-> 스크립트 실행 권한(chmod +x) 설정 완료 (state.sh, monitor.sh, handoff.sh 등 포함)"
 
 echo "=== [3/6] Codex 글로벌 하네스(~/.codex) 및 모델 프리셋 설정 ==="
 mkdir -p "$HOME/.codex"
@@ -77,18 +78,24 @@ if [ -d "$WORKSPACE_DIR/.git" ]; then
   mkdir -p "$WORKSPACE_DIR/.git/info"
   EXCLUDE_FILE="$WORKSPACE_DIR/.git/info/exclude"
   touch "$EXCLUDE_FILE"
-  for item in ".probe-kit" ".probe-kit/" "NOTES_TEMP.md" "TASK_SPEC.md" "SUB_RESULT.md" "EDA_SUMMARY.txt"; do
+  for item in ".probe-kit" ".probe-kit/" "NOTES_TEMP.md" "TASK_SPEC.md" "SUB_RESULT.md" "EDA_SUMMARY.txt" "STATE.md" "HANDOFF.md"; do
     if ! grep -qxF "$item" "$EXCLUDE_FILE" 2>/dev/null; then
       echo "$item" >> "$EXCLUDE_FILE"
     fi
   done
-  echo "-> .git/info/exclude 등록 완료 (.probe-kit, NOTES_TEMP.md, TASK_SPEC.md, SUB_RESULT.md, EDA_SUMMARY.txt 차단, .gitignore 미수정)"
+  echo "-> .git/info/exclude 등록 완료 (.probe-kit, NOTES_TEMP.md, TASK_SPEC.md, SUB_RESULT.md, EDA_SUMMARY.txt, STATE.md, HANDOFF.md 차단, .gitignore 미수정)"
 else
   echo "⚠️ [경고] .git 디렉토리가 존재하지 않아 .git/info/exclude 등록을 건너뜁니다."
 fi
 
-echo "=== [5/6] 런타임 버퍼 보장 및 실시간 메모장(NOTES_TEMP.md) 준비 ==="
+echo "=== [5/6] 런타임 버퍼 보장 및 실시간 메모장(NOTES_TEMP.md), STATE 초기화 ==="
 mkdir -p "$TARGET_KIT/runtime"
+if [ ! -f "$TARGET_KIT/runtime/STATE.md" ] && [ -f "$TARGET_KIT/scripts/state.sh" ]; then
+  bash "$TARGET_KIT/scripts/state.sh" init >/dev/null 2>&1 || true
+  echo "-> runtime/STATE.md 가 없어 scripts/state.sh init 자동 실행 완료"
+elif [ -f "$TARGET_KIT/runtime/STATE.md" ]; then
+  echo "-> 기존 runtime/STATE.md 유지"
+fi
 if [ -f "$TARGET_KIT/templates/NOTES.md" ]; then
   if [ ! -f "$WORKSPACE_DIR/NOTES_TEMP.md" ]; then
     cp "$TARGET_KIT/templates/NOTES.md" "$WORKSPACE_DIR/NOTES_TEMP.md"
@@ -134,8 +141,8 @@ echo "   3) [터미널 2 - 서브 워커]: 새 탭 열기 -> 'codex' 실행 -> '
 echo "      (역할: TASK_SPEC.md 읽고 코드 구현·테스트 실행 -> SUB_RESULT.md 작성 후 /clear)"
 echo "      ※ 비대화형 CLI 지원 환경인 경우 메인 창에서 'bash .probe-kit/scripts/subagent.sh' 실행 가능"
 echo ""
-echo "▶ 시험 종료 직전 필수 점검 및 클린업 안내:"
+echo "▶ 시험 종료 직전 필수 점검 및 하네스 보존 안내:"
 echo "   - 사전 무감점 감사: bash .probe-kit/scripts/pre_submit_audit.sh"
-echo "   - 임시 파일 정리:   rm -rf .probe-kit NOTES_TEMP.md TASK_SPEC.md SUB_RESULT.md"
+echo "   - 하네스 및 활동 기록 보존 안내: 채점관 확인 및 가점 획득을 위해 .probe-kit 및 런타임 기록을 삭제하지 않고 보존하여 제출합니다."
 echo "   - 에디터 열린 파일: 모든 탭 '저장됨(Ctrl+S)' 상태 최종 확인"
 echo "======================================================================"
