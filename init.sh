@@ -162,6 +162,7 @@ echo "      (역할: 요구사항 분석, 설계, .probe-kit/runtime/TASK_SPEC.m
 echo "   3) [터미널 2 - 서브 워커]: 새 탭 열기 -> 'codex' 실행 -> '/model'에서 [Luna 6 (xhigh)] 선택"
 echo "      (역할: TASK_SPEC.md 읽고 코드 구현·테스트 실행 -> SUB_RESULT.md 작성 후 /clear)"
 echo "      ※ 비대화형 CLI 지원 환경인 경우 메인 창에서 'bash .probe-kit/scripts/subagent.sh' 실행 가능"
+echo "   4) [Handoff 로깅 규칙]: handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) 'python3 .probe-kit/scripts/handoff.py log \"<step>\" \"<msg>\"' 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가"
 echo ""
 echo "▶ 시험 종료 직전 필수 점검 및 클린업 안내:"
 echo "   - 사전 무감점 감사: bash .probe-kit/scripts/pre_submit_audit.sh"

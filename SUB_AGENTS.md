@@ -27,7 +27,7 @@
 7. **시험 중 Git 변경 명령어(git add/commit/reset/clean) 전면 금지:**
    - 시험 도중 `git add`, `git commit`, `git reset`, `git clean` 명령어 실행은 전면 금지됩니다. 모든 태스크별 테스트 코드는 커밋하지 않고 untracked 상태로 유지하며 검증을 수행합니다.
 8. **단계별 HANDOFF.md 갱신:**
-   - 각 단계(TASK_SPEC issued / sub done / verification done) 작업 완료 시 `runtime/HANDOFF.md`를 즉시 갱신합니다 (`bash .probe-kit/scripts/handoff.sh log "<메시지>"` 실행).
+   - 각 단계(TASK_SPEC issued / sub done / verification done) 작업 완료 시 `runtime/HANDOFF.md`를 즉시 갱신합니다 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 
 ---
 
@@ -49,7 +49,7 @@
   - 실패 시 무작정 코드를 덮어쓰지 않고 에러 원인을 추적하여 최소 범위만 수정합니다.
 - [ ] **Step 5. 요약 보고서 작성, HANDOFF.md 갱신 및 종료:**
   - `.probe-kit/runtime/SUB_RESULT.md`를 필수 항목 중심의 명확한 요약 보고서 양식으로 작성합니다 (불필요한 줄 수 제한 없음).
-  - 작업 완료(`sub done`) 시 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"`을 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다.
+  - 작업 완료(`sub done`) 시 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "<요약>"`, 그래도 안 되면 runtime/HANDOFF.md 직접 추가)을 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다.
   - 터미널에서 작업 완료를 알리고, 다음 턴의 토큰 절약을 위해 `/clear` 실행 준비를 합니다.
 
 ---

@@ -14,7 +14,7 @@
 - **토큰 누적 및 지연:** 누적 토큰이 100k~150k를 초과하면 모델의 추론 속도가 현저히 느려지고 프롬프트 지시사항 준수율이 급격히 저하됩니다.
 
 ### 1.2 Top 3 랭커의 핵심 차별화 전략: 명시적 Handoff
-- **KOPA 상위 1% 벤치마킹:** 최상위 고득점자들은 단일 세션에 매달리지 않고, **하네스 초기화 시 `templates/HANDOFF.md`를 `runtime/HANDOFF.md`로 배치한 뒤, 매 단계마다 실시간 로그(`bash scripts/handoff.sh log "<step>" "<msg>"`)를 누적하고, 마일스톤이나 임계점에 도달할 때마다 구조화된 인수인계서(`HANDOFF.md`)를 디스크에 저장한 뒤 깨끗한 새 세션(토큰 0)에서 무손실로 맥락을 이어받는 공학적 스킬**을 구사했습니다.
+- **KOPA 상위 1% 벤치마킹:** 최상위 고득점자들은 단일 세션에 매달리지 않고, **하네스 초기화 시 `templates/HANDOFF.md`를 `runtime/HANDOFF.md`로 배치한 뒤, 매 단계마다 실시간 로그(`bash scripts/handoff.sh log "<step>" "<msg>"` 또는 `python3 scripts/handoff.py log "<step>" "<msg>"`)를 누적하고, 마일스톤이나 임계점에 도달할 때마다 구조화된 인수인계서(`HANDOFF.md`)를 디스크에 저장한 뒤 깨끗한 새 세션(토큰 0)에서 무손실로 맥락을 이어받는 공학적 스킬**을 구사했습니다.
 - **채점관/평가 에이전트 가점 메커니즘:**
   - 평가 에이전트는 무분별한 연속 대화보다 **"시스템 복잡도 증가를 인지하고 공학적 인수인계 프로토콜을 발동하여 리스크를 통제한 행위"**를 인지(Cognition) 및 의도(Intent) 평가 축에서 최고점으로 채점합니다.
   - 외부 하네스(`probe-kit`)와 세션 인수인계 기록(`HANDOFF.md`)이 디스크에 온전히 보존되어 있을 때 "검증된 엔지니어링 프로세스를 자율 도입한 개발자"로서 추가 가산점을 획득합니다.
@@ -69,11 +69,17 @@ sequenceDiagram
   ```bash
   # TASK_SPEC 발행 시
   bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step 1 데이터 정제 모듈 지시서 발행"
+  # (실패 시 대체: python3 .probe-kit/scripts/handoff.py log "TASK_SPEC" "Step 1 데이터 정제 모듈 지시서 발행")
+
   # 서브 에이전트 완료 시
   bash .probe-kit/scripts/handoff.sh log "sub done" "Step 1 핵심 정제 구현 및 온더플라이 테스트 통과"
+  # (실패 시 대체: python3 .probe-kit/scripts/handoff.py log "sub done" "Step 1 핵심 정제 구현 및 온더플라이 테스트 통과")
+
   # 검증 완료 시
   bash .probe-kit/scripts/handoff.sh log "verification" "표본 15건 수동 대조 100% 일치 확인"
+  # (실패 시 대체: python3 .probe-kit/scripts/handoff.py log "verification" "표본 15건 수동 대조 100% 일치 확인")
   ```
+> 💡 **Handoff 실행 규칙:** handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가.
 
 ### [Step 1] 구 세션 정보 수집 및 인수인계서 완성 (골든 타이밍)
 1. 터미널 1에서 원클릭 수집 스크립트 실행:

@@ -10,13 +10,52 @@ set -euo pipefail
 # --------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Git for Windows reports repository roots as C:/... while Bash expects a
+# POSIX path. Normalize only externally reported Windows paths; leave native
+# WSL/Git Bash paths unchanged.
+normalize_shell_path() {
+  local candidate="$1"
+  case "${candidate}" in
+    [A-Za-z]:/*|[A-Za-z]:\\*)
+      if command -v cygpath >/dev/null 2>&1; then
+        cygpath -u "${candidate}"
+      elif command -v wslpath >/dev/null 2>&1; then
+        wslpath -u "${candidate}"
+      else
+        local drive="${candidate:0:1}"
+        local rest="${candidate:2}"
+        rest="${rest//\\//}"
+        printf '/%s%s\n' "${drive,,}" "${rest}"
+      fi
+      ;;
+    *)
+      printf '%s\n' "${candidate}"
+      ;;
+  esac
+}
+
 # 워크스페이스 루트 탐색
-if git rev-parse --show-toplevel >/dev/null 2>&1; then
-  WORKSPACE_ROOT="$(git rev-parse --show-toplevel)"
+if [ -d ".probe-kit" ]; then
+  # Keep the root relative when invoked from the workspace. This avoids
+  # remapping a Windows drive path through a restricted Bash mount.
+  WORKSPACE_ROOT="."
+elif [ -d "../.probe-kit" ]; then
+  WORKSPACE_ROOT=".."
+elif [ -d "${SCRIPT_DIR}/../../.probe-kit" ]; then
+  WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+elif [ -d "probe-kit" ]; then
+  WORKSPACE_ROOT="."
+elif git rev-parse --show-toplevel >/dev/null 2>&1; then
+  WORKSPACE_ROOT="$(normalize_shell_path "$(git rev-parse --show-toplevel)")"
 elif git -C "${SCRIPT_DIR}" rev-parse --show-toplevel >/dev/null 2>&1; then
-  WORKSPACE_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel)"
+  WORKSPACE_ROOT="$(normalize_shell_path "$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel)")"
 else
-  WORKSPACE_ROOT="$(pwd)"
+  WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+fi
+
+# HOME이나 stray root로 잘못 빠지는 것 방지 안전장치
+if [ -z "${WORKSPACE_ROOT}" ] || { [ -n "${HOME:-}" ] && [ "${WORKSPACE_ROOT}" = "${HOME}" ] && [ ! -d "${WORKSPACE_ROOT}/.probe-kit" ]; }; then
+  WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 fi
 
 # 하네스 루트 및 런타임 디렉토리 결정
@@ -35,7 +74,9 @@ elif [ -d "${WORKSPACE_ROOT}/runtime" ]; then
 else
   RUNTIME_DIR="${HARNESS_ROOT}/runtime"
 fi
-mkdir -p "${RUNTIME_DIR}"
+if [ ! -d "${RUNTIME_DIR}" ]; then
+  mkdir -p "${RUNTIME_DIR}"
+fi
 
 HANDOFF_ROOT_FILE="${WORKSPACE_ROOT}/HANDOFF.md"
 HANDOFF_RUNTIME_FILE="${RUNTIME_DIR}/HANDOFF.md"
@@ -132,7 +173,7 @@ EOF
   }
 
   append_log_row "${HANDOFF_RUNTIME_FILE}" "${TS}" "${LOG_STEP}" "${LOG_MSG}"
-  if [ -f "${HANDOFF_ROOT_FILE}" ] && [ "${HANDOFF_ROOT_FILE}" != "${HANDOFF_RUNTIME_FILE}" ]; then
+  if [ "${HANDOFF_ROOT_FILE}" != "${HANDOFF_RUNTIME_FILE}" ]; then
     append_log_row "${HANDOFF_ROOT_FILE}" "${TS}" "${LOG_STEP}" "${LOG_MSG}"
   fi
 

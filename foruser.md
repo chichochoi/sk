@@ -63,7 +63,12 @@ git status
 
 # 2. 무토큰 데이터/코드 구조 요약 확인
 cat .probe-kit/runtime/EDA_SUMMARY.txt
+
+# 3. Handoff 로깅 동작 검증 (에이전트가 실행되는 터미널과 같은 셸에서 확인)
+bash .probe-kit/scripts/handoff.sh log "검증" "하네스 환경 검증" || python3 .probe-kit/scripts/handoff.py log "검증" "하네스 환경 검증"
 ```
+
+> 💡 **Handoff 실행 규칙:** handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가.
 
 ### 🖥️ 듀얼 터미널 기동 및 모델 선택
 
@@ -112,11 +117,13 @@ codex
    - Case 2: 실무형 웹 서비스 / 웹앱 / 대시보드 구축 -> .probe-kit/skills/case2_web_service.md
    - Case 3: 기존 레거시 코드베이스 디버깅 및 기능 확장 -> .probe-kit/skills/case3_legacy_debug.md
    - Case 4: 규정 색인·판정, 사내 업무 자동화, RAG -> .probe-kit/skills/case4_policy_rag_doc.md
+   - 위 4개의 케이스에 없는거면 없다고 말해.(케이스 복합이면->.probe-kit/skills/case1_data_pipeline.md)
 2. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
 3. 절대 변경하면 안 되는 기존 시스템의 불변 제약 (API 규격, 인증 방식, 함수 시그니처 등)
 4. 불필요한 오버엔지니어링을 배제한 최소 핵심 기능(MVP) 목표
 브리핑과 NOTES_TEMP.md 기록이 끝나면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "탐색" "Case 식별 및 초기 분석 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
 
 ✅ **완료 시그널:**
@@ -171,10 +178,6 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 제가 아직 미처 파악하지 못했거나 여쭤보지 않은 내용 중에, 현업에서 이 업무를 처리할 때 반드시 알아야 할 특수 예외 규칙이나 단서 조항이 또 있을까요?
 ```
 
-#### 9) [가설 제시 및 최종 구현 동의 (의도 축 가산점)]
-```text
-말씀해주신 내용을 바탕으로 요구사항을 [A, B, C]로 구조화하여, [X 기준]으로 예외를 처리하고 [Y 구조]로 우선 구현하려 합니다. 현업의 의도와 부합할까요?
-```
 
 > [!WARNING]
 > **❌ 절대 금지 질문 (감점 및 답변 거부):**
@@ -223,6 +226,8 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 1. 전체 문제를 시험 시간 내에 안정적으로 해결할 수 있는 N개의 주요 개발 단계(Step 1, Step 2, Step 3 등)로 분할해줘.
 2. 각 단계별로 채택 가능한 2~3가지 구현 대안(예: 표준 라이브러리 기반 경량 스트림 방식 vs 외부 프레임워크 일괄 적재 방식 등)을 제시하고, 각각의 장단점(구현 복잡도, 시간 내 완성 가능성, 실무자 예외 조건 충족 신뢰성, 오버엔지니어링 위험)을 명확한 트레이드오프 표로 정리해줘.
 어떤 방식이 오버엔지니어링 없이 최소 구현(MVP)을 달성하는 데 최적인지 요약해줘.
+3. 담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
+
 ```
 
 ### 📋 Part (c): [수험생의 주도적 결정 및 로깅 지시 템플릿]
@@ -232,7 +237,13 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 [MAIN] 네 분석을 검토했어. [외부 의존성 배제 및 실무자 DM의 취소·중복 예외 처리 신뢰성 보장] 장점 때문에 나는 [파이썬 표준 라이브러리(csv, json) 기반의 단일 스트림 파이프라인] 단계별 해결법을 쓰고 싶어. 가능해?
 가능하다면 내가 결정한 [채택한 방식]과 [배제한 대안 및 이유]를 NOTES_TEMP.md에 기록하고, 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "결정" "[선택한 해결법] 채택 확정 (이유: [장점 명시])"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "결정" "[선택한 해결법] 채택 확정 (이유: [장점 명시])"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 기록이 끝나면 코드는 짜지 말고 Step 1을 위한 준비 완료를 보고해줘.
+```
+#### 9) [가설 제시 및 최종 구현 동의 (의도 축 가산점)]
+```text
+'말씀해주신 내용을 바탕으로 요구사항을 [A, B, C]로 구조화하여, [X 기준]으로 예외를 처리하고 [Y 구조]로 우선 구현하려 합니다. 현업의 의도와 부합할까요?' 라는 형식으로 담당자에게 묻고 싶어. 프롬프트를 짜줘.
+
 ```
 
 ✅ **완료 시그널:**
@@ -281,6 +292,9 @@ TASK_SPEC.md 에는 다음 6대 필수 요소를 반드시 누락 없이 포함�
 6. 완료 조건(Definition of Done) 및 .probe-kit/runtime/SUB_RESULT.md 기록 요구
 작성이 완료되면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC" "Step N 명세서 발행 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
+7. 담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
+
 ```
 
 ### 2) 서브 에이전트 구현 및 온더플라이 검증 지시 (터미널 2 - 서브 `Luna 6 xhigh`)
@@ -294,6 +308,7 @@ bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완�
 3. 테스트 실패 시 무작정 덮어쓰지 말고 실패 원인과 수정 범위를 먼저 진단해.
 모든 검증이 통과하면 변경 파일 목록, 테스트 실행 결과, 남은 한계점을 핵심 위주로 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, 다음 명령어를 터미널에서 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통과 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "Step N 구현 및 검증 통과 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
 *(💡 비대화형 환경인 경우 메인 터미널에서 `bash .probe-kit/scripts/subagent.sh`를 실행해도 동일하게 서브 호출 가능)*
 
@@ -308,6 +323,8 @@ bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통�
 ```text
 [MAIN] .probe-kit/runtime/SUB_RESULT.md 와 git diff --stat 만 확인해서 Step N이 실무자 DM 조건에 맞게 검증되었는지 엣지 케이스 관점에서 비판적으로 검토해줘.
 검토가 완료되면 다음 모듈인 [Step N+1]에 대한 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
+담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
+
 ```
 
 ---
@@ -332,7 +349,7 @@ bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통�
 
 | 시그널 (Signal) | 현재 상황 | 즉시 실행할 조치 (Action) |
 | :--- | :--- | :--- |
-| **`SUB_RESULT.md` ALL PASS** | 서브 구현 및 온더플라이 테스트 정상 통과 | 1) 터미널 2에 `/clear` 입력 (토큰 리셋)<br>2) 터미널 1에 메인 검수 프롬프트 입력<br>3) `bash .probe-kit/scripts/handoff.sh log "검증 완료" "<모듈 요약>"` 실행 |
+| **`SUB_RESULT.md` ALL PASS** | 서브 구현 및 온더플라이 테스트 정상 통과 | 1) 터미널 2에 `/clear` 입력 (토큰 리셋)<br>2) 터미널 1에 메인 검수 프롬프트 입력<br>3) `bash .probe-kit/scripts/handoff.sh log "검증 완료" "<모듈 요약>"` 실행 (실패 시: `python3 .probe-kit/scripts/handoff.py log "검증 완료" "<모듈 요약>"` 또는 runtime/HANDOFF.md 직접 추가) |
 | **온더플라이 / 단위 테스트 FAIL** | 서브 구현 결함 또는 엣지 케이스 충돌 | 무작정 코드를 덮어쓰지 말고, 터미널 2에서 에러 트레이스백과 원인 후보 2가지를 먼저 진단한 뒤 대상 파일만 최소 범위로 수정 (2회 이상 실패 시 단순 로직으로 전환) |
 | **기존 베이스라인 테스트 FAIL** | 회귀(Regression) 발생 (기존 기능 파손) | 즉시 `git diff`로 변경된 코드 확인. 기존 함수 시그니처나 반환 형식이 깨졌는지 확인 후 원래 규격에 맞게 롤백 (`git reset --hard` 절대 금지, 에디터에서 직접 수정) |
 | **메인 에이전트 제약 망각 (Drift)** | 메인이 DM 조건 누락하거나 불필요한 라이브러리 임의 제안 | **Handoff 골든 타이밍 발동!**<br>구 세션에서 `bash .probe-kit/scripts/handoff.sh` 실행 ➔ 새 터미널 1 열고 클린 `Sol 6.1 xhigh`에서 `[메인 프롬프트 6]`(.probe-kit/prompts/02_codex_prompts.md 참조)으로 복창/승인 |
@@ -387,8 +404,8 @@ git status
 ```text
 [MAIN] 이제 신규 코드 작성은 중단하고 제출 보고서를 작성하자.
 과제 README.md에서 요구하는 제출 보고서 파일명(예: SUBMISSION_REPORT.md 또는 REPORT.md)으로, .probe-kit/templates/SUBMISSION_REPORT.md 양식에 맞춰 최종 보고서를 작성해줘.
-우리가 실무자 DM으로 확인한 내용, NOTES_TEMP.md, 그리고 SUB_RESULT.md의 검증 기록을 바탕으로 [결정] - [근거] - [검증] - [한계] 구조를 명확히 포함해줘.
-특히 AI 오버엔지니어링을 통제하고 단순한 구조를 채택한 이유와, 현재 구현의 실패 가능 조건(한계점)을 구체적으로 적어줘.
+우리가 실무자 DM으로 확인한 내용, NOTES_TEMP.md, 그리고 SUB_RESULT.md의 검증 기록을 바탕으로 [결정] - [근거] - [검증] - [한계] 구조를 명확히 포함해줘. 우리가 택한 구조와 왜 그 구조를 택했는지를 적어.
+특히 어떤 방식으로 AI 오버엔지니어링을 통제했는지, 현재 구현의 실패 가능 조건(한계점)을 구체적으로 적어줘.
 ```
 
 ### 5) 최종 인수인계서 동기화 및 모든 에디터 탭 저장
@@ -554,6 +571,7 @@ bash .probe-kit/scripts/handoff.sh
 │
 └── scripts/                         # [자동화 & 검증 도구]
     ├── handoff.sh                   # 세션 전환 기계 정보 수집 및 단계별 로그(log 서브커맨드) 갱신기
+    ├── handoff.py                   # OS 독립형 Python 3 버전 단계별 로그(log 서브커맨드) 갱신기
     ├── subagent.sh                  # 서브 에이전트 자동 호출 래퍼 스크립트
     ├── eda_scan.py                  # 토큰 0원으로 CSV/JSON/테스트 파일 구조 분석 스캐너
     ├── sample_check_template.py     # 15건 표본 수동 기댓값 vs 스크립트 출력 교차 검증 도구

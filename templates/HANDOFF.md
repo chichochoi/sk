@@ -2,7 +2,7 @@
 
 > **문서 목적:** 본 문서는 하네스 초기화 시점부터 세션 종료/전환 시점까지 각 단계(Step)별 핵심 의사결정, 실무자 DM 제약, 소스코드 변경 내역, 검증 결과 및 미해결 리스크를 누적 기록하고 신규 세션으로 무손실 인계하기 위한 표준 엔지니어링 문서입니다.  
 > **신규 세션 규칙:** 새로 투입된 메인 아키텍트(`Sol 6.1 xhigh`)는 본 문서를 정독하고, 핵심 제약과 다음 작업 계획을 복창한 뒤 인간 아키텍트(수험생)의 **[승인(Approved)]**을 받아야만 다음 단계(`TASK_SPEC.md`)에 착수할 수 있습니다.  
-> **실시간 갱신 규칙:** 본 문서는 세션 종료 시점만이 아니라, 매 단계(TASK_SPEC 발행 / 서브 완료 / 검증 완료)마다 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 통해 실시간으로 갱신되어야 합니다.
+> **실시간 갱신 규칙:** 본 문서는 세션 종료 시점만이 아니라, 매 단계(TASK_SPEC 발행 / 서브 완료 / 검증 완료)마다 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 통해 실시간으로 갱신되어야 합니다 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 
 ---
 
@@ -125,7 +125,7 @@
 
 ## 9. 단계별 갱신 로그 (Step Update Log)
 
-> 매 단계(TASK_SPEC 발행 / 서브 완료 / 검증 완료 등)마다 `bash .probe-kit/scripts/handoff.sh log "<단계: 요약>"`을 실행하여 누적 기록합니다.
+> 매 단계(TASK_SPEC 발행 / 서브 완료 / 검증 완료 등)마다 `bash .probe-kit/scripts/handoff.sh log "<단계: 요약>"`을 실행하여 누적 기록합니다 (실패 시 `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 또는 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 
 | 시각 (Time) | 단계 (Step) | 요약 (Summary) |
 | :--- | :--- | :--- |

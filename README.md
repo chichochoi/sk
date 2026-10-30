@@ -46,6 +46,7 @@ python .probe-kit/scripts/pre_submit_audit.py
 | `templates/SUBMISSION_REPORT.md` | 문서 템플릿 | 최종 제출용 과제 수행 계획 및 검증 보고서 템플릿 |
 | `scripts/init.sh` | 자동화 도구 | root `init.sh`로 위임 실행하는 편리 래퍼 스크립트 |
 | `scripts/handoff.sh` | 자동화 도구 | 세션 전환 Git/런타임 정보 수집 및 단계별 로그(`log` 서브커맨드) 실시간 갱신기 |
+| `scripts/handoff.py` | 자동화 도구 | OS 독립형 Python 3 버전 단계별 로그(`log` 서브커맨드) 실시간 갱신기 |
 | `scripts/subagent.sh` | 자동화 도구 | `Luna 6 xhigh`로 `TASK_SPEC.md`를 실행하고 결과만 요약 반환하는 서브 호출기 |
 | `scripts/eda_scan.py` | 자동화 도구 | CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약하는 무토큰 EDA 스캐너 |
 | `scripts/sample_check_template.py` | 검증 도구 | 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 교차 검증 템플릿 |
@@ -129,6 +130,7 @@ probe-kit/
 └── scripts/                      # [자동화 & 검증 도구]
     ├── init.sh                   # [설치 래퍼] root init.sh로 위임 실행
     ├── handoff.sh                # [인수인계 도구] 세션 전환 수집 및 단계별 로그(log 서브커맨드) 실시간 갱신기
+    ├── handoff.py                # [인수인계 도구] OS 독립형 Python 3 버전 단계별 로그(log 서브커맨드) 실시간 갱신기
     ├── subagent.sh               # [서브 호출기] Luna 6 xhigh로 TASK_SPEC.md를 실행하고 결과만 요약 반환
     ├── eda_scan.py               # [무토큰 EDA] CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약
     ├── sample_check_template.py  # [표본 대조] 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 검증 템플릿
@@ -233,7 +235,7 @@ model_reasoning_effort = "xhigh"
 4. **세션 관리 및 명시적 Handoff 프로토콜 (컨텍스트 오염 및 제약 망각 차단):**
    - 세션이 길어져 컨텍스트가 비대해질 때 단순 `/compact`를 반복하면 과거 디버깅 잔재와 파편화된 가설이 누적되어 실무자 비즈니스 제약을 망각(Constraint Drift)하게 됩니다.
    - 4대 골든 타이밍(Step 1 MVP 완료, 제약 망각 감지, 대규모 방향 전환, 12:15 최종 검증 진입 직전) 도달 시 단순 `/compact` 대신 `bash .probe-kit/scripts/handoff.sh` 실행 후 `HANDOFF.md`에 `[결정]-[근거]-[포기한 대안]`, DM 불변 제약 체크리스트, Next Actions 1~3을 명확히 보강·저장하여 신규 세션으로 무손실 인수인계를 수행하세요.
-   - **단계별 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신하세요.
+   - **단계별 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신하세요 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 
 ---
 
@@ -257,7 +259,7 @@ model_reasoning_effort = "xhigh"
 4. **제출 문서 정직성:** 제출용 보고서 작성 시 실제 구현된 코드와 실제 실행한 테스트 로그만을 근거로 `[결정] - [근거] - [검증] - [한계]` 구조에 맞춰 작성하세요.
 5. **하네스 및 인수인계 기록 디스크 영구 보존:** `.probe-kit` 하네스 전체와 `HANDOFF.md`는 외부 엔지니어링 도구 도입 및 체계적 형상 관리 역량을 증명하는 평가 가점 자산이므로 디스크에서 절대 삭제하지 마세요 (`.git/info/exclude`로 Git 형상만 깨끗이 격리; 사전 감사는 `scripts/pre_submit_audit.sh` 또는 Windows PowerShell 환경 시 `python scripts/pre_submit_audit.py`로 점검).
 6. **시험 중 Git 변경 명령어(git add/commit/reset/clean) 전면 금지:** 시험 도중 `git add`, `git commit`, `git reset`, `git clean` 명령어 실행은 전면 금지됩니다. 모든 테스트 코드는 별도의 커밋 없이 동작하며 untracked 상태로 유지되어야 합니다.
-7. **단계별 HANDOFF.md 갱신 의무:** 매 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 반드시 최신화하세요 (세션 종료 시점만이 아니라 매 단계 실시간 누적 기록 필수).
+7. **단계별 HANDOFF.md 갱신 의무:** 매 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 반드시 최신화하세요 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 ```
 
 #### ④ `scripts/subagent.sh` (메인이 서브 `Luna 6 xhigh`를 자동 호출하는 래퍼 스크립트)
@@ -426,7 +428,7 @@ echo "⚠️ 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:** 한 번에 하나씩 쪼개서 서브에 위임하고, 시키지 않은 거창한 기능(불필요한 쓰기 가드, 복잡한 캐싱/패턴 등)을 넣지 못하게 고삐를 쥡니다.
 4. **버그 수정도 '원인 보고 → 범위 합의' 후에만:** 서브 에이전트에서 테스트 실패 시 무작정 코드를 덮어쓰지 않고 원인과 수정 범위를 먼저 확인합니다.
 5. **방향 수정 시 이유를 텍스트로 기록:** *"A 방식은 ~한 문제가 있어 접고 B 방식으로 전환한다"*고 메인 에이전트 프롬프트에 명시해야 '방향 조정' 가점을 받습니다.
-6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다.
+6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 
 #### 📋 [메인 프롬프트 1 — `Sol 6.1 xhigh`] 초기 탐색 및 아키텍처 구조화 (코드 수정 금지)
 ```text
@@ -457,7 +459,7 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 1. 기존 베이스라인 테스트를 실행해 깨진 부분(Regression)이 없는지 확인해.
 2. 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로(Happy Path)와 예외 케이스(빈 입력, 결측치, 중복, 취소 건 등)를 직접 검증해 (고정 템플릿 사용 금지, git add/commit/reset/clean 금지 및 untracked 유지).
 3. 만약 실패하면 바로 덮어쓰지 말고 원인 후보와 수정 범위를 먼저 진단해.
-모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" 으로 갱신해줘 (불필요한 줄 수 제한 없음).
+모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" 으로 갱신해줘 (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "<요약>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가; 불필요한 줄 수 제한 없음).
 ```
 *(💡 서브 작업 완료 후 터미널 2에서는 `/clear`를 입력해 누적 토큰을 0으로 초기화하세요!)*
 
@@ -687,8 +689,8 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
   - 우측 DM `업무 담당자`에게 **만능 질문(`foruser.md` 4단계) + 케이스별 심층 질문**(`.probe-kit/dm_question.md` 열어 맞춤 질문 복사 활용)을 던져 숨은 조건과 예외 기준 발굴 → `NOTES_TEMP.md`에 기록.
   - 터미널 1(`Sol 6.1 xhigh`)에 **[메인 프롬프트 2]**를 입력해 첫 번째 모듈의 `.probe-kit/runtime/TASK_SPEC.md` 생성 (35분까지 구조화가 안 끝났다면 무작정 코딩 시작 금지).
 - [ ] **10:40 ~ 12:15 [메인 지시(`TASK_SPEC`) → 서브 구현·검증(`SUB_RESULT` & `/clear`) 반복]**
-  - 터미널 2(`Luna 6 xhigh`)에 **[서브 프롬프트 3]** 입력(또는 `bash .probe-kit/scripts/subagent.sh` 실행) → 구현 및 태스크 맞춤 온더플라이 ad-hoc 테스트(`tests/test_*.py` 등) 작성·실행 (고정 템플릿 금지, `git add`/`commit`/`reset`/`clean` 금지 및 untracked 유지) → `SUB_RESULT.md` 요약 및 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` 기록 확인 후 **터미널 2에서 `/clear` 실행(토큰 초기화)**.
-  - 터미널 1(`Sol 6.1 xhigh`)에 **[메인 프롬프트 4]**로 결과를 검수시키고, `bash .probe-kit/scripts/handoff.sh log "TASK_SPEC: <요약>"` 실행 및 다음 모듈 `TASK_SPEC.md` 갱신 (골든 타이밍 시 공식 Handoff 프로토콜 수행). 방향 수정 시 이유를 프롬프트와 `NOTES_TEMP.md`에 명시.
+  - 터미널 2(`Luna 6 xhigh`)에 **[서브 프롬프트 3]** 입력(또는 `bash .probe-kit/scripts/subagent.sh` 실행) → 구현 및 태스크 맞춤 온더플라이 ad-hoc 테스트(`tests/test_*.py` 등) 작성·실행 (고정 템플릿 금지, `git add`/`commit`/`reset`/`clean` 금지 및 untracked 유지) → `SUB_RESULT.md` 요약 및 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log ...`) 기록 확인 후 **터미널 2에서 `/clear` 실행(토큰 초기화)**.
+  - 터미널 1(`Sol 6.1 xhigh`)에 **[메인 프롬프트 4]**로 결과를 검수시키고, `bash .probe-kit/scripts/handoff.sh log "TASK_SPEC: <요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log ...`) 실행 및 다음 모듈 `TASK_SPEC.md` 갱신 (골든 타이밍 시 공식 Handoff 프로토콜 수행). 방향 수정 시 이유를 프롬프트와 `NOTES_TEMP.md`에 명시.
 - [ ] **12:15 ~ 12:50 [새 기능 추가 금지 → 최종 검증, 제출 문서 완성 & 클린업]**
   - 12:15(125분 경과)부터는 무리한 새 기능 추가를 멈추고 완성도와 검증에 집중.
   - 내장 Browser(`0.0.0.0` 바인딩) 직접 클릭 조작 검증 및 데이터 표본 수동 대조 테스트 실행.

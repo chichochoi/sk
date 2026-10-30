@@ -40,9 +40,9 @@
   - [ ] `.probe-kit/runtime/TASK_SPEC.md` 생성 및 첫 번째 구현 모듈 명세 확정 (구조화 전 코딩 금지)
 - [ ] **10:40 ~ 12:15 [메인 지시(`TASK_SPEC`) → 서브 구현·검증(`SUB_RESULT` & `/clear`) 반복]**
   - [ ] 터미널 2(`Luna 6 xhigh`)에 `[서브 프롬프트 3]` 입력(또는 `bash .probe-kit/scripts/subagent.sh`)으로 모듈 구현 및 태스크 맞춤 온더플라이 ad-hoc 테스트(`tests/test_*.py` 등) 작성·실행 (고정 템플릿 금지, `git add`/`commit`/`reset`/`clean` 금지 및 untracked 유지)
-  - [ ] 테스트 통과 및 `SUB_RESULT.md` 요약 기록 확인 후 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` 실행으로 `runtime/HANDOFF.md` 즉시 갱신
+  - [ ] 테스트 통과 및 `SUB_RESULT.md` 요약 기록 확인 후 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log ...` 또는 runtime/HANDOFF.md 직접 추가) 실행으로 `runtime/HANDOFF.md` 즉시 갱신
   - [ ] **터미널 2에서 `/clear` 즉시 실행** (컨텍스트 오염 방지 및 토큰 초기화)
-  - [ ] 터미널 1(`Sol 6.1 xhigh`)에 `[메인 프롬프트 4]`로 결과 검수, `bash .probe-kit/scripts/handoff.sh log "TASK_SPEC: <요약>"` 실행 및 다음 모듈 `TASK_SPEC.md` 갱신 (골든 타이밍 도달 시 공식 Handoff 프로토콜 수행)
+  - [ ] 터미널 1(`Sol 6.1 xhigh`)에 `[메인 프롬프트 4]`로 결과 검수, `bash .probe-kit/scripts/handoff.sh log "TASK_SPEC: <요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log ...`) 실행 및 다음 모듈 `TASK_SPEC.md` 갱신 (골든 타이밍 도달 시 공식 Handoff 프로토콜 수행)
   - [ ] 방향 전환이나 오버엔지니어링 통제 발생 시 아래 Section 4, 5에 실시간 기록
 - [ ] **12:15 ~ 12:50 [새 기능 추가 금지 → 최종 검증, 제출 문서 완성 & 클린업]**
   - [ ] 12:15 경과: 신규 기능 추가 전면 중단, 완성도 및 회귀 검증에 집중

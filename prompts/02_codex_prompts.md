@@ -13,7 +13,7 @@
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:** 한 번에 하나씩 쪼개서 서브에 위임하고, 시키지 않은 거창한 기능(불필요한 쓰기 가드, 복잡한 캐싱/패턴 등)을 넣지 못하게 고삐를 쥡니다.
 4. **버그 수정도 '원인 보고 → 범위 합의' 후에만:** 서브 에이전트에서 테스트 실패 시 무작정 코드를 덮어쓰지 않고 원인과 수정 범위를 먼저 확인합니다.
 5. **방향 수정 시 이유를 텍스트로 기록:** *"A 방식은 ~한 문제가 있어 접고 B 방식으로 전환한다"*고 메인 에이전트 프롬프트에 명시해야 '방향 조정' 가점을 받습니다.
-6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다.
+6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 
 ---
 
@@ -57,7 +57,7 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 1. 기존 베이스라인 테스트를 실행해 깨진 부분(Regression)이 없는지 확인해.
 2. 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로(Happy Path)와 예외 케이스(빈 입력, 결측치, 중복, 취소 건 등)를 검증해 (고정 템플릿 사용 금지, git add/commit/reset/clean 금지 및 untracked 유지).
 3. 만약 실패하면 바로 덮어쓰지 말고 원인 후보와 수정 범위를 먼저 진단해.
-모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" 으로 갱신해줘 (불필요한 줄 수 제한 없음).
+모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" 으로 갱신해줘 (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "<요약>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가; 불필요한 줄 수 제한 없음).
 ```
 
 *(💡 서브 에이전트의 작업 완료 및 `SUB_RESULT.md` 확인 후, 터미널 2에서는 반드시 `/clear`를 입력해 누적 토큰을 0으로 초기화하세요!)*
@@ -146,7 +146,7 @@ bash .probe-kit/scripts/subagent.sh status
 
 ### 2) 메인 에이전트 (터미널 A) 세션 전환 및 Handoff 운용 원칙
 - 메인 에이전트는 전체 설계 맥락을 유지해야 하므로 원칙적으로 세션을 유지합니다.
-- 하네스 초기화(`init.sh`) 시 `templates/HANDOFF.md`가 `runtime/HANDOFF.md`로 초기 복사되며, 각 단계(TASK_SPEC issued / sub done / verification done)마다 `bash .probe-kit/scripts/handoff.sh log "<단계: 요약>"`으로 실시간 진행 상태를 누적합니다.
+- 하네스 초기화(`init.sh`) 시 `templates/HANDOFF.md`가 `runtime/HANDOFF.md`로 초기 복사되며, 각 단계(TASK_SPEC issued / sub done / verification done)마다 `bash .probe-kit/scripts/handoff.sh log "<단계: 요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log "<단계>" "<요약>"`)으로 실시간 진행 상태를 누적합니다.
 - 단순 `/compact`를 반복하면 컨텍스트 오염과 실무자 비즈니스 제약 망각(Drift)이 발생할 수 있으므로, 컨텍스트가 비대해지거나 4대 골든 타이밍(Step 1 MVP 완료, 제약 망각 감지, 대규모 방향 전환, 12:15 최종 검증 진입)에 도달하면 단순 `/clear` 대신 **공식 Handoff 프로토콜**을 수행합니다:
   1. 터미널 1에서 `bash .probe-kit/scripts/handoff.sh` 실행 (기계적 메타데이터 자동 추출 및 단계별 로그 보존)
   2. 메인에게 **[메인 프롬프트 5]**를 주입하여 `HANDOFF.md`에 [결정]-[근거]-[포기한 대안], DM 불변 제약, Next Actions 1~3을 완벽히 보강 및 저장
