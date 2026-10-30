@@ -285,7 +285,7 @@ def load_target_function():
     print("ℹ️ [안내] TARGET_MODULE 및 TARGET_FUNC 환경변수가 미지정되어,")
     print("   내장 참조 구현체(reference_impl) 데모 모드로 검증을 수행합니다.")
     print("   👉 실제 과제 함수 검증 시 아래와 같이 환경변수를 지정하여 실행하세요:")
-    print("      TARGET_MODULE=src.pipeline.aggregator TARGET_FUNC=process_wafers python scripts/sample_check_template.py")
+    print("      TARGET_MODULE=src.pipeline.aggregator TARGET_FUNC=process_wafers python3 scripts/sample_check_template.py")
     print("=" * 60 + "\n")
     return reference_impl
 

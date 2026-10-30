@@ -347,10 +347,9 @@ python3 tests/test_sample_check.py || python3 .probe-kit/scripts/sample_check_te
 # 4. 결측치 및 센티널값(-999) 잔존 여부 검사
 grep -E -- "-999|null|NaN" output/wafer_quality_report.csv || echo "결측 센티널값 0건 확인 완료"
 
-# 5. Git 변경 사항 및 무결성 감사 (Git Bash/WSL 환경)
+# 5. Git 변경 사항 및 무결성 감사 (또는 python3 버전 직접 실행)
 bash .probe-kit/scripts/pre_submit_audit.sh
-# ※ Windows PowerShell / CMD 환경 시 Python 버전 직접 실행:
-# python .probe-kit/scripts/pre_submit_audit.py
+# python3 .probe-kit/scripts/pre_submit_audit.py
 ```
 
 ---

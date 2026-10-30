@@ -36,7 +36,7 @@
 - **태스크 맞춤형 온더플라이(On-the-fly) 테스트 작성 및 실행 (필수):**
   - 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(예: `tests/test_*.py` 또는 ad-hoc 검증 스크립트)를 온더플라이로 즉석 작성하여 실행할 것 (고정 템플릿 사용 금지, 태스크 맞춤형 ad-hoc 작성, git commit 없이 untracked 유지)
 - **정상 경로 및 예외 케이스 테스트:**
-  - `python tests/test_edge_cases.py` (정상 주문, 취소 주문, 중복 ID, 결측 필드 입력 검증)
+  - `python3 tests/test_edge_cases.py` (정상 주문, 취소 주문, 중복 ID, 결측 필드 입력 검증)
 
 ### 6. 완료 기준 (Definition of Done)
 - [ ] 기존 베이스라인 테스트가 깨짐 없이 100% 통과할 것

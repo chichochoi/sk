@@ -77,7 +77,7 @@
 2. 대상 모듈: Step 1 주문 집계 모듈 정제 함수
 3. 변경 파일: src/pipeline/aggregator.py (clean_orders, calculate_metrics)
 4. 베이스라인 테스트: pytest tests/test_aggregator.py -> 5 passed in 0.42s
-5. 온더플라이 태스크 테스트: python tests/test_edge_cases.py -> 3 passed (DM 취소건 분모제외/중복 최신화 온더플라이 검증, git commit 없이 untracked 유지)
+5. 온더플라이 태스크 테스트: python3 tests/test_edge_cases.py -> 3 passed (DM 취소건 분모제외/중복 최신화 온더플라이 검증, git commit 없이 untracked 유지)
 6. 반영된 예외 규칙: 취소(CANCELLED) 주문 분모 제외 및 중복 주문 ID 최신 레코드 유지 반영
 7. 웹서버/바인딩 확인: 해당 없음 (데이터 배치 파이프라인)
 8. git diff 통계: 1 file changed, 34 insertions(+), 6 deletions(-)

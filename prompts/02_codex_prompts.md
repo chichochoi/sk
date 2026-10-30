@@ -23,8 +23,9 @@
 > **용도:** 과제 시작 직후(10:05~10:15) 터미널 1에 입력하여 문제 정의, 제약사항, MVP 모듈 분할 계획을 핵심 위주로 간결하고 명확하게 도출합니다.
 
 ```text
-[MAIN] 아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
-먼저 README.md와 .probe-kit/runtime/EDA_SUMMARY.txt(초기 스캔 결과), 그리고 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑해줘:
+[MAIN] 먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.
+아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
+현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt(초기 스캔 결과), 그리고 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑해줘:
 1. 우리가 해결해야 할 핵심 문제와 작업이 필요한 파일 범위
 2. 절대 건드리면 안 되는 기존 시스템의 제약 조건 (인증 방식, API 인터페이스, 파일 경로 등)
 3. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(Luna 6 xhigh)에게 단계별로 위임할 최소 구현(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
@@ -52,7 +53,8 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 > **용도:** 터미널 2(`Luna 6 xhigh`) 창에 입력하여 `TASK_SPEC.md`에 명시된 파일만 수정하고, 정상/예외 테스트를 직접 돌려 `SUB_RESULT.md`를 작성하게 합니다.
 
 ```text
-[SUB] .probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고, 명시된 파일 범위와 제약 조건을 엄격히 지켜서 코드를 구현해줘.
+[SUB] 먼저 .probe-kit/SUB_AGENTS.md를 읽고 그 규칙을 따라줘.
+.probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고, 명시된 파일 범위와 제약 조건을 엄격히 지켜서 코드를 구현해줘.
 구현 직후 다음 검증을 직접 터미널에서 실행해:
 1. 기존 베이스라인 테스트를 실행해 깨진 부분(Regression)이 없는지 확인해.
 2. 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로(Happy Path)와 예외 케이스(빈 입력, 결측치, 중복, 취소 건 등)를 검증해 (고정 템플릿 사용 금지, git add/commit/reset/clean 금지 및 untracked 유지).
@@ -168,6 +170,6 @@ bash .probe-kit/scripts/subagent.sh status
 4. **수치·집계 표본(Sample) 수동 대조:**
    - 데이터 집계 과제는 5~20건의 작은 샘플(예외 포함)을 뽑아 기댓값을 직접 계산한 뒤, 코드 결과와 100% 일치하는지 검증하는 단위 테스트를 돌립니다.
 5. **`pre_submit_audit.sh` / `pre_submit_audit.py` (`git diff` + 보안 점검) 실행:**
-   - AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`)로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그이며, 시험 중 `git add`/`commit`/`reset`/`clean`은 엄격히 금지됩니다).
+   - AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 `python3 .probe-kit/scripts/pre_submit_audit.py`)로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그이며, 시험 중 `git add`/`commit`/`reset`/`clean`은 엄격히 금지됩니다).
 6. **리소스(OOM) 및 전 파일 저장 상태(`저장됨`) 확인:**
    - 우측 상단 CPU/RAM 사용량을 점검하고, 제출 전 모든 파일에 `Ctrl+S`를 눌러 `저장됨` 상태를 확정합니다.

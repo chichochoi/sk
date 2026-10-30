@@ -14,8 +14,8 @@ git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe
 # 사전 무감점 감사 (Git Bash / WSL / Linux: PASS 6건 확인)
 bash .probe-kit/scripts/pre_submit_audit.sh
 
-# Windows PowerShell / CMD 환경 (WSL 오류 또는 미지원 시 범용 Python 실행):
-python .probe-kit/scripts/pre_submit_audit.py
+# 범용 Python 3 버전 직접 실행:
+python3 .probe-kit/scripts/pre_submit_audit.py
 
 # ⚠️ 주의: 채점관/평가 AI 확인 및 가점 확보를 위해 .probe-kit 및 HANDOFF.md는 디스크에 영구 보존합니다 (삭제 금지).
 # Git 추적은 .git/info/exclude 로 자동 격리되어 제출 git diff/status에 영향을 주지 않습니다.
@@ -51,7 +51,7 @@ python .probe-kit/scripts/pre_submit_audit.py
 | `scripts/eda_scan.py` | 자동화 도구 | CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약하는 무토큰 EDA 스캐너 |
 | `scripts/sample_check_template.py` | 검증 도구 | 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 교차 검증 템플릿 |
 | `scripts/pre_submit_audit.sh` | 검증 도구 | Git Bash/WSL/Linux용 `git diff` 범위·민감정보·`localhost` 바인딩·리소스 일괄 점검 감사 스크립트 |
-| `scripts/pre_submit_audit.py` | 검증 도구 | Windows PowerShell/CMD 범용 Python 버전 사전 감사 스크립트 (`python scripts/pre_submit_audit.py [dir]`) |
+| `scripts/pre_submit_audit.py` | 검증 도구 | 범용 Python 3 버전 사전 감사 스크립트 (`python3 scripts/pre_submit_audit.py [dir]`) |
 
 ---
 # 🎯 SK하이닉스 AI 해커톤 2차 예선 (Cofa Probe) 최종 통합 마스터 플레이북 & 메인/서브 Git 하네스
@@ -135,7 +135,7 @@ probe-kit/
     ├── eda_scan.py               # [무토큰 EDA] CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약
     ├── sample_check_template.py  # [표본 대조] 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 검증 템플릿
     ├── pre_submit_audit.sh       # [제출 전 감사] Git Bash/WSL/Linux용 git diff 범위·민감정보·localhost 바인딩·리소스 점검
-    └── pre_submit_audit.py       # [제출 전 감사] Windows PowerShell/CMD 범용 Python 버전 사전 감사 스크립트
+    └── pre_submit_audit.py       # [제출 전 감사] 범용 Python 3 버전 사전 감사 스크립트
 ```
 
 ---
@@ -143,52 +143,61 @@ probe-kit/
 ### ⚙️ Git에 올릴 핵심 하네스 파일 코드 전문
 
 #### ① `init.sh` (시험 시작 직후 실행하는 자동 설치 스크립트; `scripts/init.sh` 래퍼로도 실행 가능)
-과제 폴더의 `.gitignore`를 건드리지 않고 `.git/info/exclude`를 사용해 **원본 `git diff` 오염을 0%로 차단**하며, `/tmp/probe-kit/.git`을 즉시 삭제해 시험 중 실수로라도 외부 `git push`가 일어나지 않도록 물리적으로 잠급니다. 또한 `templates/HANDOFF.md`를 `runtime/HANDOFF.md`로 초기 복사하여 실시간 인수인계 로깅 기반을 마련합니다.
+과제 폴더의 `.gitignore`를 건드리지 않고 `.git/info/exclude`를 사용해 **원본 `git diff` 오염을 0%로 차단**하며, 원본 `.git`을 즉시 삭제해 시험 중 실수로라도 외부 `git push`가 일어나지 않도록 물리적으로 잠급니다 (키트 위치가 `<workspace>/.probe-kit` 직접 클론이든 `/tmp/probe-kit`이든 자동 감지 지원). `templates/HANDOFF.md`를 `runtime/HANDOFF.md`로 초기 복사하고 무토큰 EDA 스캔을 수행한 뒤, `~/.codex` 글로벌 설치는 마지막 6단계에서 선택적(Non-fatal)으로 수행됩니다.
 
 ```bash
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-KIT_DIR="/tmp/probe-kit"
-WORKSPACE_DIR="$(pwd)"
+KIT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+TARGET_KIT="$WORKSPACE_DIR/.probe-kit"
 
-echo "=== [1/5] 외부 git push 원천 차단 (보안 안전장치) ==="
-rm -rf "$KIT_DIR/.git"
-mkdir -p "$KIT_DIR/runtime"
-
-echo "=== [2/5] Codex 글로벌 하네스(AGENTS.md) 및 모델 프리셋 장착 ==="
-mkdir -p ~/.codex
-cp "$KIT_DIR/AGENTS.md" ~/.codex/AGENTS.md
-cp "$KIT_DIR/AGENTS.md" ~/.codex/instructions.md
-if [ ! -f ~/.codex/config.toml ]; then
-  cp "$KIT_DIR/config.toml" ~/.codex/config.toml 2>/dev/null || true
+echo "=== [1/6] 외부 git push 원천 차단 (보안 안전장치) ==="
+if [ "$KIT_SRC" != "$WORKSPACE_DIR" ] && [ -d "$KIT_SRC/.git" ]; then
+  rm -rf "$KIT_SRC/.git"
 fi
-chmod +x "$KIT_DIR/scripts/"*.sh "$KIT_DIR/scripts/"*.py 2>/dev/null || true
-echo "-> ~/.codex/AGENTS.md 및 스크립트 권한 설정 완료"
 
-echo "=== [3/5] 워크스페이스 Git 오염 방지 (.git/info/exclude) 등록 ==="
+echo "=== [2/6] probe-kit 하네스 파일을 워크스페이스(.probe-kit)로 배포 ==="
+mkdir -p "$TARGET_KIT"
+# 하네스 복사 및 chmod +x 설정
+
+echo "=== [3/6] 워크스페이스 Git 오염 방지 (.git/info/exclude) 등록 ==="
 if [ -d "$WORKSPACE_DIR/.git" ]; then
   mkdir -p "$WORKSPACE_DIR/.git/info"
-  for item in ".probe-kit" "NOTES_TEMP.md" "TASK_SPEC.md" "SUB_RESULT.md"; do
-    if ! grep -qxF "$item" "$WORKSPACE_DIR/.git/info/exclude" 2>/dev/null; then
-      echo "$item" >> "$WORKSPACE_DIR/.git/info/exclude"
-    fi
+  for item in "/.probe-kit" "/runtime/" "/NOTES_TEMP.md" "/TASK_SPEC.md" "/SUB_RESULT.md" "/EDA_SUMMARY.txt" "/HANDOFF.md"; do
+    grep -qxF "$item" "$WORKSPACE_DIR/.git/info/exclude" 2>/dev/null || echo "$item" >> "$WORKSPACE_DIR/.git/info/exclude"
   done
-  ln -sfn "$KIT_DIR" "$WORKSPACE_DIR/.probe-kit"
-  cp -n "$KIT_DIR/templates/NOTES.md" "$WORKSPACE_DIR/NOTES_TEMP.md" 2>/dev/null || true
-  echo "-> .probe-kit 심볼릭 링크 및 NOTES_TEMP.md 생성 완료 (git status 노출 완벽 차단)"
+  echo "-> .git/info/exclude 등록 완료 (.probe-kit, runtime/ 등 격리)"
+else
+  echo "⚠️ [경고] .git 디렉토리가 없어 .git/info/exclude 등록을 건너뜁니다 (정상 동작)."
 fi
 
-echo "=== [4/5] 현재 워크스페이스 구조 및 데이터 파일 무토큰 초기 스캔 ==="
-python3 "$KIT_DIR/scripts/eda_scan.py" "$WORKSPACE_DIR" | tee "$KIT_DIR/runtime/EDA_SUMMARY.txt" || true
+echo "=== [4/6] 런타임 버퍼 보장 및 실시간 메모장/인수인계서 준비 ==="
+cp -n "$TARGET_KIT/templates/NOTES.md" "$WORKSPACE_DIR/NOTES_TEMP.md" 2>/dev/null || true
+cp -n "$TARGET_KIT/templates/HANDOFF.md" "$TARGET_KIT/runtime/HANDOFF.md" 2>/dev/null || true
 
-echo "=== [5/5] 메인(Sol 6.1 xhigh) × 서브(Luna 6 xhigh) 하네스 장착 완료! ==="
+echo "=== [5/6] 워크스페이스 구조 및 데이터 무토큰 초기 스캔 ==="
+python3 "$TARGET_KIT/scripts/eda_scan.py" "$WORKSPACE_DIR" > "$TARGET_KIT/runtime/EDA_SUMMARY.txt" 2>&1 || true
+
+echo "=== [6/6] Codex 글로벌 하네스(~/.codex) 및 모델 프리셋 설정 (선택/Non-fatal) ==="
+mkdir -p ~/.codex 2>/dev/null || true
+cp "$TARGET_KIT/AGENTS.md" ~/.codex/AGENTS.md 2>/dev/null || true
+cp "$TARGET_KIT/AGENTS.md" ~/.codex/instructions.md 2>/dev/null || true
+cp "$TARGET_KIT/SUB_AGENTS.md" ~/.codex/SUB_AGENTS.md 2>/dev/null || true
+if [ ! -f ~/.codex/config.toml ]; then
+  cp "$TARGET_KIT/config.toml" ~/.codex/config.toml 2>/dev/null || true
+fi
+# 권한 오류 시에도 경고만 출력하고 정상 통과 (에이전트 프롬프트 첫 줄에서 AGENTS.md 직접 참조)
 echo "----------------------------------------------------------------------"
 echo "▶ [터미널 1 - 메인 아키텍트]: 'codex' 실행 -> '/model'에서 [Sol 6.1 (xhigh)] 선택"
-echo "   (역할: 요구사항 구조화, 설계, .probe-kit/runtime/TASK_SPEC.md 작성 및 결과 검토만 수행)"
-echo "▶ [터미널 2 - 서브 워커]: 새 터미널 탭 열기 -> 'codex' 실행 -> '/model'에서 [Luna 6 (xhigh)] 선택"
-echo "   (역할: TASK_SPEC.md 읽고 실제 코드 구현·테스트·디버깅 후 SUB_RESULT.md 기록 & '/clear')"
+echo "   (역할: 요구사항 분석, 설계, .probe-kit/runtime/TASK_SPEC.md 작성 및 서브 결과 검토)"
+echo "   (※ ~/.codex 설치 실패 시: 프롬프트 첫머리에 '먼저 .probe-kit/AGENTS.md를 읽고' 지시)"
+echo "▶ [터미널 2 - 서브 워커]: 새 탭 열기 -> 'codex' 실행 -> '/model'에서 [Luna 6 (xhigh)] 선택"
+echo "   (역할: TASK_SPEC.md 읽고 코드 구현·테스트 실행 -> SUB_RESULT.md 작성 후 /clear)"
+echo "   (※ ~/.codex 설치 실패 시: 프롬프트 첫머리에 '먼저 .probe-kit/SUB_AGENTS.md를 읽고' 지시)"
 echo "   ※ 또는 터미널 1에서 'bash .probe-kit/scripts/subagent.sh' 로 서브 에이전트 즉시 호출 가능"
+echo "▶ [Handoff 로깅 규칙]: handoff 로그는 에이전트 터미널과 같은 셸에서 실행. 실패 시 'python3 .probe-kit/scripts/handoff.py log ...' 사용"
 echo "----------------------------------------------------------------------"
 ```
 
@@ -257,7 +266,7 @@ model_reasoning_effort = "xhigh"
 2. **보안 및 인터페이스 유지 (Technique):** 기존 인증 방식·라우터·API 스키마를 깨뜨리지 말고, API 키나 개인정보를 절대 평문으로 하드코딩하지 마세요.
 3. **대용량 데이터 프롬프트 덤프 금지:** CSV/JSON/로그 원문을 프롬프트에 통째로 출력하지 말고 Python 스크립트로 집계/검증만 수행하세요.
 4. **제출 문서 정직성:** 제출용 보고서 작성 시 실제 구현된 코드와 실제 실행한 테스트 로그만을 근거로 `[결정] - [근거] - [검증] - [한계]` 구조에 맞춰 작성하세요.
-5. **하네스 및 인수인계 기록 디스크 영구 보존:** `.probe-kit` 하네스 전체와 `HANDOFF.md`는 외부 엔지니어링 도구 도입 및 체계적 형상 관리 역량을 증명하는 평가 가점 자산이므로 디스크에서 절대 삭제하지 마세요 (`.git/info/exclude`로 Git 형상만 깨끗이 격리; 사전 감사는 `scripts/pre_submit_audit.sh` 또는 Windows PowerShell 환경 시 `python scripts/pre_submit_audit.py`로 점검).
+5. **하네스 및 인수인계 기록 디스크 영구 보존:** `.probe-kit` 하네스 전체와 `HANDOFF.md`는 외부 엔지니어링 도구 도입 및 체계적 형상 관리 역량을 증명하는 평가 가점 자산이므로 디스크에서 절대 삭제하지 마세요 (`.git/info/exclude`로 Git 형상만 깨끗이 격리; 사전 감사는 `scripts/pre_submit_audit.sh` 또는 `python3 scripts/pre_submit_audit.py`로 점검).
 6. **시험 중 Git 변경 명령어(git add/commit/reset/clean) 전면 금지:** 시험 도중 `git add`, `git commit`, `git reset`, `git clean` 명령어 실행은 전면 금지됩니다. 모든 테스트 코드는 별도의 커밋 없이 동작하며 untracked 상태로 유지되어야 합니다.
 7. **단계별 HANDOFF.md 갱신 의무:** 매 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 반드시 최신화하세요 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 ```
@@ -292,8 +301,8 @@ cat "$RESULT_FILE" 2>/dev/null || true
 ```
 
 #### ⑤ `scripts/eda_scan.py` & `scripts/pre_submit_audit.sh` / `scripts/pre_submit_audit.py`
-> **Windows 및 플랫폼 실행 안내:**  
-> Windows PowerShell / CMD 환경이거나 WSL 경로 오류 발생 시 Windows 친화적 Python 포트인 `python .probe-kit/scripts/pre_submit_audit.py [target_dir]`를 직접 실행할 수 있습니다. Git Bash 및 WSL 환경에서는 기존처럼 `bash .probe-kit/scripts/pre_submit_audit.sh`를 실행할 수 있습니다. 시험 중 `git add`, `git commit`, `git reset`, `git clean`은 엄격히 금지됩니다.
+> **플랫폼 실행 안내:**  
+> 범용 Python 3 포트인 `python3 .probe-kit/scripts/pre_submit_audit.py [target_dir]`를 직접 실행할 수 있습니다. Git Bash 및 WSL/Linux 환경에서는 `bash .probe-kit/scripts/pre_submit_audit.sh`를 실행할 수 있습니다. 시험 중 `git add`, `git commit`, `git reset`, `git clean`은 엄격히 금지됩니다.
 ```python
 #!/usr/bin/env python3
 """scripts/eda_scan.py: 워크스페이스 내 코드/데이터 구조 및 CSV·JSON 요약 통계를 토큰 소모 없이 출력"""
@@ -476,7 +485,7 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 2. **정상 경로 1개 + 실패 경로 1개 이상 직접 실행:** 빈 값, 잘못된 형식, 예외 데이터 입력 시 안 죽고 처리되는지 터미널에서 직접 실행합니다.
 3. **웹 서버 `0.0.0.0` 바인딩 및 내장 Browser 직접 조작:** 웹/UI 과제는 반드시 `0.0.0.0`으로 띄운 뒤 내장 Browser에서 **직접 버튼 클릭, 입력, 페이지 이동**을 수행해 실행 상태와 스크린샷 채점에 대비합니다.
 4. **수치·집계 표본(Sample) 수동 대조:** 데이터 집계 과제는 5~20건의 작은 샘플(예외 포함)을 뽑아 기댓값을 직접 계산한 뒤, 코드 결과와 100% 일치하는지 검증하는 테스트를 돌립니다.
-5. **`pre_submit_audit.sh` / `pre_submit_audit.py` (`git diff` + 보안 점검) 실행:** AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`)로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그이며 시험 중 `git add`/`commit`/`reset`/`clean`은 엄격히 금지됩니다).
+5. **`pre_submit_audit.sh` / `pre_submit_audit.py` (`git diff` + 보안 점검) 실행:** AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 `python3 .probe-kit/scripts/pre_submit_audit.py`)로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그이며 시험 중 `git add`/`commit`/`reset`/`clean`은 엄격히 금지됩니다).
 6. **리소스(OOM) 및 전 파일 저장 상태(`저장됨`) 확인:** 우측 상단 CPU/RAM 사용량을 점검하고, 제출 전 모든 파일에 `Ctrl+S`를 눌러 `저장됨` 상태를 확정합니다.
 
 ---
@@ -695,7 +704,7 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
   - 12:15(125분 경과)부터는 무리한 새 기능 추가를 멈추고 완성도와 검증에 집중.
   - 내장 Browser(`0.0.0.0` 바인딩) 직접 클릭 조작 검증 및 데이터 표본 수동 대조 테스트 실행.
   - 터미널 1(`Sol 6.1 xhigh`)과 함께 **제출용 계획/협업 문서** 완성.
-  - `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`) 실행하여 `git diff`·민감정보·`localhost`·메모리·하네스 영구 보존 상태 최종 점검 (PASS 6건 확인).
+  - `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 `python3 .probe-kit/scripts/pre_submit_audit.py`) 실행하여 `git diff`·민감정보·`localhost`·메모리·하네스 영구 보존 상태 최종 점검 (PASS 6건 확인).
   - **.git/info/exclude에 의한 하네스 안전 격리 상태 및 git status 클린 여부 확인** (시험 중 `git add`/`commit`/`reset`/`clean` 금지 준수, 채점관 가점 확보를 위해 `.probe-kit` 및 `HANDOFF.md`는 디스크에 영구 보존) → **모든 파일 `Ctrl+S` ('저장됨' 상태)** 최종 확인.
 - [ ] **12:50 ~ 13:00 [제출 확정 & 서술형 대기]**
   - `제출하고 문제풀기` → `제출물 확정하고 문제풀기` 클릭.

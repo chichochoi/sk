@@ -45,7 +45,7 @@
 2. **보안 및 인터페이스 유지 (Technique):** 기존 인증 방식·라우터·API 스키마를 깨뜨리지 말고, API 키나 개인정보를 절대 평문으로 하드코딩하지 마세요.
 3. **대용량 데이터 프롬프트 덤프 금지:** CSV/JSON/로그 원문을 프롬프트에 통째로 출력하지 말고 Python 스크립트로 집계/검증만 수행하세요.
 4. **제출 문서 정직성:** 제출용 보고서 작성 시 실제 구현된 코드와 실제 실행한 테스트 로그만을 근거로 `[결정] - [근거] - [검증] - [한계]` 구조에 맞춰 작성하세요.
-5. **하네스 및 인수인계 기록 디스크 영구 보존:** `.probe-kit` 하네스 전체와 `HANDOFF.md`는 외부 엔지니어링 도구 도입 및 체계적 형상 관리 역량을 증명하는 평가 가점 자산이므로 디스크에서 절대 삭제하지 마세요 (`.git/info/exclude`로 Git 형상만 깨끗이 격리; 사전 감사는 `scripts/pre_submit_audit.sh` 또는 Windows PowerShell/CMD 환경 시 `python scripts/pre_submit_audit.py`로 점검).
+5. **하네스 및 인수인계 기록 디스크 영구 보존:** `.probe-kit` 하네스 전체와 `HANDOFF.md`는 외부 엔지니어링 도구 도입 및 체계적 형상 관리 역량을 증명하는 평가 가점 자산이므로 디스크에서 절대 삭제하지 마세요 (`.git/info/exclude`로 Git 형상만 깨끗이 격리; 사전 감사는 `scripts/pre_submit_audit.sh` 또는 `python3 scripts/pre_submit_audit.py`로 점검).
 6. **시험 중 Git 변경 명령어(git add/commit/reset/clean) 전면 금지:** 시험 도중 `git add`, `git commit`, `git reset`, `git clean` 명령어 실행은 전면 금지됩니다. 모든 테스트 코드는 별도의 커밋 없이 동작하며 untracked 상태로 유지되어야 합니다.
 7. **단계별 HANDOFF.md 갱신 의무:** 매 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 반드시 최신화하세요 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 

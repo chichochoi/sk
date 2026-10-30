@@ -35,18 +35,20 @@
 git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe-kit/init.sh
 ```
 
-### 🔍 스크립트 자동 실행 내역 (배경 원리)
-1. `/tmp/probe-kit`에 하네스를 클론한 직후 **`/tmp/probe-kit/.git`을 즉시 삭제**하여 시험 중 외부 GitHub으로의 `git push` 사고를 원천 차단합니다.
-2. 하네스 파일들을 워크스페이스 내부(`.probe-kit`)로 안전하게 복사하고 실행 권한(`chmod +x`)을 부여합니다.
-3. 글로벌 설정 디렉토리(`~/.codex`)에 `AGENTS.md`(메인 헌법), `SUB_AGENTS.md`(서브 헌법), `config.toml`을 설치합니다.
-4. `.git/info/exclude`에 `/.probe-kit`, `/runtime/`, `/NOTES_TEMP.md`, `/HANDOFF.md` 등을 등록하여, **과제 저장소의 Git 형상(`.gitignore` 포함)을 전혀 더럽히지 않고 100% 격리**합니다.
-5. `templates/NOTES.md`를 워크스페이스 루트의 `NOTES_TEMP.md`로, `templates/HANDOFF.md`를 `.probe-kit/runtime/HANDOFF.md`로 안전하게 복사합니다. (기존 파일이 있으면 덮어쓰지 않고 보존)
-6. `eda_scan.py`를 무토큰(0 Token)으로 실행하여 데이터 및 테스트 파일 현황을 `.probe-kit/runtime/EDA_SUMMARY.txt`에 자동 생성합니다.
+> ⚠️ **웹 터미널 붙여넣기 주의:** 웹 터미널에서 붙여넣기는 반드시 `Ctrl+Shift+V`(또는 마우스 우클릭 > 붙여넣기)를 쓰고 `Ctrl+V`는 절대 쓰지 마세요. `Ctrl+V`를 누르면 `^[[200~`, `\026` 같은 제어 문자가 명령어 앞에 붙어 `command not found` 오류가 발생합니다.
+
+### 🔍 스크립트 자동 실행 내역 (총 6단계 순서)
+1. **[1/6] 외부 git push 원천 차단 (보안 안전장치):** 하네스를 클론한 직후(기본 `/tmp/probe-kit` 또는 `<workspace>/.probe-kit` 직접 클론 모두 지원), 원본의 **`.git` 디렉토리를 즉시 삭제**하여 시험 중 외부 GitHub으로의 `git push` 사고를 원천 차단합니다.
+2. **[2/6] probe-kit 하네스 파일을 워크스페이스(.probe-kit)로 배포:** 하네스 파일들을 워크스페이스 내부(`.probe-kit`)로 안전하게 배치하고 실행 권한(`chmod +x`)을 부여합니다.
+3. **[3/6] 워크스페이스 Git 오염 방지 (.git/info/exclude) 등록:** `.git/info/exclude`에 `/.probe-kit`, `/runtime/`, `/NOTES_TEMP.md`, `/TASK_SPEC.md`, `/SUB_RESULT.md`, `/EDA_SUMMARY.txt`, `/HANDOFF.md` 등을 등록하여, **과제 저장소의 Git 형상(`.gitignore` 포함)을 전혀 더럽히지 않고 100% 격리**합니다. (워크스페이스가 비-Git 디렉토리인 경우 경고와 함께 안전하게 건너뜁니다)
+4. **[4/6] 런타임 버퍼 보장 및 실시간 메모장/인수인계서 준비:** `templates/NOTES.md`를 워크스페이스 루트의 `NOTES_TEMP.md`로, `templates/HANDOFF.md`를 `.probe-kit/runtime/HANDOFF.md`로 안전하게 복사합니다. (기존 파일이 있으면 덮어쓰지 않고 보존)
+5. **[5/6] 워크스페이스 구조 및 데이터 무토큰 초기 스캔:** `eda_scan.py`를 무토큰(0 Token)으로 실행하여 데이터 및 테스트 파일 현황을 `.probe-kit/runtime/EDA_SUMMARY.txt`에 자동 생성합니다.
+6. **[6/6] Codex 글로벌 하네스(~/.codex) 및 모델 프리셋 설정 (마지막 / 선택적 Non-fatal):** 글로벌 설정 디렉토리(`~/.codex`)에 `AGENTS.md`(메인 헌법), `SUB_AGENTS.md`(서브 헌법), `config.toml`을 설치합니다. 이 단계는 **선택적(Non-fatal)**으로 동작하여, 환경에 따라 권한 오류(`Permission denied`)가 발생해도 경고만 출력하고 정상 통과합니다. (이 경우 에이전트 프롬프트 첫 줄에서 `.probe-kit/AGENTS.md` / `SUB_AGENTS.md`를 명시적으로 읽도록 안내합니다)
 
 ✅ **완료 시그널:**
 터미널에 다음 메시지가 출력되면 정상 완료입니다:
 ```text
-=== [6/6] 워크스페이스 구조 및 데이터 무토큰 초기 스캔 ===
+=== [6/6] Codex 글로벌 하네스(~/.codex) 및 모델 프리셋 설정 ===
 ...
 🎉 [probe-kit] 메인(Sol 6.1 xhigh) × 서브(Luna 6 xhigh) 하네스 설치 완료!
 ```
@@ -68,6 +70,8 @@ cat .probe-kit/runtime/EDA_SUMMARY.txt
 bash .probe-kit/scripts/handoff.sh log "검증" "하네스 환경 검증" || python3 .probe-kit/scripts/handoff.py log "검증" "하네스 환경 검증"
 ```
 
+> ⚠️ **웹 터미널 붙여넣기:** 터미널 명령어 입력 시 `Ctrl+V` 대신 반드시 `Ctrl+Shift+V`(또는 우클릭 > 붙여넣기)를 사용하세요.  
+> 💡 **비-Git 워크스페이스 안내:** 워크스페이스가 Git 저장소가 아닌 일반 디렉토리(예: `/home/user`)인 경우, `init.sh`에서 `.git/info/exclude` 등록 단계가 경고와 함께 안전하게 건너뛰어집니다(정상 동작). 이 경우 `git status` 격리 확인은 생략하고 바로 `cat .probe-kit/runtime/EDA_SUMMARY.txt`부터 확인하세요.  
 > 💡 **Handoff 실행 규칙:** handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가.
 
 ### 🖥️ 듀얼 터미널 기동 및 모델 선택
@@ -109,7 +113,8 @@ codex
 터미널 1 (`Sol 6.1 xhigh`)에 아래 프롬프트를 복사하여 입력합니다:
 
 ```text
-[MAIN] 아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
+[MAIN] 먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.
+아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
 현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt 를 분석해줘. (키트 내부 README가 아닌 과제 문제 지시서여야 함)
 다음 항목을 핵심 위주로 명확하게 브리핑하고, 워크스페이스 루트의 NOTES_TEMP.md 에 기록해줘:
 1. 이번 과제가 아래 Case 1~4 중 어느 유형에 해당하는지 판별하고, 연동할 .probe-kit/skills/ 스킬 파일 경로를 지정해줘:
@@ -301,7 +306,8 @@ bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완�
 터미널 2 창으로 전환하여 아래 프롬프트를 입력합니다:
 
 ```text
-[SUB] .probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고, 명시된 파일 범위와 제약 조건을 엄격히 준수하여 코드를 구현해줘.
+[SUB] 먼저 .probe-kit/SUB_AGENTS.md를 읽고 그 규칙을 따라줘.
+.probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고, 명시된 파일 범위와 제약 조건을 엄격히 준수하여 코드를 구현해줘.
 구현 직후 다음 검증을 터미널에서 직접 실행해:
 1. 기존 베이스라인 테스트를 실행하여 기존 기능이 깨지지 않았는지 확인해.
 2. 이번 태스크의 실무자 DM 요구사항에 맞춘 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로와 예외 케이스를 모두 실행 검증해 (고정 템플릿 사용 금지, git add/commit/reset/clean 금지 및 untracked 유지).
@@ -367,10 +373,10 @@ bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통�
 ### 1) 표본 수동 대조 교차 검증 (데이터 과제 필수)
 ```bash
 # 15건 표본 데이터 수동 계산값(기댓값) vs 실제 처리 함수 출력 대조 실행
-python .probe-kit/scripts/sample_check_template.py
+python3 .probe-kit/scripts/sample_check_template.py
 
 # 실제 과제 모듈 및 함수 지정 대조 실행 시 (예: src.pipeline 모듈의 process_orders 함수)
-TARGET_MODULE="src.pipeline" TARGET_FUNC="process_orders" python .probe-kit/scripts/sample_check_template.py
+TARGET_MODULE="src.pipeline" TARGET_FUNC="process_orders" python3 .probe-kit/scripts/sample_check_template.py
 ```
 *(웹 과제인 경우: `0.0.0.0`으로 서버 기동을 유지하고, 내장 Browser에서 정상 폼 제출 및 예외 입력 시 에러 표출을 직접 클릭 조작하여 확인합니다.)*
 
@@ -379,8 +385,8 @@ TARGET_MODULE="src.pipeline" TARGET_FUNC="process_orders" python .probe-kit/scri
 # Linux / WSL / Git Bash 환경:
 bash .probe-kit/scripts/pre_submit_audit.sh
 
-# Windows PowerShell / CMD 환경 (WSL 미지원 또는 WSL 오류 시 범용 Python 버전):
-python .probe-kit/scripts/pre_submit_audit.py
+# 범용 Python 3 버전 직접 실행 (WSL/Linux/Windows 공통):
+python3 .probe-kit/scripts/pre_submit_audit.py
 ```
 * **6대 PASS 확인 항목:**
   1. `git diff --stat`: 과제 범위 외 불필요한 파일이 수정되지 않았는가?
@@ -529,8 +535,11 @@ bash .probe-kit/scripts/handoff.sh
 
 | 문제 상황 | 원인 | 즉시 해결 방법 |
 | :--- | :--- | :--- |
-| **`init.sh` 실행 실패 / 네트워크 에러** | 외부 GitHub 접근 지연 또는 네트워크 제한 | 워크스페이스에 이미 다운로드된 `probe-kit`이 있다면 `bash probe-kit/init.sh` (또는 `scripts/init.sh`)를 로컬 경로로 직접 실행 |
-| **Windows 환경 스크립트 실행 오류** | PowerShell 실행 정책 또는 줄바꿈(CRLF) 문제 | 셸 스크립트 대신 `python .probe-kit/scripts/pre_submit_audit.py`를 직접 실행하거나, 플랫폼의 Git Bash 터미널 탭을 열어서 명령어 실행 |
+| **붙여넣기 오류 (`$'\E[200~git': command not found` 등)** | 웹 터미널에서 `Ctrl+V`로 붙여넣어 제어 문자(`^[[200~`, `\026`)가 유입됨 | 해당 줄을 전체 삭제(`Ctrl+U` 또는 백스페이스)한 뒤 `Ctrl+Shift+V`(또는 우클릭 > 붙여넣기)로 재붙여넣기 |
+| **`init.sh` 실행 실패 / 네트워크 에러** | 외부 GitHub 접근 지연 또는 네트워크 제한 | 워크스페이스에 이미 다운로드된 `probe-kit`이 있다면 `bash probe-kit/init.sh` (또는 `scripts/init.sh`, `bash .probe-kit/init.sh`)를 로컬 경로로 직접 실행 (키트가 `<workspace>/.probe-kit` 또는 `/tmp/probe-kit` 어디에 있어도 자동 감지 동작) |
+| **`.git/info/exclude` 건너뜀 경고 (`not a git repository`)** | 워크스페이스(예: `/home/user`)가 Git 저장소가 아닌 일반 디렉토리임 | 정상 동작입니다. 하네스는 격리 단계만 안전하게 스킵하고 정상 설치되므로 경고를 무시하고 진행 |
+| **`EDA_SUMMARY.txt` 없음 / `init.sh` 중간 종료** | 초기화 중 실행 중단 또는 권한/환경 문제 | `bash .probe-kit/init.sh` 재실행 또는 `python3 .probe-kit/scripts/eda_scan.py . > .probe-kit/runtime/EDA_SUMMARY.txt` 수동 실행 |
+| **스크립트 실행 오류 / 환경 제약** | 줄바꿈(CRLF) 또는 셸 권한 문제 | 셸 스크립트 대신 `python3 .probe-kit/scripts/pre_submit_audit.py`를 직접 실행하거나, Bash 터미널 탭을 열어서 실행 |
 | **웹 서버 기동 시 포트 충돌 (`Address already in use`)** | 이전 프로세스가 해당 포트 점유 중 | 터미널에서 `lsof -i :<port>` (또는 `netstat -ano \| findstr <port>`)로 PID 확인 후 `kill -9 <PID>` 종료, 종료가 불가능하면 실무자 DM에 다른 포트 사용 가능 여부 확인 |
 | **Codex 세션 응답 지연 또는 토큰 한계** | 컨텍스트 누적 또는 일시적 API 지연 | 서브 터미널은 즉시 `/clear` 실행. 메인 터미널은 `bash .probe-kit/scripts/handoff.sh` 실행 후 새 탭에서 새 터미널을 열어 `[메인 프롬프트 6]`(Handoff 인수, .probe-kit/prompts/02_codex_prompts.md 참조)으로 무손실 세션 전환 |
 | **시험 중 실수로 `git add`나 `git commit`을 실행함** | 무의식적 습관으로 인한 명령어 입력 | 절대 당황하여 `git reset --hard`나 `git clean -fd`를 치지 마세요 (작업 코드 영구 소실 위험!). 침착하게 작업 코드가 완성되었는지 확인하고, 추가 커밋 없이 그대로 다음 단계를 진행 |
@@ -576,5 +585,5 @@ bash .probe-kit/scripts/handoff.sh
     ├── eda_scan.py                  # 토큰 0원으로 CSV/JSON/테스트 파일 구조 분석 스캐너
     ├── sample_check_template.py     # 15건 표본 수동 기댓값 vs 스크립트 출력 교차 검증 도구
     ├── pre_submit_audit.sh          # Linux/WSL/Git Bash용 종합 무감점 사전 감사 도구
-    └── pre_submit_audit.py          # Windows PowerShell/CMD 범용 Python 버전 사전 감사 도구
+    └── pre_submit_audit.py          # 범용 Python 3 버전 사전 감사 도구
 ```

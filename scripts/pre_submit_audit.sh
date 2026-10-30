@@ -12,7 +12,12 @@ set -u
 set -o pipefail 2>/dev/null || true
 
 # 워크스페이스 루트 절대 경로 자동 판별 및 작업 디렉토리 고정
-WORKSPACE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+TARGET_DIR="${1:-}"
+if [ -n "$TARGET_DIR" ]; then
+  WORKSPACE_ROOT="$(cd "$TARGET_DIR" 2>/dev/null && pwd || echo "$TARGET_DIR")"
+else
+  WORKSPACE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+fi
 cd "${WORKSPACE_ROOT}"
 
 PASS_COUNT=0
@@ -50,7 +55,7 @@ if command -v git >/dev/null 2>&1 && git -C "${WORKSPACE_ROOT}" rev-parse --is-i
   MODIFIED_COUNT=$(git -C "${WORKSPACE_ROOT}" status --porcelain 2>/dev/null | wc -l || echo 0)
   record_pass "Git 저장소 점검 완료 (현재 변경/추적 대상: ${MODIFIED_COUNT}개 항목)"
 else
-  echo "⚪ [SKIP] 현재 디렉토리가 Git 저장소가 아닙니다. Git 점검을 건너뜁니다."
+  echo "⚪ [SKIP] 현재 디렉토리가 Git 저장소가 아닙니다 (git 저장소 아님). Git 점검을 건너뜁니다."
 fi
 
 # --------------------------------------------------------------------------
@@ -132,7 +137,7 @@ if command -v git >/dev/null 2>&1 && git -C "${WORKSPACE_ROOT}" rev-parse --is-i
     record_pass "임시 파일 및 하네스(.probe-kit, HANDOFF.md 등)가 git status에 노출되지 않음 (격리 완료)"
   fi
 else
-  echo "⚪ [SKIP] Git 저장소가 아니므로 건너뜁니다."
+  echo "⚪ [SKIP] Git 저장소가 아니므로 건너뜁니다 (git 저장소 아님)."
 fi
 
 # --------------------------------------------------------------------------

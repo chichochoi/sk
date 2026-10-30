@@ -157,7 +157,7 @@ sequenceDiagram
 - **안전 격리:** 워크스페이스의 `.gitignore`를 수정하면 채점 시 무단 수정으로 감점되므로, 로컬 Git 전용 설정인 `.git/info/exclude`에 등록하여 **`git status`는 완전히 깨끗(Clean)하게 유지하면서 디스크에는 증거를 보존**합니다.
 
 ### 5.3 제출 전 감사 및 형상 무결성 점검
-- 제출 직전(12:40) 사전 감사 도구(`bash .probe-kit/scripts/pre_submit_audit.sh` 또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`)를 실행하여 변경 범위, 민감정보, localhost 바인딩, 하네스 보존 상태를 일괄 점검합니다.
+- 제출 직전(12:40) 사전 감사 도구(`bash .probe-kit/scripts/pre_submit_audit.sh` 또는 `python3 .probe-kit/scripts/pre_submit_audit.py`)를 실행하여 변경 범위, 민감정보, localhost 바인딩, 하네스 보존 상태를 일괄 점검합니다.
 - 시험 중 `git add`, `git commit`, `git reset`, `git clean` 실행은 전면 금지되며, 온더플라이 테스트 코드는 untracked 상태로 유지되어야 합니다.
 
 ---

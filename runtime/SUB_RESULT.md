@@ -18,7 +18,7 @@
 1. 작업 상태: 성공 (Step 1 데이터 정제 및 예외 처리 로직 구현 완료)
 2. 대상 모듈: Step 1 주문 데이터 정제 파이프라인 (clean_orders, calculate_metrics)
 3. 변경 파일: src/pipeline/aggregator.py, tests/test_edge_cases.py
-4. 실행 명령: pytest tests/test_aggregator.py && python tests/test_edge_cases.py
+4. 실행 명령: pytest tests/test_aggregator.py && python3 tests/test_edge_cases.py
 5. 테스트 결과: 총 8개 케이스 전체 통과 (베이스라인 5건 PASS, 태스크 DM 맞춤 온더플라이 tests/test_edge_cases.py 3건 PASS - git commit 없이 untracked 유지)
 6. 예외 처리 반영: 취소(CANCELLED) 주문 분모 제외 및 동일 order_id 최신 레코드 유지 완료
 7. diff 요약: 2 files changed, 42 insertions(+), 6 deletions(-) (불필요한 파일 변경 없음)
