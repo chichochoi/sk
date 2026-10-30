@@ -5,7 +5,7 @@
 2. 대상 모듈: ____
 3. 변경 파일: ____
 4. 실행 명령: ____
-5. 테스트 결과: ____
+5. 테스트 결과 (베이스라인 & 태스크 DM 맞춤 온더플라이 ad-hoc 테스트 결과): ____
 6. 예외 처리 반영: ____
 7. diff 요약: ____
 8. 바인딩/보안 점검: ____
@@ -19,7 +19,7 @@
 2. 대상 모듈: Step 1 주문 데이터 정제 파이프라인 (clean_orders, calculate_metrics)
 3. 변경 파일: src/pipeline/aggregator.py, tests/test_edge_cases.py
 4. 실행 명령: pytest tests/test_aggregator.py && python tests/test_edge_cases.py
-5. 테스트 결과: 총 8개 케이스 전체 통과 (베이스라인 5건 PASS, 신규 예외 검증 3건 PASS)
+5. 테스트 결과: 총 8개 케이스 전체 통과 (베이스라인 5건 PASS, 태스크 DM 맞춤 온더플라이 tests/test_edge_cases.py 3건 PASS - git commit 없이 untracked 유지)
 6. 예외 처리 반영: 취소(CANCELLED) 주문 분모 제외 및 동일 order_id 최신 레코드 유지 완료
 7. diff 요약: 2 files changed, 42 insertions(+), 6 deletions(-) (불필요한 파일 변경 없음)
 8. 바인딩/보안 점검: 0.0.0.0 바인딩 규정 준수, 민감정보 하드코딩 없음, .gitignore 미수정 확인

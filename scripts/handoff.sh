@@ -40,6 +40,110 @@ mkdir -p "${RUNTIME_DIR}"
 HANDOFF_ROOT_FILE="${WORKSPACE_ROOT}/HANDOFF.md"
 HANDOFF_RUNTIME_FILE="${RUNTIME_DIR}/HANDOFF.md"
 
+# --------------------------------------------------------------------------
+# [1-1] 단계별 로그 추가 서브커맨드 처리 (bash scripts/handoff.sh log "message")
+# --------------------------------------------------------------------------
+if [ "${1:-}" = "log" ]; then
+  shift
+  TS="$(date '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || date)"
+
+  if [ $# -eq 0 ]; then
+    LOG_STEP="기록"
+    LOG_MSG="단계별 진행 상태 기록"
+  elif [ $# -eq 1 ]; then
+    RAW_MSG="$1"
+    if [[ "$RAW_MSG" =~ ^([A-Za-z0-9가-힣_\ -]+)[:\|][[:space:]]*(.+)$ ]]; then
+      LOG_STEP="${BASH_REMATCH[1]}"
+      LOG_MSG="${BASH_REMATCH[2]}"
+    elif [[ "$RAW_MSG" =~ ^(TASK_SPEC[[:space:]]*issued|TASK_SPEC|sub[[:space:]]*done|SUB_RESULT|verification[[:space:]]*done|verification|검증[[:space:]]*완료|서브[[:space:]]*완료) ]]; then
+      LOG_STEP="${BASH_REMATCH[1]}"
+      LOG_MSG="$RAW_MSG"
+    elif [[ "$RAW_MSG" =~ ^(Step[[:space:]]*[0-9]+) ]]; then
+      LOG_STEP="${BASH_REMATCH[1]}"
+      LOG_MSG="$RAW_MSG"
+    else
+      LOG_STEP="진행"
+      LOG_MSG="$RAW_MSG"
+    fi
+  else
+    LOG_STEP="$1"
+    shift
+    LOG_MSG="$*"
+  fi
+
+  append_log_row() {
+    local target_file="$1"
+    local ts="$2"
+    local step="$3"
+    local msg="$4"
+    local new_row="| ${ts} | ${step} | ${msg} |"
+
+    if [ ! -f "${target_file}" ]; then
+      if [ -f "${HARNESS_ROOT}/templates/HANDOFF.md" ]; then
+        mkdir -p "$(dirname "${target_file}")"
+        cp "${HARNESS_ROOT}/templates/HANDOFF.md" "${target_file}"
+      else
+        cat <<EOF > "${target_file}"
+# 🧭 세션 인수인계서 (HANDOFF.md)
+
+## 단계별 갱신 로그 (Step Update Log)
+
+| 시각 (Time) | 단계 (Step) | 요약 (Summary) |
+| :--- | :--- | :--- |
+EOF
+      fi
+    fi
+
+    if grep -q "단계별.*갱신.*로그" "${target_file}" 2>/dev/null; then
+      awk -v row="${new_row}" '
+        BEGIN { in_sec = 0; in_table = 0; inserted = 0 }
+        /^[#]+.*단계별[[:space:]]*갱신[[:space:]]*로그/ { in_sec = 1 }
+        in_sec && /^\|/ {
+          in_table = 1
+          print
+          next
+        }
+        in_sec && in_table && !inserted && !/^\|/ {
+          print row
+          inserted = 1
+          in_table = 0
+          in_sec = 0
+        }
+        { print }
+        END {
+          if (in_sec && in_table && !inserted) {
+            print row
+            inserted = 1
+          }
+        }
+      ' "${target_file}" > "${target_file}.tmp" && mv -f "${target_file}.tmp" "${target_file}"
+    else
+      cat <<EOF >> "${target_file}"
+
+---
+
+## 단계별 갱신 로그 (Step Update Log)
+
+| 시각 (Time) | 단계 (Step) | 요약 (Summary) |
+| :--- | :--- | :--- |
+${new_row}
+EOF
+    fi
+  }
+
+  append_log_row "${HANDOFF_RUNTIME_FILE}" "${TS}" "${LOG_STEP}" "${LOG_MSG}"
+  if [ -f "${HANDOFF_ROOT_FILE}" ] && [ "${HANDOFF_ROOT_FILE}" != "${HANDOFF_RUNTIME_FILE}" ]; then
+    append_log_row "${HANDOFF_ROOT_FILE}" "${TS}" "${LOG_STEP}" "${LOG_MSG}"
+  fi
+
+  echo "✅ [Handoff] 단계별 갱신 로그 추가 완료:"
+  echo "   - 시각: ${TS}"
+  echo "   - 단계: ${LOG_STEP}"
+  echo "   - 내용: ${LOG_MSG}"
+  echo "   - 대상: ${HANDOFF_RUNTIME_FILE}"
+  exit 0
+fi
+
 echo "======================================================================"
 echo "🔄 [Handoff] 세션 전환용 기계 정보 자동 수집 시작"
 echo "   - 워크스페이스 루트: ${WORKSPACE_ROOT}"
@@ -263,17 +367,48 @@ if [ -n "${NOTES_FILE}" ] && [ -f "${NOTES_FILE}" ]; then
 fi
 
 # --------------------------------------------------------------------------
-# [7] 9대 필수 항목을 갖춘 HANDOFF.md 조립
+# [6-1] 기존 단계별 갱신 로그(Step Update Log) 보존
+# --------------------------------------------------------------------------
+EXISTING_LOG_ROWS=""
+SRC_HANDOFF=""
+if [ -f "${HANDOFF_RUNTIME_FILE}" ]; then
+  SRC_HANDOFF="${HANDOFF_RUNTIME_FILE}"
+elif [ -f "${HANDOFF_ROOT_FILE}" ]; then
+  SRC_HANDOFF="${HANDOFF_ROOT_FILE}"
+fi
+
+if [ -n "${SRC_HANDOFF}" ] && [ -f "${SRC_HANDOFF}" ]; then
+  EXISTING_LOG_ROWS="$(awk '
+    /^[#]+.*단계별[[:space:]]*갱신[[:space:]]*로그/ { flag=1; next }
+    flag && (/^[#]+[[:space:]]/ || /^---/) { flag=0 }
+    flag && /^\|/ {
+      if ($0 ~ /시각|Time/ || $0 ~ /:---/ || $0 ~ /YYYY-MM-DD/) next
+      print $0
+    }
+  ' "${SRC_HANDOFF}" 2>/dev/null || true)"
+fi
+
+LOG_ROWS=""
+if [ -n "${EXISTING_LOG_ROWS}" ]; then
+  LOG_ROWS="${EXISTING_LOG_ROWS}
+| ${TS} | 세션 전환 | handoff.sh 실행 및 세션 인수인계서 최신화 |"
+else
+  LOG_ROWS="| ${TS} | 세션 전환 | handoff.sh 실행 및 세션 인수인계서 최신화 |"
+fi
+
+# --------------------------------------------------------------------------
+# [7] 필수 항목을 갖춘 HANDOFF.md 조립
 # --------------------------------------------------------------------------
 cat <<EOF > "${HANDOFF_ROOT_FILE}"
 # 🧭 세션 인수인계서 (HANDOFF.md)
 
 > **문서 목적:** 본 문서는 구 세션(\`Sol 6.1 xhigh\`)의 핵심 의사결정, 실무자 DM 제약, 소스코드 변경 내역 및 미해결 리스크를 신규 세션으로 무손실 인계하기 위한 표준 엔지니어링 문서입니다.  
-> **신규 세션 규칙:** 새로 투입된 메인 아키텍트(\`Sol 6.1 xhigh\`)는 본 문서를 정독하고, 핵심 제약과 다음 작업 계획을 복창한 뒤 인간 아키텍트(수험생)의 **[승인(Approved)]**을 받아야만 다음 단계(\`TASK_SPEC.md\`)에 착수할 수 있습니다.
+> **신규 세션 규칙:** 새로 투입된 메인 아키텍트(\`Sol 6.1 xhigh\`)는 본 문서를 정독하고, 핵심 제약과 다음 작업 계획을 복창한 뒤 인간 아키텍트(수험생)의 **[승인(Approved)]**을 받아야만 다음 단계(\`TASK_SPEC.md\`)에 착수할 수 있습니다.  
+> **실시간 갱신 규칙:** 본 문서는 세션 종료 시점만이 아니라 매 단계(TASK_SPEC 발행 / 서브 완료 / 검증 완료)마다 \`bash .probe-kit/scripts/handoff.sh log "<메시지>"\`를 통해 실시간으로 갱신되어야 합니다.
 
 ---
 
-## 1. 메타데이터 (Metadata & Git State)
+## 1. 현재 상태 및 메타데이터 (Current Status & Metadata)
 
 - **인수인계 일시:** ${TS}
 - **구 세션 담당:** \`Sol 6.1 (xhigh)\` (메인 아키텍트)
@@ -398,9 +533,9 @@ ${COMBINED_DIFF}
 
 ---
 
-## 7. 미해결 리스크 및 기술 부채 (Unresolved Risks)
+## 7. 미해결 리스크 및 한계 (Unresolved Risks & Limitations)
 
-- **식별된 이슈/리스크:** ${SUB_ISSUES:-대용량 데이터 메모리 적재 시 OOM 위험 및 동시성 병목 주의}
+- **식별된 이슈/한계:** ${SUB_ISSUES:-대용량 데이터 메모리 적재 시 OOM 위험 및 동시성 병목 주의}
 - **대응 가이드:** 신규 세션에서 스트리밍/청크 처리 도입 또는 메모리 모니터링 수행
 
 ---
@@ -415,7 +550,17 @@ ${COMBINED_DIFF}
 
 ---
 
-## 9. 금지 사항 (Strict Negative Constraints)
+## 9. 단계별 갱신 로그 (Step Update Log)
+
+> 매 단계(TASK_SPEC 발행 / 서브 완료 / 검증 완료 등)마다 \`bash .probe-kit/scripts/handoff.sh log "<단계: 요약>"\`을 실행하여 누적 기록합니다.
+
+| 시각 (Time) | 단계 (Step) | 요약 (Summary) |
+| :--- | :--- | :--- |
+${LOG_ROWS}
+
+---
+
+## 10. 금지 사항 (Strict Negative Constraints)
 
 - 🚫 **메인 직접 구현 금지:** 메인 에이전트(\`Sol 6.1 xhigh\`)는 비즈니스 코드를 직접 작성/수정하지 않는다.
 - 🚫 **불변 인터페이스 수정 금지:** 과제 기본 제공 API 라우트 및 호출 규격을 임의로 변경하지 않는다.

@@ -9,10 +9,11 @@
 1. **터미널 2개 분리 운용 (가장 확실하고 빠른 방법):**
    - **터미널 1 (`Main - Sol 6.1 xhigh`):** 아키텍트 전용입니다. 비즈니스 코드를 직접 짜게 하지 말고, 구조 진단·작업 분할·`.probe-kit/runtime/TASK_SPEC.md` 작성·최종 제출 문서 초안 작성만 시킵니다.
    - **터미널 2 (`Sub - Luna 6 xhigh`):** 워커 전용입니다. `TASK_SPEC.md`를 읽고 실제 파일 수정·단위 테스트 실행·디버깅만 수행하게 한 뒤, 모듈 1개가 끝날 때마다 **`/clear`를 입력해 컨텍스트를 초기화**합니다(토큰 절약의 핵심!).
-2. **모든 `TASK_SPEC.md`에 4요소 강제:** **① 목표, ② 유지할 제약(담당자 DM 조건), ③ 변경 파일 범위, ④ 검증 테스트 명령어**를 명시합니다.
+2. **모든 `TASK_SPEC.md`에 필수 요소 강제:** **① 이번 단계 목표, ② 변경 파일 범위, ③ 유지할 제약(담당자 DM 조건), ④ 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, git add/commit/reset/clean 금지), ⑤ 검증 테스트 명령어(매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지, SUB_RESULT 보고)**를 명시합니다.
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:** 한 번에 하나씩 쪼개서 서브에 위임하고, 시키지 않은 거창한 기능(불필요한 쓰기 가드, 복잡한 캐싱/패턴 등)을 넣지 못하게 고삐를 쥡니다.
 4. **버그 수정도 '원인 보고 → 범위 합의' 후에만:** 서브 에이전트에서 테스트 실패 시 무작정 코드를 덮어쓰지 않고 원인과 수정 범위를 먼저 확인합니다.
 5. **방향 수정 시 이유를 텍스트로 기록:** *"A 방식은 ~한 문제가 있어 접고 B 방식으로 전환한다"*고 메인 에이전트 프롬프트에 명시해야 '방향 조정' 가점을 받습니다.
+6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다.
 
 ---
 
@@ -40,8 +41,8 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 - [실무자 확인 조건 1: 예) 취소 상태 데이터는 집계 및 비율 분모에서 제외]
 - [실무자 확인 조건 2: 예) 중복 데이터는 최신 타임스탬프 기준으로 유지]
 - 변경 허용 파일 범위: [파일 경로 명시] (기존 인증 방식/라우터/인터페이스 변경 절대 금지)
-- 오버엔지니어링 금지 및 민감정보 하드코딩 금지, 웹 서버는 0.0.0.0 바인딩
-- 서브 에이전트가 구현 직후 실행해야 할 정상 경로 + 예외 경로(Edge Case) 테스트 명령어
+- 오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버는 0.0.0.0 바인딩, git add/commit/reset/clean 금지
+- 서브 에이전트가 구현 직후 실행해야 할 정상 경로 + 예외 경로(Edge Case) 테스트 명령어 (태스크별 DM 요구사항 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지)
 - 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md 등 해당 파일명]
 ```
 
@@ -54,9 +55,9 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 [SUB] .probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고, 명시된 파일 범위와 제약 조건을 엄격히 지켜서 코드를 구현해줘.
 구현 직후 다음 검증을 직접 터미널에서 실행해:
 1. 기존 베이스라인 테스트를 실행해 깨진 부분(Regression)이 없는지 확인해.
-2. 정상 경로(Happy Path)와 예외 케이스(빈 입력, 결측치, 중복, 취소 건 등)를 검증하는 테스트를 실행해 통과 여부를 확인해.
+2. 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로(Happy Path)와 예외 케이스(빈 입력, 결측치, 중복, 취소 건 등)를 검증해 (고정 템플릿 사용 금지, git add/commit/reset/clean 금지 및 untracked 유지).
 3. 만약 실패하면 바로 덮어쓰지 말고 원인 후보와 수정 범위를 먼저 진단해.
-모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록해줘 (불필요한 줄 수 제한 없음).
+모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" 으로 갱신해줘 (불필요한 줄 수 제한 없음).
 ```
 
 *(💡 서브 에이전트의 작업 완료 및 `SUB_RESULT.md` 확인 후, 터미널 2에서는 반드시 `/clear`를 입력해 누적 토큰을 0으로 초기화하세요!)*
@@ -145,9 +146,9 @@ bash .probe-kit/scripts/subagent.sh status
 
 ### 2) 메인 에이전트 (터미널 A) 세션 전환 및 Handoff 운용 원칙
 - 메인 에이전트는 전체 설계 맥락을 유지해야 하므로 원칙적으로 세션을 유지합니다.
-- 단, 단순 `/compact`를 반복하면 컨텍스트 오염과 실무자 비즈니스 제약 망각(Drift)이 발생할 수 있습니다.
-- 따라서 컨텍스트가 비대해지거나 4대 골든 타이밍(Step 1 MVP 완료, 제약 망각 감지, 대규모 방향 전환, 12:15 최종 검증 진입)에 도달하면 단순 `/clear` 대신 **공식 Handoff 프로토콜**을 수행합니다:
-  1. 터미널 1에서 `bash .probe-kit/scripts/handoff.sh` 실행 (기계적 메타데이터 자동 추출)
+- 하네스 초기화(`init.sh`) 시 `templates/HANDOFF.md`가 `runtime/HANDOFF.md`로 초기 복사되며, 각 단계(TASK_SPEC issued / sub done / verification done)마다 `bash .probe-kit/scripts/handoff.sh log "<단계: 요약>"`으로 실시간 진행 상태를 누적합니다.
+- 단순 `/compact`를 반복하면 컨텍스트 오염과 실무자 비즈니스 제약 망각(Drift)이 발생할 수 있으므로, 컨텍스트가 비대해지거나 4대 골든 타이밍(Step 1 MVP 완료, 제약 망각 감지, 대규모 방향 전환, 12:15 최종 검증 진입)에 도달하면 단순 `/clear` 대신 **공식 Handoff 프로토콜**을 수행합니다:
+  1. 터미널 1에서 `bash .probe-kit/scripts/handoff.sh` 실행 (기계적 메타데이터 자동 추출 및 단계별 로그 보존)
   2. 메인에게 **[메인 프롬프트 5]**를 주입하여 `HANDOFF.md`에 [결정]-[근거]-[포기한 대안], DM 불변 제약, Next Actions 1~3을 완벽히 보강 및 저장
   3. 구 터미널 종료(`/exit`) 후 새 터미널 창에서 `codex` 기동 (`Sol 6.1 xhigh` 설정)
   4. 신규 메인에게 **[메인 프롬프트 6]**을 주입하여 `HANDOFF.md` 복창 확인 후 인간 아키텍트의 `[승인(Approved)]`을 거쳐 다음 단계 착수
@@ -166,7 +167,7 @@ bash .probe-kit/scripts/subagent.sh status
    - 웹/UI 과제는 반드시 `0.0.0.0`으로 띄운 뒤 내장 Browser에서 **직접 버튼 클릭, 입력, 페이지 이동**을 수행해 실행 상태와 스크린샷 채점에 대비합니다.
 4. **수치·집계 표본(Sample) 수동 대조:**
    - 데이터 집계 과제는 5~20건의 작은 샘플(예외 포함)을 뽑아 기댓값을 직접 계산한 뒤, 코드 결과와 100% 일치하는지 검증하는 단위 테스트를 돌립니다.
-5. **`pre_submit_audit.sh` (`git diff` + 보안 점검) 실행:**
-   - AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh`로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그입니다).
+5. **`pre_submit_audit.sh` / `pre_submit_audit.py` (`git diff` + 보안 점검) 실행:**
+   - AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`)로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그이며, 시험 중 `git add`/`commit`/`reset`/`clean`은 엄격히 금지됩니다).
 6. **리소스(OOM) 및 전 파일 저장 상태(`저장됨`) 확인:**
    - 우측 상단 CPU/RAM 사용량을 점검하고, 제출 전 모든 파일에 `Ctrl+S`를 눌러 `저장됨` 상태를 확정합니다.

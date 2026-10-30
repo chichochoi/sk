@@ -11,8 +11,12 @@ git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe
 ## 🛡️ 제출 직전 사전 감사 및 하네스 영구 보존
 
 ```bash
-# 사전 무감점 감사 (PASS 6건 확인)
+# 사전 무감점 감사 (Git Bash / WSL / Linux: PASS 6건 확인)
 bash .probe-kit/scripts/pre_submit_audit.sh
+
+# Windows PowerShell / CMD 환경 (WSL 오류 또는 미지원 시 범용 Python 실행):
+python .probe-kit/scripts/pre_submit_audit.py
+
 # ⚠️ 주의: 채점관/평가 AI 확인 및 가점 확보를 위해 .probe-kit 및 HANDOFF.md는 디스크에 영구 보존합니다 (삭제 금지).
 # Git 추적은 .git/info/exclude 로 자동 격리되어 제출 git diff/status에 영향을 주지 않습니다.
 ```
@@ -22,25 +26,31 @@ bash .probe-kit/scripts/pre_submit_audit.sh
 | 파일 경로 | 구분 | 설명 |
 | :--- | :--- | :--- |
 | `foruser.md` | 수험생 실전 매뉴얼 | 시험 당일 10:00부터 13:30까지 그대로 따라 하는 인간 주도형 올인원 시나리오 |
-| `init.sh` | 하네스 설치 | 하네스·모델 설정 주입 + `.git/info/exclude` 오염 방지 + 초기 EDA 스캔 원클릭 실행 |
+| `dm_question.md` | DM 질문 뱅크 | Case 1~4별 실무자 DM 맞춤형 심층 질문 뱅크 & 평가 에이전트 대응 가이드 |
+| `init.sh` | 하네스 설치 | 하네스 배포 + `.git/info/exclude` 오염 방지 + 초기 EDA + `templates/HANDOFF.md` 복사 원클릭 실행 |
 | `config.toml` | 모델 프리셋 | 기본 모델(`Sol 6.1 xhigh`) 및 서브 프로필(`Luna 6 xhigh`) 설정 |
-| `AGENTS.md` | 공통 헌법 | 메인(`Sol 6.1 xhigh`) 설계/지시 전담 헌법 및 6대 오케스트레이션 통제 규칙 |
-| `SUB_AGENTS.md` | 서브 헌법 | 서브(`Luna 6 xhigh`) 전용 고속 구현·검증·요약 보고 프로토콜 |
+| `AGENTS.md` | 공통 헌법 | 메인(`Sol 6.1 xhigh`) 설계/지시 전담 헌법 및 오케스트레이션 통제 규칙 |
+| `SUB_AGENTS.md` | 서브 헌법 | 서브(`Luna 6 xhigh`) 전용 온더플라이 테스트·고속 구현·검증·요약 보고 프로토콜 |
 | `runtime/TASK_SPEC.md` | 작업 큐 | 메인이 작성하는 모듈별 작업 명세서 (목표·대상 파일·제약·검증 명령) |
 | `runtime/SUB_RESULT.md` | 결과 버퍼 | 서브가 구현/검증 후 남기는 핵심 요약 보고서 (변경 파일·테스트 결과) |
+| `runtime/HANDOFF.md` | 인수인계서 | 세션 간 무손실 인수인계서 (init.sh가 templates에서 복사 후 매 단계 및 세션 전환 시 실시간 갱신) |
+| `skills/handoff.md` | 온디맨드 스킬 | Handoff 4대 골든 타이밍, 단계별 실시간 로그 및 3단계 표준 프로토콜 지침 |
 | `skills/case1_data_pipeline.md` | 온디맨드 스킬 | Case 1, 5: 데이터 정제·집계·임계값 판정·표본 수동 대조 지침 |
 | `skills/case2_web_service.md` | 온디맨드 스킬 | Case 2: `0.0.0.0` 바인딩·핵심 동선 수직 완성·예외 UI 방어 지침 |
 | `skills/case3_legacy_debug.md` | 온디맨드 스킬 | Case 3: 베이스라인 테스트·인터페이스 유지·최소 범위 디버깅 지침 |
 | `skills/case4_policy_rag_doc.md` | 온디맨드 스킬 | Case 4, 6, 7, 8: 규정 조항 색인화·수동 검토 플래그·환각 통제·대안 비교 지침 |
-| `prompts/01_dm_questions.md` | 프롬프트 치트시트 | 우측 DM '업무 담당자' 5단계 만능 12문 + 케이스별 질문 + 비상 힌트 유도문 |
-| `prompts/02_codex_prompts.md` | 프롬프트 치트시트 | 메인/서브 단계별 통제 프롬프트 4종 (초기 진단 / TASK_SPEC 생성 / 서브 실행 / 검수) |
+| `prompts/02_codex_prompts.md` | 프롬프트 치트시트 | 메인/서브 단계별 통제 프롬프트 6종 (초기 진단 / TASK_SPEC / 서브 실행 / 검수 / Handoff) |
 | `prompts/03_post_qna_formula.md` | 프롬프트 치트시트 | 마지막 30분 후속 서술형(6문항×5분) 4문장 타이핑 공식 & 전제 불일치 방어문 |
-| `templates/NOTES.md` | 문서 템플릿 | 시험 중 실시간 기록장 (`NOTES_TEMP.md` 복사본) |
+| `templates/HANDOFF.md` | 문서 템플릿 | 세션 인수인계서 원본 템플릿 (`init.sh` 실행 시 `runtime/HANDOFF.md`로 자동 복사) |
+| `templates/NOTES.md` | 문서 템플릿 | 시험 중 실시간 기록장 (`NOTES_TEMP.md` 원본 템플릿) |
 | `templates/SUBMISSION_REPORT.md` | 문서 템플릿 | 최종 제출용 과제 수행 계획 및 검증 보고서 템플릿 |
+| `scripts/init.sh` | 자동화 도구 | root `init.sh`로 위임 실행하는 편리 래퍼 스크립트 |
+| `scripts/handoff.sh` | 자동화 도구 | 세션 전환 Git/런타임 정보 수집 및 단계별 로그(`log` 서브커맨드) 실시간 갱신기 |
 | `scripts/subagent.sh` | 자동화 도구 | `Luna 6 xhigh`로 `TASK_SPEC.md`를 실행하고 결과만 요약 반환하는 서브 호출기 |
 | `scripts/eda_scan.py` | 자동화 도구 | CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약하는 무토큰 EDA 스캐너 |
 | `scripts/sample_check_template.py` | 검증 도구 | 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 교차 검증 템플릿 |
-| `scripts/pre_submit_audit.sh` | 검증 도구 | `git diff` 범위·민감정보·`localhost` 바인딩·리소스 일괄 점검 감사 스크립트 |
+| `scripts/pre_submit_audit.sh` | 검증 도구 | Git Bash/WSL/Linux용 `git diff` 범위·민감정보·`localhost` 바인딩·리소스 일괄 점검 감사 스크립트 |
+| `scripts/pre_submit_audit.py` | 검증 도구 | Windows PowerShell/CMD 범용 Python 버전 사전 감사 스크립트 (`python scripts/pre_submit_audit.py [dir]`) |
 
 ---
 # 🎯 SK하이닉스 AI 해커톤 2차 예선 (Cofa Probe) 최종 통합 마스터 플레이북 & 메인/서브 Git 하네스
@@ -89,43 +99,49 @@ bash .probe-kit/scripts/pre_submit_audit.sh
 probe-kit/
 ├── README.md                     # 이 마스터 플레이북 전문 (에디터 우측에 띄워둘 총사령부 문서)
 ├── foruser.md                    # [수험생 실전 매뉴얼] 10:00~13:30 인간 주도형 올인원 시나리오
-├── init.sh                       # [원클릭 장착] 하네스·모델 설정 주입 + .git/info/exclude 오염 방지 + 초기 EDA 스캔
+├── dm_question.md                # [DM 질문 뱅크] Case 1~4별 실무자 DM 맞춤형 심층 질문 모음
+├── init.sh                       # [원클릭 장착] 하네스 배포 + Git 보호 + 무토큰 EDA + templates/HANDOFF.md 복사 (root 또는 scripts/init.sh)
 ├── config.toml                   # [모델 설정] 기본 모델(Sol 6.1 xhigh) 및 서브 프로필(Luna 6 xhigh) 프리셋
-├── AGENTS.md                     # [메인+공통 헌법] 역할 분담(Architect vs Worker) 및 6대 통제 규칙
-├── SUB_AGENTS.md                 # [서브 전용 헌법] Luna 6 xhigh 전용 고속 구현·검증·요약 보고 프로토콜
+├── AGENTS.md                     # [메인+공통 헌법] 역할 분담(Architect vs Worker) 및 오케스트레이션 통제 규칙
+├── SUB_AGENTS.md                 # [서브 전용 헌법] Luna 6 xhigh 전용 온더플라이 테스트·고속 구현·검증·요약 보고 프로토콜
 │
 ├── runtime/                      # [핸드셰이크 버퍼] 메인 ↔ 서브 에이전트가 토큰 낭비 없이 통신하는 작업 큐
 │   ├── TASK_SPEC.md              # 메인(Sol 6.1 xhigh)이 작성하는 모듈별 작업 지시서 (목표·파일·제약·검증 명령)
-│   └── SUB_RESULT.md             # 서브(Luna 6 xhigh)가 실행 후 남기는 핵심 요약 보고서 (변경 파일·테스트 결과)
+│   ├── SUB_RESULT.md             # 서브(Luna 6 xhigh)가 실행 후 남기는 핵심 요약 보고서 (변경 파일·테스트 결과)
+│   └── HANDOFF.md                # [인수인계서] init.sh가 templates에서 복사 후 매 단계 및 세션 전환 시 실시간 갱신
 │
 ├── skills/                       # [온디맨드 스킬] 판별된 케이스 파일만 서브 에이전트에게 읽히는 도메인 지침
+│   ├── handoff.md                # Handoff 4대 골든 타이밍, 단계별 실시간 로그 및 3단계 표준 프로토콜 지침
 │   ├── case1_data_pipeline.md    # Case 1, 5: 데이터 정제·집계·임계값 판정·표본 수동 대조
 │   ├── case2_web_service.md      # Case 2: 0.0.0.0 바인딩·핵심 동선 수직 완성·예외 UI 방어
 │   ├── case3_legacy_debug.md     # Case 3: 베이스라인 테스트·인터페이스 유지·최소 범위 디버깅
 │   └── case4_policy_rag_doc.md   # Case 4, 6, 7, 8: 규정 조항 색인화·수동 검토 플래그·환각 통제·대안 비교
 │
 ├── prompts/                      # [복붙 치트시트] 에디터 우측에 띄워두고 쓰는 인간용 무기
-│   ├── 01_dm_questions.md        # 우측 DM '업무 담당자' 공략용 5단계 만능 12문 + 케이스별 질문 + 비상 힌트 유도문
-│   ├── 02_codex_prompts.md       # 메인/서브 단계별 통제 프롬프트 4종 (초기 진단 / TASK_SPEC 생성 / 서브 실행 / 검수·전환)
+│   ├── 02_codex_prompts.md       # 메인/서브 단계별 통제 프롬프트 6종 (초기 진단 / TASK_SPEC 생성 / 서브 실행 / 검수 / Handoff)
 │   └── 03_post_qna_formula.md    # 마지막 30분 후속 서술형(6문항×5분) 직접 타이핑용 4문장 공식 & 전제 불일치 방어문
 │
 ├── templates/                    # [문서 템플릿]
+│   ├── HANDOFF.md                # 세션 인수인계서 원본 템플릿 (init.sh 실행 시 runtime/HANDOFF.md로 복사)
 │   ├── NOTES.md                  # 실시간 메모장 (담당자 DM 답변 + [결정]-[근거]-[검증]-[한계] 기록)
 │   └── SUBMISSION_REPORT.md      # 최종 제출용 과제 수행 계획 및 검증 보고서 템플릿
 │
 └── scripts/                      # [자동화 & 검증 도구]
+    ├── init.sh                   # [설치 래퍼] root init.sh로 위임 실행
+    ├── handoff.sh                # [인수인계 도구] 세션 전환 수집 및 단계별 로그(log 서브커맨드) 실시간 갱신기
     ├── subagent.sh               # [서브 호출기] Luna 6 xhigh로 TASK_SPEC.md를 실행하고 결과만 요약 반환
     ├── eda_scan.py               # [무토큰 EDA] CSV/JSON/테스트 파일 구조를 토큰 0원으로 즉시 요약
     ├── sample_check_template.py  # [표본 대조] 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 검증 템플릿
-    └── pre_submit_audit.sh       # [제출 전 감사] git diff 범위·민감정보·localhost 바인딩·리소스 일괄 점검
+    ├── pre_submit_audit.sh       # [제출 전 감사] Git Bash/WSL/Linux용 git diff 범위·민감정보·localhost 바인딩·리소스 점검
+    └── pre_submit_audit.py       # [제출 전 감사] Windows PowerShell/CMD 범용 Python 버전 사전 감사 스크립트
 ```
 
 ---
 
 ### ⚙️ Git에 올릴 핵심 하네스 파일 코드 전문
 
-#### ① `init.sh` (시험 시작 직후 단 한 번 실행하는 자동 설치 스크립트)
-과제 폴더의 `.gitignore`를 건드리지 않고 `.git/info/exclude`를 사용해 **원본 `git diff` 오염을 0%로 차단**하며, `/tmp/probe-kit/.git`을 즉시 삭제해 시험 중 실수로라도 외부 `git push`가 일어나지 않도록 물리적으로 잠급니다.
+#### ① `init.sh` (시험 시작 직후 실행하는 자동 설치 스크립트; `scripts/init.sh` 래퍼로도 실행 가능)
+과제 폴더의 `.gitignore`를 건드리지 않고 `.git/info/exclude`를 사용해 **원본 `git diff` 오염을 0%로 차단**하며, `/tmp/probe-kit/.git`을 즉시 삭제해 시험 중 실수로라도 외부 `git push`가 일어나지 않도록 물리적으로 잠급니다. 또한 `templates/HANDOFF.md`를 `runtime/HANDOFF.md`로 초기 복사하여 실시간 인수인계 로깅 기반을 마련합니다.
 
 ```bash
 #!/usr/bin/env bash
@@ -209,11 +225,15 @@ model_reasoning_effort = "xhigh"
      1) **이번 단계 목표 (단일 모듈/기능)**
      2) **수정/생성할 정확한 파일 경로 및 함수 범위**
      3) **절대 지켜야 할 현업 예외 조건(Edge Cases) 및 기존 인터페이스 제약**
-     4) **금지 사항 (오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버는 `0.0.0.0` 바인딩 필수)**
-     5) **서브 에이전트가 실행해야 할 구체적인 검증/테스트 명령어**
+     4) **금지 사항 (오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버는 `0.0.0.0` 바인딩 필수, git add/commit/reset/clean 금지)**
+     5) **서브 에이전트가 실행해야 할 구체적인 검증/테스트 명령어 (태스크별 DM 요구사항 검증을 위한 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지, SUB_RESULT 보고)**
 3. **서브 에이전트 호출 및 결과 검수:**
    - `TASK_SPEC.md` 작성 후, `bash .probe-kit/scripts/subagent.sh` 실행을 제안하거나 사용자가 서브 터미널(`Luna 6 xhigh`)에서 실행하도록 안내하세요.
    - 서브 작업이 끝나면 전체 코드를 다 읽지 말고 `.probe-kit/runtime/SUB_RESULT.md`와 `git diff --stat`만 확인하여 다음 단계 지시서(`TASK_SPEC.md`)를 수립하세요.
+4. **세션 관리 및 명시적 Handoff 프로토콜 (컨텍스트 오염 및 제약 망각 차단):**
+   - 세션이 길어져 컨텍스트가 비대해질 때 단순 `/compact`를 반복하면 과거 디버깅 잔재와 파편화된 가설이 누적되어 실무자 비즈니스 제약을 망각(Constraint Drift)하게 됩니다.
+   - 4대 골든 타이밍(Step 1 MVP 완료, 제약 망각 감지, 대규모 방향 전환, 12:15 최종 검증 진입 직전) 도달 시 단순 `/compact` 대신 `bash .probe-kit/scripts/handoff.sh` 실행 후 `HANDOFF.md`에 `[결정]-[근거]-[포기한 대안]`, DM 불변 제약 체크리스트, Next Actions 1~3을 명확히 보강·저장하여 신규 세션으로 무손실 인수인계를 수행하세요.
+   - **단계별 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신하세요.
 
 ---
 
@@ -222,19 +242,22 @@ model_reasoning_effort = "xhigh"
 1. **지시서 기반 정밀 구현:**
    - 즉시 `.probe-kit/runtime/TASK_SPEC.md`(및 지정된 경우 `.probe-kit/skills/caseX_*.md`)를 읽고, 지정된 파일 범위 내에서만 가장 간결하고 직관적인 코드(MVP)를 구현하세요.
    - 시키지 않은 거창한 디자인 패턴, 불필요한 쓰기 가드(Write Guard), 범위 밖 파일 수정을 절대 하지 마세요.
-2. **직접 실행 및 정상·예외 경로 검증:**
-   - 구현 직후 `TASK_SPEC.md`에 명시된 베이스라인 테스트 + 신규 정상/예외 케이스 테스트를 터미널에서 직접 실행하세요.
+2. **직접 실행 및 온더플라이 테스트 검증:**
+   - 구현 직후 `TASK_SPEC.md`에 명시된 베이스라인 테스트를 실행하고, 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(예: `tests/test_*.py` 또는 ad-hoc 검증 스크립트)를 온더플라이로 직접 작성하여 실행하세요 (고정 템플릿 사용 금지, git add/commit 금지 및 untracked 유지).
    - 웹 서버 실행 시 반드시 `0.0.0.0`에 바인딩하세요.
 3. **요약 보고서(`.probe-kit/runtime/SUB_RESULT.md`) 작성:**
-   - 작업과 검증이 끝나면 메인 아키텍트가 최소 토큰으로 결과를 파악할 수 있도록 `.probe-kit/runtime/SUB_RESULT.md`에 **(1) 변경한 파일·함수 요약, (2) 실행한 테스트 명령어 및 통과 결과, (3) 남은 이슈 또는 잠재적 한계점**을 핵심 위주로 명확하게 기록하고 종료하세요 (불필요한 줄 수 제한 없음).
+   - 작업과 검증이 끝나면 메인 아키텍트가 최소 토큰으로 결과를 파악할 수 있도록 `.probe-kit/runtime/SUB_RESULT.md`에 **(1) 변경한 파일·함수 요약, (2) 실행한 테스트 명령어 및 통과 결과, (3) 남은 이슈 또는 잠재적 한계점** 등 필수 항목 중심의 간결하고 명확한 요약 보고를 기록하고 종료하세요 (불필요한 줄 수 제한 없음).
 
 ---
 
-## 🛡️ 공통 4대 절대 불변 규칙 (All Agents)
+## 🛡️ 공통 절대 불변 규칙 (All Agents)
 1. **오버엔지니어링 금지 (Cognition):** 사용자가 후속 서술형 평가(6문항×5분)에서 4문장으로 모든 동작 원리와 한계를 설명할 수 있는 단순하고 명확한 구조만 사용하세요.
 2. **보안 및 인터페이스 유지 (Technique):** 기존 인증 방식·라우터·API 스키마를 깨뜨리지 말고, API 키나 개인정보를 절대 평문으로 하드코딩하지 마세요.
 3. **대용량 데이터 프롬프트 덤프 금지:** CSV/JSON/로그 원문을 프롬프트에 통째로 출력하지 말고 Python 스크립트로 집계/검증만 수행하세요.
 4. **제출 문서 정직성:** 제출용 보고서 작성 시 실제 구현된 코드와 실제 실행한 테스트 로그만을 근거로 `[결정] - [근거] - [검증] - [한계]` 구조에 맞춰 작성하세요.
+5. **하네스 및 인수인계 기록 디스크 영구 보존:** `.probe-kit` 하네스 전체와 `HANDOFF.md`는 외부 엔지니어링 도구 도입 및 체계적 형상 관리 역량을 증명하는 평가 가점 자산이므로 디스크에서 절대 삭제하지 마세요 (`.git/info/exclude`로 Git 형상만 깨끗이 격리; 사전 감사는 `scripts/pre_submit_audit.sh` 또는 Windows PowerShell 환경 시 `python scripts/pre_submit_audit.py`로 점검).
+6. **시험 중 Git 변경 명령어(git add/commit/reset/clean) 전면 금지:** 시험 도중 `git add`, `git commit`, `git reset`, `git clean` 명령어 실행은 전면 금지됩니다. 모든 테스트 코드는 별도의 커밋 없이 동작하며 untracked 상태로 유지되어야 합니다.
+7. **단계별 HANDOFF.md 갱신 의무:** 매 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 반드시 최신화하세요 (세션 종료 시점만이 아니라 매 단계 실시간 누적 기록 필수).
 ```
 
 #### ④ `scripts/subagent.sh` (메인이 서브 `Luna 6 xhigh`를 자동 호출하는 래퍼 스크립트)
@@ -266,7 +289,9 @@ echo "✅ [Sub-Agent 실행 완료] 요약 보고서 ($RESULT_FILE):"
 cat "$RESULT_FILE" 2>/dev/null || true
 ```
 
-#### ⑤ `scripts/eda_scan.py` & `scripts/pre_submit_audit.sh`
+#### ⑤ `scripts/eda_scan.py` & `scripts/pre_submit_audit.sh` / `scripts/pre_submit_audit.py`
+> **Windows 및 플랫폼 실행 안내:**  
+> Windows PowerShell / CMD 환경이거나 WSL 경로 오류 발생 시 Windows 친화적 Python 포트인 `python .probe-kit/scripts/pre_submit_audit.py [target_dir]`를 직접 실행할 수 있습니다. Git Bash 및 WSL 환경에서는 기존처럼 `bash .probe-kit/scripts/pre_submit_audit.sh`를 실행할 수 있습니다. 시험 중 `git add`, `git commit`, `git reset`, `git clean`은 엄격히 금지됩니다.
 ```python
 #!/usr/bin/env python3
 """scripts/eda_scan.py: 워크스페이스 내 코드/데이터 구조 및 CSV·JSON 요약 통계를 토큰 소모 없이 출력"""
@@ -377,6 +402,7 @@ echo "⚠️ 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 
 
 * ❌ **절대 금지 (감점 및 답변 거부):** *"제가 당장 해야 할 일을 1, 2, 3번 순서로 정리해 주세요."*, *"어떻게 구현하면 될까요?"* (할 일 정리와 판단은 본인이 하고, 에이전트에게는 정보와 조건만 캐내야 합니다.)
 * 💡 **막혔을 때의 비상 질문 (설계자 공인 힌트 유도):** *"과제 맥락을 정확히 파악하고 싶습니다. 현업 관점에서 제가 무엇을 먼저 물어봐야 할까요? 어떤 영역이나 조건에 대해 확인하면 좋을지 힌트를 주실 수 있나요?"*
+* 💬 **케이스별 심층 질문:** Case 1~4별 구체적인 실무자 맞춤형 심층 질문은 `.probe-kit/dm_question.md`를 열어 복사하여 활용하세요.
 
 | 단계 | 카테고리 | 실전 질문 리스트 (상황에 맞게 복사·변형하여 하나씩 질문) |
 | :--- | :--- | :--- |
@@ -392,14 +418,15 @@ echo "⚠️ 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 
 
 ### 🤖 B. 메인(`Sol 6.1 xhigh`) × 서브(`Luna 6 xhigh`) 오케스트레이션 원칙 & 복붙용 프롬프트
 
-#### 📌 메인/서브 이원화 통제 5대 원칙 (의도 축 + 토큰 비용 극소화)
+#### 📌 메인/서브 이원화 통제 6대 원칙 (의도 축 + 토큰 비용 극소화)
 1. **터미널 2개 분리 운용 (가장 확실하고 빠른 방법):**
    * **터미널 1 (`Main - Sol 6.1 xhigh`):** 아키텍트 전용입니다. 비즈니스 코드를 직접 짜게 하지 말고, 구조 진단·작업 분할·`.probe-kit/runtime/TASK_SPEC.md` 작성·최종 제출 문서 초안 작성만 시킵니다.
    * **터미널 2 (`Sub - Luna 6 xhigh`):** 워커 전용입니다. `TASK_SPEC.md`를 읽고 실제 파일 수정·단위 테스트 실행·디버깅만 수행하게 한 뒤, 모듈 1개가 끝날 때마다 **`/clear`를 입력해 컨텍스트를 초기화**합니다(토큰 절약의 핵심!).
-2. **모든 `TASK_SPEC.md`에 4요소 강제:** **① 목표, ② 유지할 제약(담당자 DM 조건), ③ 변경 파일 범위, ④ 검증 테스트 명령어**를 명시합니다.
+2. **모든 `TASK_SPEC.md`에 필수 요소 강제:** **① 이번 단계 목표, ② 변경 파일 범위, ③ 유지할 제약(담당자 DM 조건), ④ 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, git add/commit/reset/clean 금지), ⑤ 검증 테스트 명령어(매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지, SUB_RESULT 보고)**를 명시합니다.
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:** 한 번에 하나씩 쪼개서 서브에 위임하고, 시키지 않은 거창한 기능(불필요한 쓰기 가드, 복잡한 캐싱/패턴 등)을 넣지 못하게 고삐를 쥡니다.
 4. **버그 수정도 '원인 보고 → 범위 합의' 후에만:** 서브 에이전트에서 테스트 실패 시 무작정 코드를 덮어쓰지 않고 원인과 수정 범위를 먼저 확인합니다.
 5. **방향 수정 시 이유를 텍스트로 기록:** *"A 방식은 ~한 문제가 있어 접고 B 방식으로 전환한다"*고 메인 에이전트 프롬프트에 명시해야 '방향 조정' 가점을 받습니다.
+6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다.
 
 #### 📋 [메인 프롬프트 1 — `Sol 6.1 xhigh`] 초기 탐색 및 아키텍처 구조화 (코드 수정 금지)
 ```text
@@ -417,8 +444,8 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 - [실무자 확인 조건 1: 예) 취소 상태 데이터는 집계 및 비율 분모에서 제외]
 - [실무자 확인 조건 2: 예) 중복 데이터는 최신 타임스탬프 기준으로 유지]
 - 변경 허용 파일 범위: [파일 경로 명시] (기존 인증 방식/라우터/인터페이스 변경 절대 금지)
-- 오버엔지니어링 금지 및 민감정보 하드코딩 금지, 웹 서버는 0.0.0.0 바인딩
-- 서브 에이전트가 구현 직후 실행해야 할 정상 경로 + 예외 경로(Edge Case) 테스트 명령어
+- 오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버는 0.0.0.0 바인딩, git add/commit/reset/clean 금지
+- 서브 에이전트가 구현 직후 실행해야 할 정상 경로 + 예외 경로(Edge Case) 테스트 명령어 (태스크별 DM 요구사항 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지)
 - 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md 등 해당 파일명]
 ```
 
@@ -428,9 +455,9 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 [SUB] .probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고, 명시된 파일 범위와 제약 조건을 엄격히 지켜서 코드를 구현해줘.
 구현 직후 다음 검증을 직접 터미널에서 실행해:
 1. 기존 베이스라인 테스트를 실행해 깨진 부분(Regression)이 없는지 확인해.
-2. 정상 경로(Happy Path)와 예외 케이스(빈 입력, 결측치, 중복, 취소 건 등)를 검증하는 테스트를 실행해 통과 여부를 확인해.
+2. 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로(Happy Path)와 예외 케이스(빈 입력, 결측치, 중복, 취소 건 등)를 직접 검증해 (고정 템플릿 사용 금지, git add/commit/reset/clean 금지 및 untracked 유지).
 3. 만약 실패하면 바로 덮어쓰지 말고 원인 후보와 수정 범위를 먼저 진단해.
-모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록해줘 (불필요한 줄 수 제한 없음).
+모든 테스트가 통과하면 변경 파일 요약, 테스트 결과, 잠재적 한계점을 핵심 위주로 명확하게 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" 으로 갱신해줘 (불필요한 줄 수 제한 없음).
 ```
 *(💡 서브 작업 완료 후 터미널 2에서는 `/clear`를 입력해 누적 토큰을 0으로 초기화하세요!)*
 
@@ -447,7 +474,7 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
 2. **정상 경로 1개 + 실패 경로 1개 이상 직접 실행:** 빈 값, 잘못된 형식, 예외 데이터 입력 시 안 죽고 처리되는지 터미널에서 직접 실행합니다.
 3. **웹 서버 `0.0.0.0` 바인딩 및 내장 Browser 직접 조작:** 웹/UI 과제는 반드시 `0.0.0.0`으로 띄운 뒤 내장 Browser에서 **직접 버튼 클릭, 입력, 페이지 이동**을 수행해 실행 상태와 스크린샷 채점에 대비합니다.
 4. **수치·집계 표본(Sample) 수동 대조:** 데이터 집계 과제는 5~20건의 작은 샘플(예외 포함)을 뽑아 기댓값을 직접 계산한 뒤, 코드 결과와 100% 일치하는지 검증하는 테스트를 돌립니다.
-5. **`pre_submit_audit.sh` (`git diff` + 보안 점검) 실행:** AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh`로 직접 확인합니다(`git diff` 실행 자체가 평가 로그입니다).
+5. **`pre_submit_audit.sh` / `pre_submit_audit.py` (`git diff` + 보안 점검) 실행:** AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`)로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그이며 시험 중 `git add`/`commit`/`reset`/`clean`은 엄격히 금지됩니다).
 6. **리소스(OOM) 및 전 파일 저장 상태(`저장됨`) 확인:** 우측 상단 CPU/RAM 사용량을 점검하고, 제출 전 모든 파일에 `Ctrl+S`를 눌러 `저장됨` 상태를 확정합니다.
 
 ---
@@ -652,22 +679,22 @@ TASK_SPEC.md 에는 다음 제약과 검증 기준을 반드시 포함해:
   - `과제 시작` 클릭(자동 녹화 시작) → 팔 뻗어 손끝 위치에 스마트폰 세로 거치(손·키보드·얼굴·모니터 노출).
   - 카메라에 **실물 신분증(규정 가림 범위 마스킹 필수)** 얼굴 옆 나란히 제시 → **안경 벗어서 앞면·양쪽 안경다리 바깥/안쪽** 천천히 제시 후 재착용.
 - [ ] **10:05 ~ 10:15 [하네스 원클릭 세팅 & 메인/서브 에이전트 구동]**
-  - 터미널 1에서 `git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe-kit/init.sh` 실행 (`.git/info/exclude` 자동 보호 및 `EDA_SUMMARY.txt` 자동 생성).
+  - 터미널 1에서 `git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe-kit/init.sh` 실행 (또는 `scripts/init.sh` 실행; `.git/info/exclude` 자동 보호, `templates/HANDOFF.md` -> `runtime/HANDOFF.md` 복사 및 `EDA_SUMMARY.txt` 자동 생성).
   - `README.md` 정독 및 필수 제출 파일명 확인.
   - **터미널 1 (메인):** `codex` 실행 → `/status` → `/model`에서 **`Sol 6.1 (xhigh)`** 선택 → **[메인 프롬프트 1(코드 수정 금지 + 구조 진단)]** 입력 및 기존 베이스라인 테스트 1회 실행.
   - **터미널 2 (서브):** 새 터미널 탭 열기 → `codex` 실행 → `/status` → `/model`에서 **`Luna 6 (xhigh)`** 선택 (`Astra` 절대 금지).
 - [ ] **10:15 ~ 10:40 [실무자 에이전트 DM 질문 & 첫 `TASK_SPEC.md` 확정]**
-  - 우측 DM `업무 담당자`에게 **만능 12문 + 케이스별 전용 질문**을 던져 숨은 조건과 예외 기준 발굴 → `NOTES_TEMP.md`에 기록.
+  - 우측 DM `업무 담당자`에게 **만능 질문(`foruser.md` 4단계) + 케이스별 심층 질문**(`.probe-kit/dm_question.md` 열어 맞춤 질문 복사 활용)을 던져 숨은 조건과 예외 기준 발굴 → `NOTES_TEMP.md`에 기록.
   - 터미널 1(`Sol 6.1 xhigh`)에 **[메인 프롬프트 2]**를 입력해 첫 번째 모듈의 `.probe-kit/runtime/TASK_SPEC.md` 생성 (35분까지 구조화가 안 끝났다면 무작정 코딩 시작 금지).
 - [ ] **10:40 ~ 12:15 [메인 지시(`TASK_SPEC`) → 서브 구현·검증(`SUB_RESULT` & `/clear`) 반복]**
-  - 터미널 2(`Luna 6 xhigh`)에 **[서브 프롬프트 3]** 입력(또는 `bash .probe-kit/scripts/subagent.sh` 실행) → 구현 및 테스트 통과 확인 → `SUB_RESULT.md` 기록 확인 후 **터미널 2에서 `/clear` 실행(토큰 초기화)**.
-  - 터미널 1(`Sol 6.1 xhigh`)에 **[메인 프롬프트 4]**로 결과를 검수시키고 다음 모듈 `TASK_SPEC.md` 갱신. 방향 수정 시 이유를 프롬프트와 `NOTES_TEMP.md`에 명시.
+  - 터미널 2(`Luna 6 xhigh`)에 **[서브 프롬프트 3]** 입력(또는 `bash .probe-kit/scripts/subagent.sh` 실행) → 구현 및 태스크 맞춤 온더플라이 ad-hoc 테스트(`tests/test_*.py` 등) 작성·실행 (고정 템플릿 금지, `git add`/`commit`/`reset`/`clean` 금지 및 untracked 유지) → `SUB_RESULT.md` 요약 및 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` 기록 확인 후 **터미널 2에서 `/clear` 실행(토큰 초기화)**.
+  - 터미널 1(`Sol 6.1 xhigh`)에 **[메인 프롬프트 4]**로 결과를 검수시키고, `bash .probe-kit/scripts/handoff.sh log "TASK_SPEC: <요약>"` 실행 및 다음 모듈 `TASK_SPEC.md` 갱신 (골든 타이밍 시 공식 Handoff 프로토콜 수행). 방향 수정 시 이유를 프롬프트와 `NOTES_TEMP.md`에 명시.
 - [ ] **12:15 ~ 12:50 [새 기능 추가 금지 → 최종 검증, 제출 문서 완성 & 클린업]**
   - 12:15(125분 경과)부터는 무리한 새 기능 추가를 멈추고 완성도와 검증에 집중.
   - 내장 Browser(`0.0.0.0` 바인딩) 직접 클릭 조작 검증 및 데이터 표본 수동 대조 테스트 실행.
   - 터미널 1(`Sol 6.1 xhigh`)과 함께 **제출용 계획/협업 문서** 완성.
-  - `bash .probe-kit/scripts/pre_submit_audit.sh` 실행하여 `git diff`·민감정보·`localhost`·메모리·하네스 영구 보존 상태 최종 점검 (PASS 6건 확인).
-  - **.git/info/exclude에 의한 하네스 안전 격리 상태 및 git status 클린 여부 확인** (채점관 가점 확보를 위해 `.probe-kit` 및 `HANDOFF.md`는 디스크에 영구 보존) → **모든 파일 `Ctrl+S` ('저장됨' 상태)** 최종 확인.
+  - `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`) 실행하여 `git diff`·민감정보·`localhost`·메모리·하네스 영구 보존 상태 최종 점검 (PASS 6건 확인).
+  - **.git/info/exclude에 의한 하네스 안전 격리 상태 및 git status 클린 여부 확인** (시험 중 `git add`/`commit`/`reset`/`clean` 금지 준수, 채점관 가점 확보를 위해 `.probe-kit` 및 `HANDOFF.md`는 디스크에 영구 보존) → **모든 파일 `Ctrl+S` ('저장됨' 상태)** 최종 확인.
 - [ ] **12:50 ~ 13:00 [제출 확정 & 서술형 대기]**
   - `제출하고 문제풀기` → `제출물 확정하고 문제풀기` 클릭.
   - 질문 생성 대기 시간(약 5~10분) 동안 내가 만든 코드의 파일/함수명, 선택 근거, 검증 방법, 한계점 머릿속 복기.

@@ -29,8 +29,8 @@
   - [ ] 카메라에 **실물 신분증(주민번호 뒷자리 마스킹)** 얼굴 옆 나란히 제시
   - [ ] **안경 벗어서 앞면·양쪽 안경다리 바깥/안쪽** 카메라에 천천히 회전 제시 후 재착용
 - [ ] **10:05 ~ 10:15 [하네스 원클릭 세팅 & 메인/서브 에이전트 구동]**
-  - [ ] 터미널 1에서 원클릭 세팅 실행: `git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe-kit/init.sh`
-  - [ ] `EDA_SUMMARY.txt` 자동 생성 확인 및 `.git/info/exclude` 보호 상태 확인
+  - [ ] 터미널 1에서 원클릭 세팅 실행: `git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe-kit/init.sh` (또는 `scripts/init.sh`)
+  - [ ] `EDA_SUMMARY.txt` 자동 생성, `templates/HANDOFF.md` -> `runtime/HANDOFF.md` 초기 복사 확인 및 `.git/info/exclude` 보호 상태 확인
   - [ ] 과제 `README.md` 정독 및 필수 제출 파일명 식별
   - [ ] **터미널 1 (메인):** `codex` 실행 → `/status` → `/model`에서 **`Sol 6.1 (xhigh)`** 선택 → `[메인 프롬프트 1]` 주입 및 기존 베이스라인 테스트 1회 실행
   - [ ] **터미널 2 (서브):** 새 터미널 탭 열기 → `codex` 실행 → `/status` → `/model`에서 **`Luna 6 (xhigh)`** 선택
@@ -39,19 +39,19 @@
   - [ ] 발굴된 숨은 조건/예외 기준을 바탕으로 터미널 1(`Sol 6.1 xhigh`)에 `[메인 프롬프트 2]` 입력
   - [ ] `.probe-kit/runtime/TASK_SPEC.md` 생성 및 첫 번째 구현 모듈 명세 확정 (구조화 전 코딩 금지)
 - [ ] **10:40 ~ 12:15 [메인 지시(`TASK_SPEC`) → 서브 구현·검증(`SUB_RESULT` & `/clear`) 반복]**
-  - [ ] 터미널 2(`Luna 6 xhigh`)에 `[서브 프롬프트 3]` 입력(또는 `bash .probe-kit/scripts/subagent.sh`)으로 모듈 구현 및 단위/예외 테스트 실행
-  - [ ] 테스트 통과 및 `SUB_RESULT.md` 요약 기록 확인
+  - [ ] 터미널 2(`Luna 6 xhigh`)에 `[서브 프롬프트 3]` 입력(또는 `bash .probe-kit/scripts/subagent.sh`)으로 모듈 구현 및 태스크 맞춤 온더플라이 ad-hoc 테스트(`tests/test_*.py` 등) 작성·실행 (고정 템플릿 금지, `git add`/`commit`/`reset`/`clean` 금지 및 untracked 유지)
+  - [ ] 테스트 통과 및 `SUB_RESULT.md` 요약 기록 확인 후 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` 실행으로 `runtime/HANDOFF.md` 즉시 갱신
   - [ ] **터미널 2에서 `/clear` 즉시 실행** (컨텍스트 오염 방지 및 토큰 초기화)
-  - [ ] 터미널 1(`Sol 6.1 xhigh`)에 `[메인 프롬프트 4]`로 결과 검수 및 다음 모듈 `TASK_SPEC.md` 갱신
+  - [ ] 터미널 1(`Sol 6.1 xhigh`)에 `[메인 프롬프트 4]`로 결과 검수, `bash .probe-kit/scripts/handoff.sh log "TASK_SPEC: <요약>"` 실행 및 다음 모듈 `TASK_SPEC.md` 갱신 (골든 타이밍 도달 시 공식 Handoff 프로토콜 수행)
   - [ ] 방향 전환이나 오버엔지니어링 통제 발생 시 아래 Section 4, 5에 실시간 기록
 - [ ] **12:15 ~ 12:50 [새 기능 추가 금지 → 최종 검증, 제출 문서 완성 & 클린업]**
   - [ ] 12:15 경과: 신규 기능 추가 전면 중단, 완성도 및 회귀 검증에 집중
   - [ ] 데이터 과제: 10~20건 표본 수동 계산값 vs 스크립트 산출물 100% 교차 대조
   - [ ] 웹/UI 과제: `0.0.0.0` 바인딩 실행 후 내장 Browser로 주요 유저 동선 및 예외 입력 직접 클릭 조작
   - [ ] 터미널 1(`Sol 6.1 xhigh`)과 함께 제출 문서(`SUBMISSION_REPORT.md`) 완성
-  - [ ] `bash .probe-kit/scripts/pre_submit_audit.sh` 실행 (git diff, 민감정보, localhost, 리소스 감사)
+  - [ ] `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`) 실행 (git diff, 민감정보, localhost, 리소스 감사)
   - [ ] 하네스 영구 보존: .probe-kit 및 런타임 기록(HANDOFF.md 등)은 평가 가점(의도/인지) 확보를 위해 삭제하지 않고 디스크에 영구 보존 확인
-  - [ ] `git status`로 변경 파일 범위 확인 및 모든 수정 파일 `Ctrl+S` 저장 확인
+  - [ ] `git status`로 변경 파일 범위 확인 (시험 중 `git add`/`commit`/`reset`/`clean` 금지, 테스트 코드는 untracked 유지) 및 모든 수정 파일 `Ctrl+S` 저장 확인
 - [ ] **12:50 ~ 13:00 [제출 확정 & 서술형 대기]**
   - [ ] `제출하고 문제풀기` → `제출물 확정하고 문제풀기` 최종 클릭
   - [ ] 서술형 문제 생성 대기(5~10분) 동안 본인이 구현한 핵심 결정, 검증 근거, 한계점 복기

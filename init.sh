@@ -5,6 +5,9 @@
 set -euo pipefail
 
 KIT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ "$(basename "$KIT_SRC")" = "scripts" ]; then
+  KIT_SRC="$(cd "$KIT_SRC/.." && pwd)"
+fi
 WORKSPACE_DIR="${1:-}"
 
 if [ -z "$WORKSPACE_DIR" ]; then
@@ -87,7 +90,7 @@ else
   echo "⚠️ [경고] .git 디렉토리가 존재하지 않아 .git/info/exclude 등록을 건너뜁니다."
 fi
 
-echo "=== [5/6] 런타임 버퍼 보장 및 실시간 메모장(NOTES_TEMP.md) 준비 ==="
+echo "=== [5/6] 런타임 버퍼 보장 및 실시간 메모장/인수인계서 준비 ==="
 mkdir -p "$TARGET_KIT/runtime"
 if [ -f "$TARGET_KIT/templates/NOTES.md" ]; then
   if [ ! -f "$WORKSPACE_DIR/NOTES_TEMP.md" ]; then
@@ -98,6 +101,29 @@ if [ -f "$TARGET_KIT/templates/NOTES.md" ]; then
   fi
 else
   echo "💡 [안내] $TARGET_KIT/templates/NOTES.md 파일이 없어 복사를 대기합니다."
+fi
+
+# HANDOFF.md 템플릿 복사 (존재하지 않을 때만 복사, 기존 파일 절대 덮어쓰기 금지)
+HANDOFF_TEMPLATE=""
+if [ -f "$TARGET_KIT/templates/HANDOFF.md" ]; then
+  HANDOFF_TEMPLATE="$TARGET_KIT/templates/HANDOFF.md"
+elif [ -f "$KIT_SRC/templates/HANDOFF.md" ]; then
+  HANDOFF_TEMPLATE="$KIT_SRC/templates/HANDOFF.md"
+fi
+
+if [ -n "$HANDOFF_TEMPLATE" ]; then
+  if [ ! -f "$TARGET_KIT/runtime/HANDOFF.md" ]; then
+    cp "$HANDOFF_TEMPLATE" "$TARGET_KIT/runtime/HANDOFF.md"
+    echo "-> templates/HANDOFF.md -> $TARGET_KIT/runtime/HANDOFF.md 복사 완료"
+  else
+    echo "-> 기존 $TARGET_KIT/runtime/HANDOFF.md 유지 (덮어쓰기 방지)"
+  fi
+  if [ -d "$WORKSPACE_DIR/runtime" ] && [ ! -f "$WORKSPACE_DIR/runtime/HANDOFF.md" ]; then
+    cp "$HANDOFF_TEMPLATE" "$WORKSPACE_DIR/runtime/HANDOFF.md"
+    echo "-> templates/HANDOFF.md -> $WORKSPACE_DIR/runtime/HANDOFF.md 복사 완료"
+  fi
+else
+  echo "💡 [안내] templates/HANDOFF.md 파일이 없어 복사를 대기합니다."
 fi
 
 echo "=== [6/6] 워크스페이스 구조 및 데이터 무토큰 초기 스캔 ==="
@@ -130,7 +156,7 @@ echo "▶ 워크스페이스:  $WORKSPACE_DIR"
 echo "▶ 하네스 디렉토리: $TARGET_KIT"
 echo ""
 echo "▶ 다음 행동 순서:"
-echo "   1) 메인 프롬프트 1 확인: .probe-kit/prompts/02_codex_prompts.md"
+echo "   1) 실전 라이브 런북 확인: .probe-kit/foruser.md (프롬프트 원문: .probe-kit/prompts/02_codex_prompts.md)"
 echo "   2) [터미널 1 - 메인 아키텍트]: 'codex' 실행 -> '/model'에서 [Sol 6.1 (xhigh)] 선택"
 echo "      (역할: 요구사항 분석, 설계, .probe-kit/runtime/TASK_SPEC.md 작성 및 서브 결과 검토)"
 echo "   3) [터미널 2 - 서브 워커]: 새 탭 열기 -> 'codex' 실행 -> '/model'에서 [Luna 6 (xhigh)] 선택"

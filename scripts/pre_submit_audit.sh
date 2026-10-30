@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# [참고] Windows PowerShell/CMD 환경에서는 Python 버전(scripts/pre_submit_audit.py)을 직접 실행할 수 있습니다.
 # scripts/pre_submit_audit.sh: 제출 직전(12:40) 종합 무감점 사전 점검 스크립트
 # - Git 변경 범위(diff --stat)
 # - 민감정보 평문 노출 스캔

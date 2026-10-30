@@ -14,7 +14,7 @@
 - **토큰 누적 및 지연:** 누적 토큰이 100k~150k를 초과하면 모델의 추론 속도가 현저히 느려지고 프롬프트 지시사항 준수율이 급격히 저하됩니다.
 
 ### 1.2 Top 3 랭커의 핵심 차별화 전략: 명시적 Handoff
-- **KOPA 상위 1% 벤치마킹:** 최상위 고득점자들은 단일 세션에 매달리지 않고, **마일스톤이나 임계점에 도달할 때마다 구조화된 인수인계서(`HANDOFF.md`)를 디스크에 저장한 뒤 깨끗한 새 세션(토큰 0)에서 무손실로 맥락을 이어받는 공학적 스킬**을 구사했습니다.
+- **KOPA 상위 1% 벤치마킹:** 최상위 고득점자들은 단일 세션에 매달리지 않고, **하네스 초기화 시 `templates/HANDOFF.md`를 `runtime/HANDOFF.md`로 배치한 뒤, 매 단계마다 실시간 로그(`bash scripts/handoff.sh log "<step>" "<msg>"`)를 누적하고, 마일스톤이나 임계점에 도달할 때마다 구조화된 인수인계서(`HANDOFF.md`)를 디스크에 저장한 뒤 깨끗한 새 세션(토큰 0)에서 무손실로 맥락을 이어받는 공학적 스킬**을 구사했습니다.
 - **채점관/평가 에이전트 가점 메커니즘:**
   - 평가 에이전트는 무분별한 연속 대화보다 **"시스템 복잡도 증가를 인지하고 공학적 인수인계 프로토콜을 발동하여 리스크를 통제한 행위"**를 인지(Cognition) 및 의도(Intent) 평가 축에서 최고점으로 채점합니다.
   - 외부 하네스(`probe-kit`)와 세션 인수인계 기록(`HANDOFF.md`)이 디스크에 온전히 보존되어 있을 때 "검증된 엔지니어링 프로세스를 자율 도입한 개발자"로서 추가 가산점을 획득합니다.
@@ -63,7 +63,19 @@ sequenceDiagram
     NewSol->>Disk: .probe-kit/runtime/TASK_SPEC.md 작성 착수
 ```
 
-### [Step 1] 구 세션 정보 수집 및 인수인계서 완성
+### [Step 0] 일상 단계별 실시간 갱신 (`handoff.sh log`)
+- 하네스 설치(`init.sh`) 시 `templates/HANDOFF.md`가 `runtime/HANDOFF.md`로 초기 복사됩니다 (존재 시 보존).
+- 세션 전환뿐만 아니라, 매 단계마다 터미널에서 아래 명령어로 실시간 진행 상태를 `runtime/HANDOFF.md`에 누적 기록합니다:
+  ```bash
+  # TASK_SPEC 발행 시
+  bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step 1 데이터 정제 모듈 지시서 발행"
+  # 서브 에이전트 완료 시
+  bash .probe-kit/scripts/handoff.sh log "sub done" "Step 1 핵심 정제 구현 및 온더플라이 테스트 통과"
+  # 검증 완료 시
+  bash .probe-kit/scripts/handoff.sh log "verification" "표본 15건 수동 대조 100% 일치 확인"
+  ```
+
+### [Step 1] 구 세션 정보 수집 및 인수인계서 완성 (골든 타이밍)
 1. 터미널 1에서 원클릭 수집 스크립트 실행:
    ```bash
    bash .probe-kit/scripts/handoff.sh
@@ -118,13 +130,13 @@ sequenceDiagram
 5. **[코드 및 파일 변경 현황 (Code & File Changes)]**
    - 수정/생성된 파일 목록, `git diff --stat` 요약, `SUB_RESULT.md` 실행 결과.
 6. **[검증 완료 vs 미검증 현황 (Verification Matrix)]**
-   - 통과된 테스트 목록(베이스라인 회귀 방지, 단위/통합 테스트), 수동 표본 대조(10~20건) 결과, 미검증 엣지 케이스.
+   - 통과된 테스트 목록(베이스라인 회귀 방지, 단위/통합 테스트, 태스크 맞춤 온더플라이 ad-hoc 테스트 결과), 수동 표본 대조(10~20건) 결과, 미검증 엣지 케이스 (테스트 파일은 git commit 없이 untracked 유지).
 7. **[미해결 리스크 및 기술 부채 (Unresolved Risks)]**
    - OOM 위험, 동시성 병목, 센서 결측치, 잠재적 예외 케이스.
 8. **[차기 세션 액션 아이템 Top 3 (Next Actions)]**
    - 신규 세션이 승인 직후 즉시 수행해야 할 3대 구체적 작업 순서.
 9. **[금지 사항 (Strict Negative Constraints)]**
-   - 메인 에이전트의 비즈니스 코드 직접 작성 금지, `.gitignore` 수정 금지, 민감정보 하드코딩 금지, 오버엔지니어링 금지 등.
+   - 메인 에이전트의 비즈니스 코드 직접 작성 금지, `.gitignore` 수정 금지, git add/commit/reset/clean 금지, 민감정보 하드코딩 금지, 오버엔지니어링 금지 등.
 
 ---
 
@@ -137,6 +149,10 @@ sequenceDiagram
 ### 5.2 `.git/info/exclude`를 통한 2중 격리 안전망
 - **과제 Git 형상 클린 유지:** 과제 평가 시 `git status`에 임시 하네스 파일이 untracked 상태로 노출되면 감점 요인이 될 수 있습니다.
 - **안전 격리:** 워크스페이스의 `.gitignore`를 수정하면 채점 시 무단 수정으로 감점되므로, 로컬 Git 전용 설정인 `.git/info/exclude`에 등록하여 **`git status`는 완전히 깨끗(Clean)하게 유지하면서 디스크에는 증거를 보존**합니다.
+
+### 5.3 제출 전 감사 및 형상 무결성 점검
+- 제출 직전(12:40) 사전 감사 도구(`bash .probe-kit/scripts/pre_submit_audit.sh` 또는 Windows PowerShell/CMD 환경 시 `python .probe-kit/scripts/pre_submit_audit.py`)를 실행하여 변경 범위, 민감정보, localhost 바인딩, 하네스 보존 상태를 일괄 점검합니다.
+- 시험 중 `git add`, `git commit`, `git reset`, `git clean` 실행은 전면 금지되며, 온더플라이 테스트 코드는 untracked 상태로 유지되어야 합니다.
 
 ---
 

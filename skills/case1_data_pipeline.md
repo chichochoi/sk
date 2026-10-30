@@ -21,7 +21,7 @@
   1. 데이터를 프롬프트에 통째로 넣지 말고(토큰·OOM 폭발 방지), `init.sh`가 생성한 `EDA_SUMMARY.txt`로 스키마·행 개수·결측치부터 파악.
   2. 실무자 DM으로 정제 기준을 확정해 메인(`Sol 6.1 xhigh`)이 `TASK_SPEC.md`에 체크리스트로 기록.
   3. 서브(`Luna 6 xhigh`)에게 각 전처리 단계별 필터링 건수를 로그로 출력하도록 코드 구현 지시.
-  4. **표본 10~20건(정상+중복+취소+결측 포함)을 뽑아 수동 계산한 기댓값과 코드 출력값을 대조하는 단위 테스트** 실행 후 제출.
+  4. **태스크 DM 요구사항에 맞춘 온더플라이 테스트(tests/test_*.py) 즉석 작성·실행 및 표본 10~20건 대조 단위 테스트** 실행 후 제출 (고정 템플릿 금지, git commit 없이 untracked 유지).
 
 ---
 
@@ -58,8 +58,9 @@
 - [ ] 서브 에이전트(`Luna 6 xhigh`)를 호출하여 전처리 단계별 건수 로깅 로직을 구현하도록 지시한다.
 - [ ] 서브 에이전트가 코드를 구현하고 전처리 단계별 건수 로그를 표준 출력에 출력하도록 한다.
 
-### 4단계: 표본 10~20건 수동 대조 검증
+### 4단계: 표본 10~20건 수동 대조 검증 및 온더플라이 테스트 실행
 - [ ] 정상, 중복, 결측, 취소, 경계값 케이스를 포함하는 10~20건의 표본 데이터를 추출한다.
+- [ ] 이번 태스크의 실무자 DM 요구사항에 맞춘 온더플라이 단위 테스트(예: `tests/test_*.py` 또는 ad-hoc 검증 스크립트)를 직접 작성하여 실행한다 (고정 템플릿 사용 금지, 태스크 맞춤형 ad-hoc 작성, `git commit` 금지 및 untracked 유지).
 - [ ] `.probe-kit/scripts/sample_check_template.py`를 활용하여 수동 계산 기댓값과 파이프라인 출력값을 비교한다.
 - [ ] 불일치 발생 시 즉시 파이프라인 로직의 부등호, 타임존, 반올림 규칙을 점검하고 수정한다.
 
@@ -340,14 +341,16 @@ wc -l data/wafer_sensor_raw.csv output/wafer_quality_report.csv
 # 2. 파이프라인 실행 및 단계별 로깅 출력 확인
 python3 src/pipeline.py data/wafer_sensor_raw.csv output/wafer_quality_report.csv
 
-# 3. 10~20건 수동 표본 대조 단위 테스트 실행
-python3 .probe-kit/scripts/sample_check_template.py
+# 3. 태스크 DM 맞춤 온더플라이 단위 테스트 및 10~20건 수동 표본 대조 실행 (git commit 없이 untracked 유지)
+python3 tests/test_sample_check.py || python3 .probe-kit/scripts/sample_check_template.py
 
 # 4. 결측치 및 센티널값(-999) 잔존 여부 검사
 grep -E -- "-999|null|NaN" output/wafer_quality_report.csv || echo "결측 센티널값 0건 확인 완료"
 
-# 5. Git 변경 사항 및 무결성 감사
+# 5. Git 변경 사항 및 무결성 감사 (Git Bash/WSL 환경)
 bash .probe-kit/scripts/pre_submit_audit.sh
+# ※ Windows PowerShell / CMD 환경 시 Python 버전 직접 실행:
+# python .probe-kit/scripts/pre_submit_audit.py
 ```
 
 ---

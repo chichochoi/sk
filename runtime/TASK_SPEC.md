@@ -28,16 +28,20 @@
 - 시크릿, 패스워드, 개인 식별 정보, API 키 코드 내 하드코딩 절대 금지
 - 웹 서버 구동 시 `localhost` 바인딩 금지 (반드시 `0.0.0.0` 바인딩 준수)
 - `.gitignore` 파일 수정 금지 (임시 파일은 `.git/info/exclude`로 통제됨)
+- 시험 중 `git add` / `git commit` / `git reset` / `git clean` 실행 전면 금지 (테스트 코드는 커밋하지 않으며 test 파일은 untracked 상태 유지)
 
 ### 5. 실행할 검증 명령어
 - **베이스라인 테스트 (회귀 방지):**
   - `pytest tests/test_aggregator.py` (기존 테스트 5건 전원 통과 확인)
+- **태스크 맞춤형 온더플라이(On-the-fly) 테스트 작성 및 실행 (필수):**
+  - 매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(예: `tests/test_*.py` 또는 ad-hoc 검증 스크립트)를 온더플라이로 즉석 작성하여 실행할 것 (고정 템플릿 사용 금지, 태스크 맞춤형 ad-hoc 작성, git commit 없이 untracked 유지)
 - **정상 경로 및 예외 케이스 테스트:**
   - `python tests/test_edge_cases.py` (정상 주문, 취소 주문, 중복 ID, 결측 필드 입력 검증)
 
 ### 6. 완료 기준 (Definition of Done)
 - [ ] 기존 베이스라인 테스트가 깨짐 없이 100% 통과할 것
 - [ ] 취소 데이터 분모 제외 및 중복 최신화 로직이 예외 테스트를 통해 검증될 것
+- [ ] 태스크별 DM 요구사항에 맞춘 온더플라이 테스트 코드를 직접 작성·실행하여 통과하고 결과를 `SUB_RESULT.md`에 기록할 것 (git commit 금지, untracked 유지)
 - [ ] `git diff --stat` 확인 시 지정된 2개 파일 외 변경이 없을 것
 
 ### 7. 보고 형식

@@ -9,7 +9,7 @@
 
 ---
 
-## ⚡ 2. 6대 절대 준수 규칙 (Hard Constraints)
+## ⚡ 2. 8대 절대 준수 규칙 (Hard Constraints)
 1. **지정된 파일 범위 외 수정 절대 금지:**
    - `.probe-kit/runtime/TASK_SPEC.md`에 명시된 파일과 함수 범위 내에서만 수정합니다.
    - 만약 범위 밖의 파일 수정이 불가피하다고 판단되면, 임의로 수정하지 말고 즉시 작업을 중단한 후 사유를 `SUB_RESULT.md`에 적어 메인 에이전트에게 보고합니다.
@@ -24,6 +24,10 @@
    - `.gitignore`를 수정하면 `git status` 및 `git diff`가 오염되어 감점 대상이 됩니다. 임시 파일은 이미 `.git/info/exclude`로 차단되어 있으므로 `.gitignore`를 건드리지 않습니다.
 6. **기존 시스템 인터페이스 보존:**
    - 기존 API 라우트 경로, 요청/응답 JSON 스키마, 데이터베이스 스키마, 인증 미들웨어를 깨뜨리지 않습니다.
+7. **시험 중 Git 변경 명령어(git add/commit/reset/clean) 전면 금지:**
+   - 시험 도중 `git add`, `git commit`, `git reset`, `git clean` 명령어 실행은 전면 금지됩니다. 모든 태스크별 테스트 코드는 커밋하지 않고 untracked 상태로 유지하며 검증을 수행합니다.
+8. **단계별 HANDOFF.md 갱신:**
+   - 각 단계(TASK_SPEC issued / sub done / verification done) 작업 완료 시 `runtime/HANDOFF.md`를 즉시 갱신합니다 (`bash .probe-kit/scripts/handoff.sh log "<메시지>"` 실행).
 
 ---
 
@@ -37,13 +41,15 @@
   - 코드 수정 전 기존 단위 테스트/통합 테스트를 실행하여 초기 성공 상태(Baseline)를 기록합니다.
 - [ ] **Step 3. 최소 변경 구현 (MVP):**
   - 허용된 파일 내에서 현업 예외 조건(결측치, 중복 데이터, 취소 건 등)을 반영한 코드를 구현합니다.
-- [ ] **Step 4. 정상 경로 및 예외 케이스 검증 (사후 검증):**
+- [ ] **Step 4. 온더플라이 태스크 맞춤 테스트 작성 및 정상·예외 경로 검증 (사후 검증):**
   - 기존 베이스라인 테스트 재실행 (Regression 방지).
+  - **매 태스크마다 실무자 DM 요구사항에 맞춘 전용 테스트 코드(예: `tests/test_*.py` 또는 ad-hoc 검증 스크립트)를 온더플라이로 즉석 작성하여 실행** (고정 템플릿 사용 금지, 태스크 맞춤형 ad-hoc 작성, `git commit` 금지 및 untracked 유지).
   - 정상 입력(Happy Path) 검증 명령어 실행.
   - 비정상/경계값 입력(빈 값, 결측치, 잘못된 타입, 취소 플래그) 방어 테스트 실행.
   - 실패 시 무작정 코드를 덮어쓰지 않고 에러 원인을 추적하여 최소 범위만 수정합니다.
-- [ ] **Step 5. 요약 보고서 작성 및 종료:**
+- [ ] **Step 5. 요약 보고서 작성, HANDOFF.md 갱신 및 종료:**
   - `.probe-kit/runtime/SUB_RESULT.md`를 필수 항목 중심의 명확한 요약 보고서 양식으로 작성합니다 (불필요한 줄 수 제한 없음).
+  - 작업 완료(`sub done`) 시 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"`을 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다.
   - 터미널에서 작업 완료를 알리고, 다음 턴의 토큰 절약을 위해 `/clear` 실행 준비를 합니다.
 
 ---
@@ -57,7 +63,7 @@
 2. 대상 모듈: [모듈명 또는 Step 번호]
 3. 변경 파일: [수정된 파일 경로 및 함수명]
 4. 베이스라인 테스트: [실행 명령어 및 결과 (예: pytest tests/test_core.py -> 8 passed)]
-5. 신규/예외 테스트: [실행 명령어 및 결과 (예: pytest tests/test_edge.py -> 3 passed)]
+5. 온더플라이 태스크 테스트: [DM 요구 맞춤 즉석 테스트(tests/test_*.py) 실행 명령 및 결과 (예: pytest tests/test_edge.py -> 3 passed, untracked)]
 6. 반영된 예외 규칙: [DM 확인 조건 반영 내역 (예: status='CANCELLED' 데이터 분모 제외 완료)]
 7. 웹서버/바인딩 확인: [0.0.0.0:<PORT> 정상 확인 / 해당 없음]
 8. git diff 통계: [변경 줄 수 요약 (예: 2 files changed, 28 insertions(+), 4 deletions(-))]
@@ -71,7 +77,7 @@
 2. 대상 모듈: Step 1 주문 집계 모듈 정제 함수
 3. 변경 파일: src/pipeline/aggregator.py (clean_orders, calculate_metrics)
 4. 베이스라인 테스트: pytest tests/test_aggregator.py -> 5 passed in 0.42s
-5. 신규/예외 테스트: python tests/test_edge_cases.py -> 3 passed (결측치, 취소 건, 중복 타임스탬프)
+5. 온더플라이 태스크 테스트: python tests/test_edge_cases.py -> 3 passed (DM 취소건 분모제외/중복 최신화 온더플라이 검증, git commit 없이 untracked 유지)
 6. 반영된 예외 규칙: 취소(CANCELLED) 주문 분모 제외 및 중복 주문 ID 최신 레코드 유지 반영
 7. 웹서버/바인딩 확인: 해당 없음 (데이터 배치 파이프라인)
 8. git diff 통계: 1 file changed, 34 insertions(+), 6 deletions(-)

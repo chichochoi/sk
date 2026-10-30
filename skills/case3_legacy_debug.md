@@ -41,6 +41,7 @@
 
 ### 4단계: 기존 테스트 재실행(회귀 방지) 및 신규 테스트 작성
 - [ ] 수정 후 기존 테스트 스위트를 동일하게 재실행하여 기존 통과 건들이 단 하나도 깨지지 않았음을 확인한다.
+- [ ] 매 태스크마다 실무자 DM 요구사항에 맞춘 온더플라이 테스트 코드(예: `tests/test_*.py` 또는 ad-hoc 검증 스크립트)를 즉석 작성하여 실행한다 (고정 템플릿 사용 금지, 태스크 맞춤형 ad-hoc 작성, `git commit` 금지 및 untracked 유지).
 - [ ] 수정한 버그가 재발하지 않도록 검증하는 단위 테스트(재현 테스트)를 추가한다.
 - [ ] 신규 추가 기능에 대한 정상 케이스 1개 + 비정상/경계 케이스 1개 이상의 단위 테스트를 작성하고 실행한다.
 
@@ -113,11 +114,13 @@ git diff
   - 비밀번호, API 키, 로컬 경로 등 민감 정보가 하드코딩되지 않았는가?
 
 ### 3단계: 원복 필요 시 명령
+> ⚠️ **주의:** 시험 중 `git add`, `git commit`, `git reset`, `git clean` 실행은 전면 금지됩니다. 잘못 수정한 특정 파일만 원래대로 되돌릴 때 `git checkout -- <file>` 또는 `git restore <file>`을 사용하며, `git reset`이나 `git clean`은 절대 실행하지 마세요.
+
 ```bash
 # 특정 파일만 원래대로 되돌리기
 git checkout -- path/to/unintended_file.py
 
-# 신규 생성된 불필요한 임시 파일 제거
+# 신규 생성된 불필요한 임시 파일 제거 (git clean 대신 직접 rm)
 rm -f path/to/temp_debug.py
 ```
 
@@ -138,7 +141,7 @@ diff baseline_test_result.log after_fix_test_result.log || true
 ```
 
 ### 2. 신규 단위 테스트 추가 (버그 재발 방지 및 신규 기능)
-`tests/test_bugfix_and_new_feature.py`를 신규 생성하여 아래 3가지 케이스를 포함:
+매 태스크마다 고정 템플릿이 아닌 실무자 DM 요구사항에 맞춰 온더플라이 ad-hoc 테스트(`tests/test_*.py`, 예: `tests/test_bugfix_and_new_feature.py`)를 신규 생성하여 실행 (git commit 없이 untracked 유지)하며 아래 3가지 케이스를 포함:
 - **Case A (버그 재현 및 해결 확인):** 버그가 발생했던 특정 조건(예: 특수문자가 포함된 아이디로 로그인 시)을 재현하고 정상 동작함을 확인.
 - **Case B (신규 기능 정상 경로):** 새롭게 추가된 기능의 대표 정상 입력 케이스 확인.
 - **Case C (신규 기능 예외/실패 경로):** 새 기능에 잘못된 인자나 결측값이 들어왔을 때 지정된 예외(400 에러 등)가 발생하는지 확인.
@@ -177,7 +180,7 @@ diff baseline_test_result.log after_fix_test_result.log || true
 
 ## 3. 검증 기준
 - 수정 전 기존 테스트 통과 유지: `pytest tests/test_legacy_auth.py` PASS.
-- 신규 테스트 통과: `pytest tests/test_auth_patch.py` 3개 케이스(정상 연장, 만료 토큰 연장 거부, 위조 토큰 거부) PASS.
+- 신규 태스크 맞춤 온더플라이 테스트 통과: `pytest tests/test_auth_patch.py` 3개 케이스(정상 연장, 만료 토큰 연장 거부, 위조 토큰 거부) PASS (git commit 금지, untracked 유지).
 - `git diff --stat` 검증 시 변경 파일이 2개(`auth_service.py`, `auth_router.py`) 외에 없을 것.
 ```
 
