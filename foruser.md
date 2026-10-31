@@ -24,6 +24,7 @@
 | **12:47** | **[10단계]** 제출 보고서 3대 요소 점검 | [판단·근거]-[검증]-[남은 한계] 점검 | 메인 보고서 검토 프롬프트 |
 | **12:50** | **[11단계]** 보안 취약점 전수 점검 | API 키, 0.0.0.0 바인딩, 로그 누출 점검 | 메인 보안 감사 프롬프트 |
 | **12:52** | **[12단계]** 오버엔지니어링 점검 & 제출 | 불필요 라이브러리 배제 ➔ 12:55 칼제출 | 메인 점검 ➔ 13:00 서술형 직접 타이핑 |
+| **상시** | **[13]** 비상 상황 트러블슈팅 | 막히면 3분 우회, 핑퐁·환경 장애 즉각 해결 | 13. 트러블슈팅 표 / 플레이북 |
 
 ---
 
@@ -101,7 +102,7 @@ codex
 > ⚠️ **주의:** `Astra` 모델이나 자동 화면 조작(`Computer Use`)은 규정상 금지되어 있으며 사용 시 실격 처리됩니다.
 
 ✅ **완료 시그널:**
-`git status` 출력 시 하네스 파일이 노출되지 않고, `EDA_SUMMARY.txt`에서 컬럼/테스트 파일 목록을 확인했으며, 터미널 1(`Sol 6.1 xhigh`)과 터미널 2(`Luna 6 xhigh`)가 대기 상태인 것.
+`git status` 출력 시 하네스 파일이 노출되지 않고, `EDA_SUMMARY.txt`에서 컬럼/테스트 파일 목록을 확인했으며, 터미널 1(`Sol 6.1 xhigh`)과 터미널 2(`Luna 6 xhigh`)가 대기 상태인 것. (진행 중 문제가 발생하면 [13. 비상 상황 트러블슈팅](#13-비상-상황-트러블슈팅-if-something-breaks) 참조)
 
 ---
 
@@ -533,12 +534,46 @@ bash .probe-kit/scripts/handoff.sh
 
 ## 13. 비상 상황 트러블슈팅 (If Something Breaks)
 
-| 문제 상황 | 원인 | 즉시 해결 방법 |
+> 🚨 **원칙:** 막히면 3분 안에 우회하고, 하네스가 없어도 과제 자체는 계속 진행
+
+### 🩺 시작 직후 한 줄 확인 (Quick Health Check)
+
+```bash
+ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which python3 ; git status --short | head
+```
+— `EDA_SUMMARY.txt`와 `HANDOFF.md`가 보이면 init 정상, 없으면 아래 표 첫 줄 대처.
+
+---
+
+### 🛡️ A. AGENTS.md가 안 깔릴 때
+
+- **현상:** `init.sh` 실행 시 `~/.codex 설치 실패(권한): 건너뜀` 출력. (스크립트는 더 이상 중단(abort)되지 않고 정상 통과함)
+- **대처:** 키트는 `~/.codex` 없이도 `.probe-kit/` 안 파일로 정상 동작합니다.
+  - **메인 첫 줄 프롬프트:** `먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.`
+  - **서브 첫 줄 프롬프트:** `먼저 .probe-kit/SUB_AGENTS.md를 읽고 그 규칙을 따라줘.`  
+  *(이미 3단계 및 6.5단계 프롬프트에 기본 반영되어 있음)*
+
+---
+
+### 🏓 B. 핑퐁이 안 될 때 (메인 ↔ 서브 통신 장애)
+
+- **서브가 `TASK_SPEC.md`를 못 찾음:** 메인에게 `.probe-kit/runtime/TASK_SPEC.md` 저장 경로를 `cat`으로 확인시키기
+- **`[SUB] TASK_SPEC 실행해`를 못 알아들음:** `TASK_SPEC.md` 내용을 서브 창에 직접 붙여넣고 `SUB_AGENTS.md` 규칙대로 실행
+- **`SUB_RESULT.md`가 안 생김:** 서브에게 `.probe-kit/runtime/SUB_RESULT.md`에 쓰도록 재지시, 안 되면 서브 요약 출력을 메인 창에 붙여넣어 검수
+- **서브 자체가 안 뜸:** 메인이 직접 구현하는 것은 최후수단 (역할 분리 규칙 위반으로 평가 영향 가능, 불가피한 경우 그 이유를 `NOTES_TEMP.md`에 기록)
+
+---
+
+### 📋 C. 증상별 즉시 해결 조치표 (Symptoms → Action)
+
+| 문제 증상 | 원인 | 즉시 해결 방법 |
 | :--- | :--- | :--- |
-| **붙여넣기 오류 (`$'\E[200~git': command not found` 등)** | 웹 터미널에서 `Ctrl+V`로 붙여넣어 제어 문자(`^[[200~`, `\026`)가 유입됨 | 해당 줄을 전체 삭제(`Ctrl+U` 또는 백스페이스)한 뒤 `Ctrl+Shift+V`(또는 우클릭 > 붙여넣기)로 재붙여넣기 |
-| **`init.sh` 실행 실패 / 네트워크 에러** | 외부 GitHub 접근 지연 또는 네트워크 제한 | 워크스페이스에 이미 다운로드된 `probe-kit`이 있다면 `bash probe-kit/init.sh` (또는 `scripts/init.sh`, `bash .probe-kit/init.sh`)를 로컬 경로로 직접 실행 (키트가 `<workspace>/.probe-kit` 또는 `/tmp/probe-kit` 어디에 있어도 자동 감지 동작) |
-| **`.git/info/exclude` 건너뜀 경고 (`not a git repository`)** | 워크스페이스(예: `/home/user`)가 Git 저장소가 아닌 일반 디렉토리임 | 정상 동작입니다. 하네스는 격리 단계만 안전하게 스킵하고 정상 설치되므로 경고를 무시하고 진행 |
-| **`EDA_SUMMARY.txt` 없음 / `init.sh` 중간 종료** | 초기화 중 실행 중단 또는 권한/환경 문제 | `bash .probe-kit/init.sh` 재실행 또는 `python3 .probe-kit/scripts/eda_scan.py . > .probe-kit/runtime/EDA_SUMMARY.txt` 수동 실행 |
+| **`EDA_SUMMARY.txt` 없음 / `init.sh` 중간 종료** | 초기화 중 실행 중단 또는 권한/환경 문제 | `bash .probe-kit/init.sh` 재실행 또는 `python3 .probe-kit/scripts/eda_scan.py . > .probe-kit/runtime/EDA_SUMMARY.txt` |
+| **명령 앞에 `\E[200~` / `\026` 붙음 (`command not found` 등)** | 웹 터미널에서 `Ctrl+V`로 붙여넣어 제어 문자 유입 | 해당 줄을 전체 삭제(`Ctrl+U` 또는 백스페이스)한 뒤 `Ctrl+Shift+V`(또는 우클릭 붙여넣기), **`Ctrl+V` 금지** |
+| **`python: command not found`** | 환경 내 기본 `python` 심볼릭 링크 부재 | 모든 명령은 `python3`으로 실행 (`python3 .probe-kit/...`) |
+| **`handoff.sh` 실패** | WSL 권한 오류 또는 셸 환경 제약 | `python3 .probe-kit/scripts/handoff.py log "<단계>" "<메시지>"`, 그래도 안 되면 `runtime/HANDOFF.md` 표에 직접 한 줄 추가 |
+| **`pre_submit_audit`가 `.probe-kit/`·`HANDOFF.md` untracked 경고** | `.git/info/exclude` 등록 누락 또는 비-Git 디렉토리 | `init.sh` 재실행(exclude 재등록), git 저장소가 아니면 'git 저장소 아님' SKIP은 정상 |
+| **`git clone` 자체가 멈춤** | 외부 GitHub 네트워크 지연/제한 | 에러 메시지 확인, 네트워크 문제면 시험 운영진에 문의 (재현된 적 없음). 워크스페이스에 이미 다운로드된 `probe-kit`이 있다면 `bash probe-kit/init.sh` (또는 `bash .probe-kit/init.sh`) 로컬 실행 |
 | **스크립트 실행 오류 / 환경 제약** | 줄바꿈(CRLF) 또는 셸 권한 문제 | 셸 스크립트 대신 `python3 .probe-kit/scripts/pre_submit_audit.py`를 직접 실행하거나, Bash 터미널 탭을 열어서 실행 |
 | **웹 서버 기동 시 포트 충돌 (`Address already in use`)** | 이전 프로세스가 해당 포트 점유 중 | 터미널에서 `lsof -i :<port>` (또는 `netstat -ano \| findstr <port>`)로 PID 확인 후 `kill -9 <PID>` 종료, 종료가 불가능하면 실무자 DM에 다른 포트 사용 가능 여부 확인 |
 | **Codex 세션 응답 지연 또는 토큰 한계** | 컨텍스트 누적 또는 일시적 API 지연 | 서브 터미널은 즉시 `/clear` 실행. 메인 터미널은 `bash .probe-kit/scripts/handoff.sh` 실행 후 새 탭에서 새 터미널을 열어 `[메인 프롬프트 6]`(Handoff 인수, .probe-kit/prompts/02_codex_prompts.md 참조)으로 무손실 세션 전환 |
