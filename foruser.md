@@ -123,7 +123,7 @@ codex
    - Case 2: 실무형 웹 서비스 / 웹앱 / 대시보드 구축 -> .probe-kit/skills/case2_web_service.md
    - Case 3: 기존 레거시 코드베이스 디버깅 및 기능 확장 -> .probe-kit/skills/case3_legacy_debug.md
    - Case 4: 규정 색인·판정, 사내 업무 자동화, RAG -> .probe-kit/skills/case4_policy_rag_doc.md
-   - 위 4개의 케이스에 없는거면 없다고 말해.(케이스 복합이면->.probe-kit/skills/case1_data_pipeline.md)
+   - 위 4개의 케이스에 없는거면 없다고 말해.(케이스 복합이면->~구조의 복합인데 뭐를 쓸지 나에게 보고)
 2. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
 3. 절대 변경하면 안 되는 기존 시스템의 불변 제약 (API 규격, 인증 방식, 함수 시그니처 등)
 4. 불필요한 오버엔지니어링을 배제한 최소 핵심 기능(MVP) 목표
