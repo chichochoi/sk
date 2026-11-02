@@ -12,7 +12,7 @@
 | 시각 | 단계 | 핵심 수행 내용 | 주요 도구 / 명령어 |
 | :--- | :--- | :--- | :--- |
 | **10:00** | **[1단계]** 원클릭 하네스 설치 | 외부 Git 차단 및 하네스 자동 장착 | `git clone ... && bash init.sh` |
-| **10:02** | **[2단계]** 환경 검증 & 듀얼 터미널 | 무토큰 EDA 확인 및 Sol/Luna 분리 기동 | `git status` / `EDA_SUMMARY` / `codex` |
+| **10:02** | **[2단계]** 환경 검증 & 듀얼 터미널 | 무토큰 EDA 확인 및 Sol/GPT 5.6-terra 분리 기동 | `git status` / `EDA_SUMMARY` / `codex` |
 | **10:05** | **[3단계]** 문제 탐색 & Case 식별 | 과제 문제 README 분석 및 스킬 매핑 | 메인 프롬프트 (`NOTES_TEMP.md` 기록) |
 | **10:10** | **[4단계]** DM 실무자 만능 질의 | 목표, 입출력, 결측/중복, 인터페이스 질의 | 우측 DM 창 (범용 템플릿) |
 | **10:20** | **[5단계]** 케이스별 DM 질문 질의 | `dm_question.md` 기반 심층 질문 및 기록 | `.probe-kit/dm_question.md` |
@@ -51,7 +51,7 @@ git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe
 ```text
 === [6/6] Codex 글로벌 하네스(~/.codex) 및 모델 프리셋 설정 ===
 ...
-🎉 [probe-kit] 메인(Sol 6.1 xhigh) × 서브(Luna 6 xhigh) 하네스 설치 완료!
+🎉 [probe-kit] 메인(Sol 6.1 xhigh) × 서브(GPT 5.6-terra medium) 하네스 설치 완료!
 ```
 
 ---
@@ -95,14 +95,14 @@ codex
 # Codex 진입 후 명령어 실행:
 /status
 /model
-# 모델 목록에서 [Luna 6 (xhigh)] 선택 (luna-6, reasoning xhigh)
+# 모델 목록에서 [GPT 5.6-terra medium] 선택 (gpt-5.6-terra, reasoning medium)
 ```
 > **절대 원칙 (서브):** 서브는 `TASK_SPEC.md`에 지정된 파일만 최소 수정하고, 온더플라이 테스트를 실행하여 `SUB_RESULT.md`를 작성한 뒤 **반드시 `/clear`로 초기화**합니다.
 > 
 > ⚠️ **주의:** `Astra` 모델이나 자동 화면 조작(`Computer Use`)은 규정상 금지되어 있으며 사용 시 실격 처리됩니다.
 
 ✅ **완료 시그널:**
-`git status` 출력 시 하네스 파일이 노출되지 않고, `EDA_SUMMARY.txt`에서 컬럼/테스트 파일 목록을 확인했으며, 터미널 1(`Sol 6.1 xhigh`)과 터미널 2(`Luna 6 xhigh`)가 대기 상태인 것. (진행 중 문제가 발생하면 [13. 비상 상황 트러블슈팅](#13-비상-상황-트러블슈팅-if-something-breaks) 참조)
+`git status` 출력 시 하네스 파일이 노출되지 않고, `EDA_SUMMARY.txt`에서 컬럼/테스트 파일 목록을 확인했으며, 터미널 1(`Sol 6.1 xhigh`)과 터미널 2(`GPT 5.6-terra medium`)가 대기 상태인 것. (진행 중 문제가 발생하면 [13. 비상 상황 트러블슈팅](#13-비상-상황-트러블슈팅-if-something-breaks) 참조)
 
 ---
 
@@ -268,7 +268,7 @@ sequenceDiagram
     actor User as 수험생 (인간)
     participant T1 as 터미널 1 (Main: Sol 6.1)
     participant FS as 파일시스템 (TASK_SPEC / SUB_RESULT)
-    participant T2 as 터미널 2 (Sub: Luna 6)
+    participant T2 as 터미널 2 (Sub: GPT 5.6-terra medium)
 
     User->>T1: 메인 지시서 작성 프롬프트 주입
     T1->>FS: .probe-kit/runtime/TASK_SPEC.md 생성 & handoff.sh log
@@ -282,7 +282,7 @@ sequenceDiagram
 ### 1) 범용 `TASK_SPEC.md` 작성 지시 프롬프트 (터미널 1 - 메인 `Sol 6.1 xhigh`)
 ```text
 [MAIN] 비즈니스 코드는 절대 직접 작성하거나 수정하지 마.
-우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(Luna 6 xhigh)가 수행할 [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
+우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(GPT 5.6-terra medium)가 수행할 [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
 TASK_SPEC.md 에는 다음 6대 필수 요소를 반드시 누락 없이 포함해야 해:
 1. 이번 단계의 명확한 단일 목표 (Single Goal)
 2. 수정이 허용된 정확한 파일 경로 (지정 외 파일 수정 절대 금지)
@@ -303,7 +303,7 @@ bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완�
 
 ```
 
-### 2) 서브 에이전트 구현 및 온더플라이 검증 지시 (터미널 2 - 서브 `Luna 6 xhigh`)
+### 2) 서브 에이전트 구현 및 온더플라이 검증 지시 (터미널 2 - 서브 `GPT 5.6-terra medium`)
 터미널 2 창으로 전환하여 아래 프롬프트를 입력합니다:
 
 ```text
@@ -596,11 +596,11 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 ├── dm_question.md                   # 💬 [수험생 전용] Case 1~4 실무자 DM 맞춤형 질문 뱅크 & 비상 가이드
 ├── init.sh                          # [원클릭 장착] 하네스 설치 + Git 보호 + 무토큰 EDA 스캔
 ├── AGENTS.md                        # [메인 헌법] Sol 6.1에게 코드 작성 금지 & 설계·지시 강제
-├── SUB_AGENTS.md                    # [서브 헌법] Luna 6에게 지시서 엄수 & 온더플라이 테스트·구현 전담 강제
+├── SUB_AGENTS.md                    # [서브 헌법] GPT 5.6-terra medium에게 지시서 엄수 & 온더플라이 테스트·구현 전담 강제
 │
 ├── runtime/                         # [작업 버퍼] 메인 ↔ 서브 통신 무토큰 핸드셰이크 버퍼
 │   ├── TASK_SPEC.md                 # 메인(Sol)이 작성하는 단일 모듈 작업 지시서
-│   ├── SUB_RESULT.md                # 서브(Luna)가 실행 후 기록하는 요약 결과 보고서
+│   ├── SUB_RESULT.md                # 서브(GPT 5.6-terra)가 실행 후 기록하는 요약 결과 보고서
 │   ├── HANDOFF.md                   # 세션 간 무손실 인수인계서 (init.sh가 초기 복사 후 실시간 누적)
 │   └── EDA_SUMMARY.txt              # init.sh 실행 시 무토큰 자동 생성되는 데이터/코드 요약문
 │

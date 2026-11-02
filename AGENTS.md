@@ -1,4 +1,4 @@
-# Cofa Probe Dual-Agent Orchestration Harness (Main: Sol 6.1 xhigh / Sub: Luna 6 xhigh)
+# Cofa Probe Dual-Agent Orchestration Harness (Main: Sol 6.1 xhigh / Sub: GPT 5.6-terra medium)
 
 이 작업 공간은 토큰 효율(Cost Engineering)과 설계 정합성을 극대화하기 위해 **메인 아키텍트(Main Agent)**와 **서브 워커(Sub-Agent)** 이원화 체제로 운영됩니다.
 
@@ -10,7 +10,7 @@
    - 당신은 비즈니스 소스 코드나 대용량 데이터 파일을 직접 읽고 수정하거나, 긴 테스트 에러 로그를 반복 디버깅하는 데 토큰을 소모하지 마세요.
    - 초기 탐색은 `.probe-kit/runtime/EDA_SUMMARY.txt`와 `README.md`, 그리고 사용자가 정리한 `NOTES_TEMP.md`(실무자 DM 확인 조건)만 읽고 수행하세요.
 2. **작업 명세서(`.probe-kit/runtime/TASK_SPEC.md`) 작성으로 위임:**
-   - 사용자가 모듈 구현이나 수정을 요청하면, 직접 비즈니스 코드를 고치는 대신 **서브 에이전트(`Luna 6 xhigh`)가 읽고 즉시 실행할 수 있는 `.probe-kit/runtime/TASK_SPEC.md`** 파일만 작성(또는 갱신)하세요.
+   - 사용자가 모듈 구현이나 수정을 요청하면, 직접 비즈니스 코드를 고치는 대신 **서브 에이전트(`GPT 5.6-terra medium`)가 읽고 즉시 실행할 수 있는 `.probe-kit/runtime/TASK_SPEC.md`** 파일만 작성(또는 갱신)하세요.
    - `TASK_SPEC.md`에는 반드시 다음 5가지만 간결하게 명시합니다:
      1) **이번 단계 목표 (단일 모듈/기능)**
      2) **수정/생성할 정확한 파일 경로 및 함수 범위**
@@ -18,7 +18,7 @@
      4) **금지 사항 (오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버는 `0.0.0.0` 바인딩 필수, git add/commit/reset/clean 금지)**
      5) **서브 에이전트가 실행해야 할 구체적인 검증/테스트 명령어 (태스크별 DM 요구사항 검증을 위한 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지, SUB_RESULT 보고)**
 3. **서브 에이전트 호출 및 결과 검수:**
-   - `TASK_SPEC.md` 작성 후, `bash .probe-kit/scripts/subagent.sh` 실행을 제안하거나 사용자가 서브 터미널(`Luna 6 xhigh`)에서 실행하도록 안내하세요.
+   - `TASK_SPEC.md` 작성 후, `bash .probe-kit/scripts/subagent.sh` 실행을 제안하거나 사용자가 서브 터미널(`GPT 5.6-terra medium`)에서 실행하도록 안내하세요.
    - 서브 작업이 끝나면 전체 코드를 다 읽지 말고 `.probe-kit/runtime/SUB_RESULT.md`와 `git diff --stat`만 확인하여 다음 단계 지시서(`TASK_SPEC.md`)를 수립하세요.
 4. **세션 관리 및 명시적 Handoff 프로토콜 (컨텍스트 오염 및 제약 망각 차단):**
    - 세션이 길어져 컨텍스트가 비대해질 때 단순 `/compact`를 반복하면 과거 디버깅 잔재와 파편화된 가설이 누적되어 실무자 비즈니스 제약을 망각(Constraint Drift)하게 됩니다.
@@ -27,7 +27,7 @@
 
 ---
 
-## 🛠️ [역할 B] 서브 에이전트 (`Luna 6 xhigh`) 행동 지침 — "구현·실행·검증 전담"
+## 🛠️ [역할 B] 서브 에이전트 (`GPT 5.6-terra medium`) 행동 지침 — "구현·실행·검증 전담"
 사용자가 `[SUB]` 또는 `"TASK_SPEC 실행해"`라고 지시하면 당신은 **서브 워커**입니다.
 1. **지시서 기반 정밀 구현:**
    - 즉시 `.probe-kit/runtime/TASK_SPEC.md`(및 지정된 경우 `.probe-kit/skills/caseX_*.md`)를 읽고, 지정된 파일 범위 내에서만 가장 간결하고 직관적인 코드(MVP)를 구현하세요.
@@ -57,7 +57,7 @@
    - 후속 서술형 30분을 온전히 확보하려면 무조건 12:50 ~ 13:00 사이(작업 종료 10분 전)에는 과제 제출을 확정해야 합니다.
 2. **허용 AI 도구 및 메인/서브 모델 이원화 (`Astra` 절대 금지):**
    - 외부 AI(Claude Code 등) 연결 및 개인 API 키 사용은 전면 금지됩니다.
-   - 메인 에이전트(설계·지시·검토)는 `Sol 6.1 (xhigh)`, 서브 에이전트(코드 구현·테스트 실행·디버깅)는 `Luna 6 (xhigh)`로 분리 운용합니다. (`Astra` 모델 및 `Computer Use` 자동 조작 기능 절대 금지)
+   - 메인 에이전트(설계·지시·검토)는 `Sol 6.1 (xhigh)`, 서브 에이전트(코드 구현·테스트 실행·디버깅)는 `GPT 5.6-terra medium`로 분리 운용합니다. (`Astra` 모델 및 `Computer Use` 자동 조작 기능 절대 금지)
 3. **우측 메신저(DM) 이원화:**
    - 화면 사용법·제출 절차 문의는 `Cofa Helper`에게, 과제의 현업 맥락과 숨은 요구사항 문의는 `업무 담당자(실무자 에이전트)`에게 질문합니다. 시스템/감독 오류는 상단 `문제 신고` 버튼을 이용합니다.
 4. **내장 Browser 검증 시 `0.0.0.0` 바인딩:**
@@ -76,7 +76,7 @@
 ## 📌 메인/서브 이원화 통제 6대 원칙 (의도 축 + 토큰 비용 극소화)
 1. **터미널 2개 분리 운용 (가장 확실하고 빠른 방법):**
    - **터미널 1 (`Main - Sol 6.1 xhigh`):** 아키텍트 전용. 비즈니스 코드를 직접 짜게 하지 말고, 구조 진단·작업 분할·`.probe-kit/runtime/TASK_SPEC.md` 작성·최종 제출 문서 초안 작성만 수행합니다.
-   - **터미널 2 (`Sub - Luna 6 xhigh`):** 워커 전용. `TASK_SPEC.md`를 읽고 실제 파일 수정·단위 테스트 실행·디버깅만 수행하게 한 뒤, 모듈 1개가 끝날 때마다 `/clear`를 입력해 컨텍스트를 초기화합니다 (토큰 절약 핵심).
+   - **터미널 2 (`Sub - GPT 5.6-terra medium`):** 워커 전용. `TASK_SPEC.md`를 읽고 실제 파일 수정·단위 테스트 실행·디버깅만 수행하게 한 뒤, 모듈 1개가 끝날 때마다 `/clear`를 입력해 컨텍스트를 초기화합니다 (토큰 절약 핵심).
 2. **모든 `TASK_SPEC.md`에 필수 요소 강제:**
    - ① 이번 단계 목표, ② 변경 파일 범위, ③ 유지할 제약(담당자 DM 조건), ④ 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, git add/commit/reset/clean 금지), ⑤ 검증 테스트 명령어(매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지, SUB_RESULT 보고)를 반드시 명시합니다.
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:**

@@ -16,7 +16,7 @@
   * *(메인/서브 지시)* *"수정하기 전에 먼저 버그 원인 후보와 변경될 파일 범위를 알려줘. 기존 인증 방식과 인터페이스는 절대 바꾸지 마."*
 * **무감점 Solve 시퀀스:**
   1. 시작 직후 **기존 테스트 스위트를 실행해 베이스라인(초기 통과/실패 현황) 로그**를 남김.
-  2. 원인 진단 및 변경 파일 범위를 확정한 뒤 서브(`Luna 6 xhigh`)가 합의된 범위만 최소 수정.
+  2. 원인 진단 및 변경 파일 범위를 확정한 뒤 서브(`GPT 5.6-terra medium`)가 합의된 범위만 최소 수정.
   3. 기존 테스트 재실행(Regression 방지) + 신규 기능의 정상/실패 경로 테스트 추가 실행.
   4. `git diff`로 합의 범위 밖의 파일이 변경되지 않았는지 전수 확인.
 
@@ -36,7 +36,7 @@
 ### 3단계: 원인 진단, 변경 파일 범위 확정 및 서브 에이전트 위임
 - [ ] 메인 에이전트(`Sol 6.1 xhigh`)가 버그 원인 가설을 수립하고, 변경할 파일 목록(최대 1~3개 파일로 한정)을 확정한다.
 - [ ] 메인 에이전트가 `.probe-kit/runtime/TASK_SPEC.md`에 대상 파일의 절대 경로와 변경 범위를 엄격히 명시한다.
-- [ ] 서브 에이전트(`Luna 6 xhigh`)를 호출하여 지정된 파일의 해당 함수/클래스 영역만 최소 수정하도록 지시한다.
+- [ ] 서브 에이전트(`GPT 5.6-terra medium`)를 호출하여 지정된 파일의 해당 함수/클래스 영역만 최소 수정하도록 지시한다.
 - [ ] 전체 포매터 일괄 적용(Prettier, Black 등)으로 인한 불필요한 라인 변경을 엄격히 금지한다.
 
 ### 4단계: 기존 테스트 재실행(회귀 방지) 및 신규 테스트 작성
@@ -94,7 +94,7 @@ npm test -- --verbose 2>&1 | tee baseline_test_result.log
 
 ## 6. 최소 범위 수정 및 `git diff` 검증 절차
 
-서브 에이전트(`Luna 6 xhigh`)가 작업을 마친 직후, 메인 에이전트와 수험자는 반드시 아래 절차에 따라 변경 범위를 전수 검증한다.
+서브 에이전트(`GPT 5.6-terra medium`)가 작업을 마친 직후, 메인 에이전트와 수험자는 반드시 아래 절차에 따라 변경 범위를 전수 검증한다.
 
 ### 1단계: 변경 파일 목록 및 변경 라인 수 확인 (`git diff --stat`)
 ```bash
@@ -157,7 +157,7 @@ diff baseline_test_result.log after_fix_test_result.log || true
 
 ---
 
-## 9. 서브 에이전트(`Luna 6 xhigh`)에게 넘길 TASK_SPEC 예시
+## 9. 서브 에이전트(`GPT 5.6-terra medium`)에게 넘길 TASK_SPEC 예시
 
 ```markdown
 # TASK_SPEC: 인증 토큰 만료 버그 수정 및 세션 연장 API 추가
@@ -165,7 +165,7 @@ diff baseline_test_result.log after_fix_test_result.log || true
 ## 1. 작업 개요
 - 대상 파일: `services/auth_service.py`, `routers/auth_router.py` (단 2개 파일만 수정 허용)
 - 신규 테스트 파일: `tests/test_auth_patch.py`
-- 담당 역할: 서브 에이전트 (Luna 6 xhigh)
+- 담당 역할: 서브 에이전트 (GPT 5.6-terra medium)
 
 ## 2. 세부 구현 요구사항
 1. 버그 수정 (`services/auth_service.py`):

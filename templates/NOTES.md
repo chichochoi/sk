@@ -14,7 +14,7 @@
 | **과제 식별 유형** | `________________________________________________` |
 | **필수 제출 파일명** | `________________________________________________` (과제 README 요구 파일명) |
 | **메인 에이전트 (터미널 1)** | `Sol 6.1 (xhigh)` — 설계·구조화·지시·검수 전담 (코드 직접 수정 금지) |
-| **서브 에이전트 (터미널 2)** | `Luna 6 (xhigh)` — 모듈별 고속 구현·검증 실행 전담 (`Astra` 금지) |
+| **서브 에이전트 (터미널 2)** | `GPT 5.6-terra medium` — 모듈별 고속 구현·검증 실행 전담 (`Astra` 금지) |
 
 ### ⏰ 시험 타임라인 체크리스트
 - [ ] **09:20 ~ 09:40 [환경 세팅 & 접속 완료]**
@@ -33,13 +33,13 @@
   - [ ] `EDA_SUMMARY.txt` 자동 생성, `templates/HANDOFF.md` -> `runtime/HANDOFF.md` 초기 복사 확인 및 `.git/info/exclude` 보호 상태 확인
   - [ ] 과제 `README.md` 정독 및 필수 제출 파일명 식별
   - [ ] **터미널 1 (메인):** `codex` 실행 → `/status` → `/model`에서 **`Sol 6.1 (xhigh)`** 선택 → `[메인 프롬프트 1]` 주입 및 기존 베이스라인 테스트 1회 실행
-  - [ ] **터미널 2 (서브):** 새 터미널 탭 열기 → `codex` 실행 → `/status` → `/model`에서 **`Luna 6 (xhigh)`** 선택
+  - [ ] **터미널 2 (서브):** 새 터미널 탭 열기 → `codex` 실행 → `/status` → `/model`에서 **`GPT 5.6-terra medium`** 선택
 - [ ] **10:15 ~ 10:40 [실무자 에이전트 DM 질문 & 첫 `TASK_SPEC.md` 확정]**
   - [ ] 우측 DM `업무 담당자`에게 만능 12문 및 케이스별 질문 질의 → 답변을 아래 Section 3에 기록
   - [ ] 발굴된 숨은 조건/예외 기준을 바탕으로 터미널 1(`Sol 6.1 xhigh`)에 `[메인 프롬프트 2]` 입력
   - [ ] `.probe-kit/runtime/TASK_SPEC.md` 생성 및 첫 번째 구현 모듈 명세 확정 (구조화 전 코딩 금지)
 - [ ] **10:40 ~ 12:15 [메인 지시(`TASK_SPEC`) → 서브 구현·검증(`SUB_RESULT` & `/clear`) 반복]**
-  - [ ] 터미널 2(`Luna 6 xhigh`)에 `[서브 프롬프트 3]` 입력(또는 `bash .probe-kit/scripts/subagent.sh`)으로 모듈 구현 및 태스크 맞춤 온더플라이 ad-hoc 테스트(`tests/test_*.py` 등) 작성·실행 (고정 템플릿 금지, `git add`/`commit`/`reset`/`clean` 금지 및 untracked 유지)
+  - [ ] 터미널 2(`GPT 5.6-terra medium`)에 `[서브 프롬프트 3]` 입력(또는 `bash .probe-kit/scripts/subagent.sh`)으로 모듈 구현 및 태스크 맞춤 온더플라이 ad-hoc 테스트(`tests/test_*.py` 등) 작성·실행 (고정 템플릿 금지, `git add`/`commit`/`reset`/`clean` 금지 및 untracked 유지)
   - [ ] 테스트 통과 및 `SUB_RESULT.md` 요약 기록 확인 후 `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log ...` 또는 runtime/HANDOFF.md 직접 추가) 실행으로 `runtime/HANDOFF.md` 즉시 갱신
   - [ ] **터미널 2에서 `/clear` 즉시 실행** (컨텍스트 오염 방지 및 토큰 초기화)
   - [ ] 터미널 1(`Sol 6.1 xhigh`)에 `[메인 프롬프트 4]`로 결과 검수, `bash .probe-kit/scripts/handoff.sh log "TASK_SPEC: <요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log ...`) 실행 및 다음 모듈 `TASK_SPEC.md` 갱신 (골든 타이밍 도달 시 공식 Handoff 프로토콜 수행)

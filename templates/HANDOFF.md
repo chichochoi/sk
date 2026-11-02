@@ -11,7 +11,7 @@
 - **인수인계/기록 일시:** `YYYY-MM-DD HH:MM:SS KST`
 - **구 세션 담당:** `Sol 6.1 (xhigh)` (메인 아키텍트)
 - **신규 세션 담당:** `Sol 6.1 (xhigh)` (신규 메인 아키텍트)
-- **서브 워커 모델:** `Luna 6 (xhigh)`
+- **서브 워커 모델:** `GPT 5.6-terra medium`
 - **현재 진행 단계:** `[Step 1 / Step 2 / Step 3 / 최종 검증]`
 - **현재 Git 브랜치:** `main`
 - **누적 Git 커밋 수:** `0 건`
@@ -82,7 +82,7 @@
 ```text
 변경 사항 없음 (Working tree clean)
 ```
-- **직전 서브 에이전트(`Luna 6 xhigh`) 실행 요약 (`SUB_RESULT.md`):**
+- **직전 서브 에이전트(`GPT 5.6-terra medium`) 실행 요약 (`SUB_RESULT.md`):**
   - **작업 상태:** 대기 중
   - **대상 모듈:** Step 1 데이터 정제 파이프라인
   - **실행 명령:** pytest tests/
@@ -118,7 +118,7 @@
 신규 세션(`Sol 6.1 xhigh`)은 인수인계 승인 후 즉시 아래 작업을 순차적으로 실행합니다:
 
 1. **[Action 1]:** Step 1 MVP 구현을 위한 `.probe-kit/runtime/TASK_SPEC.md` 작성 및 서브 워커 지시
-2. **[Action 2]:** 서브 에이전트(`Luna 6 xhigh`) 호출하여 핵심 로직 및 단위 테스트 구현 지시
+2. **[Action 2]:** 서브 에이전트(`GPT 5.6-terra medium`) 호출하여 핵심 로직 및 단위 테스트 구현 지시
 3. **[Action 3]:** 산출물 포맷 및 실무자 DM 불변 제약 교차 검증
 
 ---
