@@ -216,7 +216,7 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 ```
 추가 질문
 ```markdown
-`NOTES_TEMP.md`를 읽고, 추가적으로 DM담당자에게 질문해야할 내용이 있으면.probe-kit/dm_question.md 파일의 맨 위에 적어줘.
+`NOTES_TEMP.md`를 읽고, 추가적으로 DM담당자에게 질문해야할 내용이 있으면.probe-kit/dm_question.md 파일의 맨 위에 적어줘. 특히 예외사항 등 상활 맥락은 한번에 안알려주고 해당 관점에서 자세히 물어봐야 답을 해주니 여러 각도에서 찔러볼 수 있는,물어볼 질문들을 알려줘.
 ```
 
 ✅ **완료 시그널:**
