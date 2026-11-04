@@ -192,3 +192,144 @@ diff baseline_test_result.log after_fix_test_result.log || true
 - **[근거]:** 실무자 DM을 통해 기존 웹/모바일 클라이언트가 사용 중인 API 시그니처와 JSON 응답 규격을 100% 보존해야 함을 확인하였으며, 대규모 리팩토링은 잠재적 회귀 버그(Regression)를 유발할 위험이 높다는 실무 품질 원칙을 근거로 삼음.
 - **[검증]:** 코드 수정 전 기존 테스트 스위트를 실행하여 베이스라인 로그(18개 테스트 통과)를 기록하였고, 수정 후 전체 테스트 재실행을 통해 기존 18개 테스트가 모두 통과함을 확인하였으며, 신규 추가한 재현 및 경계값 테스트 3건(`tests/test_auth_patch.py`)을 포함한 총 21개 테스트 100% 통과 및 `git diff --stat`를 통한 2개 파일 최소 변경을 전수 확인함.
 - **[한계]:** 이번 조치는 타임존 오프셋 계산 버그를 해결한 핫픽스(Hotfix) 수준의 최소 수정이므로, 향후 토큰 블랙리스트 관리 및 Redis 기반의 분산 토큰 무효화(Revocation) 기능을 도입하여 보안성을 강화하는 구조적 고도화가 후속 과제로 요구됨.
+
+
+---
+
+## 🚨 [CCTV / Safety Vision 특화] 안전관제·비전 파이프라인 레거시 버그 타격 포인트
+
+> **만약 CCTV(Safety Vision AI 추론 후처리 코드베이스 / 안전관제 레거시 API)에 관련된 문제라면, 위 기존의 일반 로그인·결제 버그 예시가 아니라 아래 새로 만든 [CCTV·비전 코드베이스 5대 빈출 버그 체크리스트]를 참고하세요.**
+
+---
+
+### 1. CCTV·비전 레거시 디버깅 접근 원칙
+- CCTV 비전 AI 및 안전관제 코드베이스 디버깅은 모델 자체(가중치/신경망)를 재학습시키는 것이 아니라, **모델 추론 후처리(Post-processing), 프레임 시계열 추적기(Tracker), 좌표 변환, 경보 판정 로직에 잠복한 소프트웨어 버그를 국소적으로 최소 수정(Minimal Scoped Patch)**하는 것이 출제 의도입니다.
+- 아래 5대 패턴은 코파톤 및 실기 평가에서 빈번하게 출제되는 대표적 결함 유형입니다.
+
+---
+
+### 2. CCTV·비전 코드베이스 5대 빈출 버그 체크리스트 및 최소 수정 가이드
+
+#### 버그 1. BBox 좌표계 형식 혼동 (`[x1, y1, x2, y2]` vs `[x, y, w, h]`)
+- **증상**: 침입 판정 시 객체가 위험구역 밖에 있는데 침입으로 오판되거나, 쓰러짐 종횡비가 비정상적으로 계산됨.
+- **원인**: YOLO 계열의 `[cx, cy, w, h]` 또는 OpenCV의 `[x, y, w, h]` 포맷을 `[x1, y1, x2, y2]`(좌상단-우하단)로 착각하여 `x2 - x1` 대신 너비 자리에 다시 빼기를 적용하거나, `y2`를 높이로 오인.
+- **버그 코드 (Before)**:
+  ```python
+  # bbox가 [x, y, w, h]로 들어오는데 [x1, y1, x2, y2]로 취급하여 버그 발생
+  x1, y1, x2, y2 = det["bbox"]
+  width = x2 - x1   # 음수 또는 엉뚱한 값 발생!
+  height = y2 - y1
+  aspect_ratio = width / height
+  ```
+- **수정 코드 (After - 최소 수정)**:
+  ```python
+  raw_bbox = det["bbox"]
+  # 포맷 명세 확인 후 정규화 (예: [x, y, w, h] -> [x1, y1, x2, y2])
+  if len(raw_bbox) == 4:
+      x, y, w, h = raw_bbox
+      x1, y1, x2, y2 = x, y, x + w, y + h
+      aspect_ratio = float(w) / max(float(h), 1e-6)
+  ```
+
+---
+
+#### 버그 2. 24시간 모니터링 타임존(UTC vs KST) 및 교대조(Shift) 자정 경계 버그
+- **증상**: 야간 교대조(22:00 ~ 익일 06:00)의 사고 건수가 자정(00:00)을 기점으로 날짜가 바뀌면서 두 개로 쪼개지거나, UTC(+0)와 KST(+9) 오프셋 불일치로 집계에서 9시간 누락됨.
+- **원인**: 타임스탬프를 단순히 `datetime.fromtimestamp(ts).day`로 묶어 자정 넘김을 다른 근무조로 분리해버리거나 타임존 없이 `datetime.utcnow()`와 `datetime.now()`를 혼용.
+- **버그 코드 (Before)**:
+  ```python
+  # 자정(00:00) 기준으로 shift_date를 분리하여 야간조 인시던트가 단절됨
+  event_date = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+  shift_records[event_date].append(event)
+  ```
+- **수정 코드 (After - 최소 수정)**:
+  ```python
+  from datetime import datetime, timezone, timedelta
+  KST = timezone(timedelta(hours=9))
+
+  # 야간조(Shift C: 전일 22:00 ~ 당일 06:00) 처리 기준 보정 (새벽 00~06시는 전일 야간조에 귀속)
+  dt = datetime.fromtimestamp(ts, tz=KST)
+  if dt.hour < 6:
+      work_date = (dt - timedelta(days=1)).strftime("%Y-%m-%d")
+      shift_type = "NIGHT"
+  elif 6 <= dt.hour < 14:
+      work_date = dt.strftime("%Y-%m-%d")
+      shift_type = "DAY"
+  else: # 14:00 ~ 22:00: SWING / EVENING
+      work_date = dt.strftime("%Y-%m-%d")
+      shift_type = "SWING" if dt.hour < 22 else "NIGHT"
+  ```
+
+---
+
+#### 버그 3. 연속 프레임 상태 초기화(Reset) 및 루프 종료 누락(Off-by-one / Flush)
+- **증상**: 10초 동안 지속된 침입인데 `duration`이 항상 1프레임(0.0초)으로 찍히거나, 영상 마지막 프레임까지 이어진 사고가 결과 리스트에서 누락됨.
+- **원인**: 프레임 순회 루프 내부에서 세션 카운터나 상태 변수를 매 반복마다 `streak = 0`으로 초기화하거나, 루프가 끝난 뒤 마지막 진행 중인 사고를 결과 리스트에 `append`하지 않고 종료.
+- **버그 코드 (Before)**:
+  ```python
+  for frame in frames:
+      active_alarm = None # 루프 내부에서 초기화하여 연속 상태 파괴!
+      if is_danger(frame):
+          active_alarm = update_alarm(frame)
+  # 루프 종료 후 마지막 active_alarm flush 누락!
+  return confirmed_alarms
+  ```
+- **수정 코드 (After - 최소 수정)**:
+  ```python
+  active_alarm = None # 루프 외부에서 상태 유지
+  for frame in frames:
+      if is_danger(frame):
+          if active_alarm is None:
+              active_alarm = {"start": frame["time"], "end": frame["time"]}
+          else:
+              active_alarm["end"] = frame["time"]
+      else:
+          if active_alarm and (active_alarm["end"] - active_alarm["start"] >= min_sec):
+              confirmed_alarms.append(active_alarm)
+          active_alarm = None
+
+  # 중요: 루프 종료 후 마지막 진행 중이던 사고 Flush 필수!
+  if active_alarm and (active_alarm["end"] - active_alarm["start"] >= min_sec):
+      confirmed_alarms.append(active_alarm)
+  return confirmed_alarms
+  ```
+
+---
+
+#### 버그 4. ZeroDivision 및 NoneType 크래시
+- **증상**: 객체가 카메라 화각 경계에 걸쳐 높이 `h == 0`이거나 노이즈로 `bbox` 필드가 `None` 또는 비어있을 때 파이프라인 전체가 `ZeroDivisionError` 또는 `TypeError`로 중단됨.
+- **원인**: BBox 유효성 검사 없이 바로 나눗셈 또는 인덱싱 수행.
+- **버그 코드 (Before)**:
+  ```python
+  w = bbox[2] - bbox[0]
+  h = bbox[3] - bbox[1]
+  ratio = w / h  # h가 0일 때 ZeroDivisionError 크래시!
+  ```
+- **수정 코드 (After - 최소 수정)**:
+  ```python
+  if not bbox or len(bbox) < 4:
+      return None
+  w = max(0.0, float(bbox[2] - bbox[0]))
+  h = max(0.0, float(bbox[3] - bbox[1]))
+  if h <= 0.0 or w <= 0.0:
+      return None
+  ratio = w / max(h, 1e-6)
+  ```
+
+---
+
+#### 버그 5. 임계값 등호(`>=` vs `>`) 불일치 및 부동소수점 오차
+- **증상**: 정확히 5.0초 동안 지속되었거나 confidence가 정확히 0.70인 경계 케이스가 누락되어 테스트가 1건 차이로 실패함.
+- **원인**: 명세서에는 "5초 이상(`>= 5.0`)"으로 명시되었으나 코드에 `> 5.0`으로 작성되었거나, `0.1 + 0.2` 부동소수점 오차로 미달 처리.
+- **버그 코드 (Before)**:
+  ```python
+  # 명세: "지속시간 5.0초 이상"
+  if duration > 5.0 and conf > 0.7:  # 5.0초 정확한 경계값 탈락
+      trigger_alert()
+  ```
+- **수정 코드 (After - 최소 수정)**:
+  ```python
+  # 부동소수점 마진(1e-5) 및 이상(>=) 정확 반영
+  if (duration + 1e-5) >= 5.0 and (conf + 1e-5) >= 0.70:
+      trigger_alert()
+  ```

@@ -17,12 +17,12 @@ from pathlib import Path
 # Windows CP949 환경 대응
 if hasattr(sys.stdout, "reconfigure"):
     try:
-        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 if hasattr(sys.stderr, "reconfigure"):
     try:
-        sys.stderr.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
@@ -34,6 +34,10 @@ IGNORE_DIRS = {
 MISSING_TOKENS = {
     '', 'null', 'none', 'nan', 'na', 'n/a', '-999', '-999.0'
 }
+
+MEDIA_EXTS = {'.jpg', '.jpeg', '.png', '.mp4', '.avi'}
+CONFIG_LOG_EXTS = {'.yaml', '.yml', '.log', '.txt', '.sqlite', '.db', '.parquet', '.xml'}
+PREVIEW_EXTS = {'.yaml', '.yml', '.log'}
 
 MAX_ROWS = 200000
 MAX_JSON_FILE_SIZE = 10 * 1024 * 1024  # 10MB 초과 대용량 JSON OOM 안전 가드
@@ -229,7 +233,7 @@ def scan_large_json_safe(full_path: Path):
     """
     file_size = os.path.getsize(full_path)
     size_mb = file_size / (1024 * 1024)
-    print(f"  * ⚠️ 대용량 JSON 감지 ({size_mb:.2f} MB > 10MB)")
+    print(f"  * [대용량 JSON 감지] ({size_mb:.2f} MB > 10MB)")
     print("  * [대용량 JSON 파일 - 안전 발췌 요약]")
     print(f"  * OOM 방지를 위해 상위 50줄 / 1,000자 안전 발췌 스트리밍 분석을 수행합니다.")
 
@@ -288,6 +292,19 @@ def scan_json(full_path: Path):
                 else:
                     rows.append([str(item)])
             analyze_tabular(keys, rows, full_path.name, truncated)
+
+            # 2차 하위 중첩 필드(detections, objects 등) 힌트 출력
+            first_item = data[0]
+            nested_hints = []
+            for sub_k, sub_v in first_item.items():
+                if isinstance(sub_v, list):
+                    sample_repr = str(sub_v[0])[:60] if sub_v else "[]"
+                    nested_hints.append(f"'{sub_k}' (리스트 {len(sub_v)}개, 첫 항목: {sample_repr})")
+                elif isinstance(sub_v, dict):
+                    dict_keys_repr = str(list(sub_v.keys())[:5])
+                    nested_hints.append(f"'{sub_k}' (dict 키: {dict_keys_repr})")
+            if nested_hints:
+                print(f"    * [하위 중첩 필드 구조 힌트]: {', '.join(nested_hints)}")
         else:
             print(f"  * 단일 값 리스트 샘플: {data[:5]}")
     elif isinstance(data, dict):
@@ -296,6 +313,50 @@ def scan_json(full_path: Path):
         print(f"  * 최상위 키 목록: {keys[:20]}")
         sample_dict = {k: str(data[k])[:60] for k in keys[:5]}
         print(f"  * 상위 키 미리보기: {sample_dict}")
+
+        # [CCTV / Safety Vision AI / SDX 중첩 JSON 내부 배열 자동 심층 스캔]
+        nested_candidates = [
+            k for k in keys
+            if isinstance(data.get(k), list) and len(data[k]) > 0
+        ]
+        for k in nested_candidates[:3]:
+            sub_list = data[k]
+            print(f"\n  * [CCTV/중첩 JSON 내부 배열 감지] 키 '{k}' (총 {len(sub_list):,}개 항목) 상세 분석:")
+            if not sub_list:
+                continue
+
+            if isinstance(sub_list[0], dict):
+                sub_keys = []
+                for item in sub_list[:100]:
+                    if isinstance(item, dict):
+                        for sk in item.keys():
+                            if sk not in sub_keys:
+                                sub_keys.append(sk)
+
+                rows = []
+                truncated = len(sub_list) > MAX_ROWS
+                for item in sub_list[:MAX_ROWS]:
+                    if isinstance(item, dict):
+                        rows.append([str(item.get(sk, "")) if item.get(sk) is not None else "" for sk in sub_keys])
+                    else:
+                        rows.append([str(item)])
+                analyze_tabular(sub_keys, rows, f"{full_path.name}[{k}]", truncated)
+
+                # 내부 레코드의 2차 중첩(detections, objects 등) 힌트 1줄 출력
+                first_item = sub_list[0]
+                nested_hints = []
+                for sub_k, sub_v in first_item.items():
+                    if isinstance(sub_v, list):
+                        sample_repr = str(sub_v[0])[:60] if sub_v else "[]"
+                        nested_hints.append(f"'{sub_k}' (리스트 {len(sub_v)}개, 첫 항목: {sample_repr})")
+                    elif isinstance(sub_v, dict):
+                        dict_keys_repr = str(list(sub_v.keys())[:5])
+                        nested_hints.append(f"'{sub_k}' (dict 키: {dict_keys_repr})")
+                if nested_hints:
+                    print(f"    * [하위 중첩 필드 구조 힌트]: {', '.join(nested_hints)}")
+            else:
+                sample_preview = [str(x)[:40] for x in sub_list[:5]]
+                print(f"    * 단일 값 리스트 샘플: {sample_preview}")
     else:
         print(f"  * 단일 리터럴: {type(data)} = {data}")
 
@@ -352,6 +413,8 @@ def scan_workspace(root_path: str):
 
     data_files = []
     test_files = []
+    other_files = []
+    media_files = {}
 
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in IGNORE_DIRS and not d.startswith('.')]
@@ -361,8 +424,15 @@ def scan_workspace(root_path: str):
             rel_p = rel_dir / f if str(rel_dir) != '.' else Path(f)
             if is_test_file(rel_p):
                 test_files.append(rel_p)
-            if f.lower().endswith(('.csv', '.tsv', '.json', '.jsonl')):
+
+            f_lower = f.lower()
+            ext = f_lower[f_lower.rfind('.'):] if '.' in f_lower else ''
+            if ext in ('.csv', '.tsv', '.json', '.jsonl'):
                 data_files.append(rel_p)
+            elif ext in MEDIA_EXTS:
+                media_files.setdefault(ext, []).append(rel_p)
+            elif ext in CONFIG_LOG_EXTS:
+                other_files.append(rel_p)
 
     print(f"\n[1] 테스트 파일 목록 ({len(test_files)}개 발견):")
     if test_files:
@@ -379,6 +449,60 @@ def scan_workspace(root_path: str):
             print(f"   - {df}")
     else:
         print("   (발견된 데이터 파일 없음)")
+
+    total_media = sum(len(v) for v in media_files.values())
+    print(f"\n[2-1] 기타 설정/로그/DB/미디어 에셋 파일 감지:")
+    if total_media > 0:
+        ext_summary = [f"{ext}: {len(media_files[ext]):,}개" for ext in sorted(media_files.keys())]
+        print(f"   * 미디어/에셋 파일 ({total_media:,}개 - {', '.join(ext_summary)}):")
+        all_media_list = []
+        for ext in sorted(media_files.keys()):
+            all_media_list.extend(media_files[ext])
+        for mf in all_media_list[:3]:
+            print(f"     - 샘플: {mf}")
+        if len(all_media_list) > 3:
+            print(f"     ... (+{len(all_media_list) - 3}개 미디어 에셋 생략)")
+    else:
+        print("   * 미디어/에셋 파일: 없음")
+
+    if other_files:
+        print(f"   * 설정/로그/DB/문서 파일 ({len(other_files)}개):")
+        for of in other_files[:20]:
+            print(f"     - {of}")
+        if len(other_files) > 20:
+            print(f"     ... (+{len(other_files) - 20}개 추가 파일 생략)")
+    else:
+        print("   * 설정/로그/DB/문서 파일: 없음")
+
+    preview_files = [of for of in other_files if of.suffix.lower() in PREVIEW_EXTS]
+    if preview_files:
+        print(f"\n   * [설정/로그 파일 내용 미리보기 (상위 15줄)]:")
+        for pf in preview_files[:5]:
+            full_pf = root / pf
+            try:
+                fsize = full_pf.stat().st_size
+                if fsize > 5 * 1024 * 1024:
+                    print(f"     - {pf} ({fsize / (1024*1024):.2f} MB > 5MB, 크기 제한으로 미리보기 생략)")
+                    continue
+                fp, enc = open_with_encoding(full_pf)
+                with fp:
+                    lines = []
+                    for idx, line in enumerate(fp):
+                        if idx >= 15:
+                            break
+                        lines.append(line.rstrip('\r\n'))
+                print(f"     --------------------------------------------------")
+                print(f"     - 파일: {pf} (인코딩: {enc}, 크기: {fsize/1024:.1f} KB)")
+                print(f"     --------------------------------------------------")
+                for l_idx, line in enumerate(lines, 1):
+                    disp = line[:120] + ("..." if len(line) > 120 else "")
+                    print(f"       [{l_idx:2d}] {disp}")
+                if len(lines) == 15:
+                    print(f"       ... (이하 생략)")
+            except Exception as e:
+                print(f"     - {pf} 미리보기 실패: {e}")
+        if len(preview_files) > 5:
+            print(f"     ... (+{len(preview_files) - 5}개 설정/로그 파일 미리보기 생략)")
 
     for df in data_files:
         full_p = root / df

@@ -362,3 +362,275 @@ bash .probe-kit/scripts/pre_submit_audit.sh
 - **[근거]:** 실무자 DM을 통해 취소 건과 통신 실패 데이터가 수율 통계에 포함될 경우 불량률이 과대 계상될 위험이 있음을 확인하였고, 이력 데이터 중복 수집 시 최신 보정 데이터를 취하는 것이 현업 품질 관리 표준 프로토콜임을 근거로 삼음.
 - **[검증]:** 15건의 수동 계산 표본 세트(정상, 경계값 400.0/450.0, 결측치 -999, 취소 건, 중복 건)를 구축하고 단위 테스트를 실행하여 기대 판정 등급과 파이프라인 출력값이 100% 일치함을 확인하였으며, 단계별 필터링 건수 로그를 통해 원본 10,000건 중 9,653건이 무결하게 보존됨을 검증함.
 - **[한계]:** 고정 임계값(400도/450도) 기반 판정 방식은 센서의 일시적 고주파 노이즈나 챔버 급가열 구간에서 일시적 오탐(정상 웨이퍼의 경보 발생)을 유발할 수 있으므로, 실제 현업 적용 시에는 단순 수치 비교를 넘어 3초 이동평균(Moving Average) 필터링이나 시계열 추세 분석 알고리즘의 추가 도입이 필요함.
+
+
+---
+
+## 🚨 [CCTV / Safety Vision AI 특화] 객체 탐지·행동 판단 시공간(Spatio-Temporal) 파이프라인 공략
+
+> **만약 CCTV(Safety Vision AI / 침입·쓰러짐·추락·화재 감지 / 24시간 모니터링)에 관련된 문제라면, 위 기존의 단순 단일 행(Row) 수치 임계값(웨이퍼/온도 400도 등) 및 일반 주문 집계 내용이 아니라, 아래 새로 만든 [CCTV 시공간(Spatio-Temporal) 사고 판정 및 쿨다운 병합 파이프라인] 내용을 참고하세요.**
+
+---
+
+### 1. CCTV 비전 AI 데이터 파이프라인 특성 및 핵심 평가 포인트
+- CCTV 및 스마트 안전관제 도메인은 단순 정적 수치(1행 1판정)와 달리 **공간(Spatial) 위치·형상**과 **시간(Temporal) 연속성**을 동시에 만족해야 유효 사고로 확정됩니다.
+- **공간(Spatial) 판정**: 객체의 BBox 중심점/발끝 좌표가 위험구역(ROI) 내부인지, 쓰러짐/추락의 경우 종횡비(Aspect Ratio)가 정상 보행자 범위(0.3~0.6)를 벗어나 전도 상태(>= 1.2 등)인지 판정합니다.
+- **시간(Temporal) 판정**: 작업자 보행 중 스쳐지나감이나 카메라 깜빡임 등의 단발성 노이즈(1~2프레임)를 제거하기 위해 최소 지속시간(`min_duration_sec`) 이상 유지되어야 하며, 영상 프레임 드롭이나 가림(Occlusion) 발생 시 짧은 공백(`max_gap_sec`)은 끊어지지 않은 동일 사건으로 이어붙여야 합니다.
+- **쿨다운(Cooldown / Deduplication)**: 동일 현장에서 1초에 수십 프레임씩 반복 탐지되는 건을 단일 사고(Incident)로 압축 및 쿨다운 병합하여 관제 피로도(Alert Fatigue)를 방지합니다.
+
+---
+
+### 2. 공간(Spatial) 판정 패턴 및 Python 표준 라이브러리 레퍼런스
+
+#### (1) BBox 좌표 및 지표 계산 함수
+```python
+def extract_bbox_features(bbox):
+    """
+    bbox: [x1, y1, x2, y2] (좌상단 x1, y1, 우하단 x2, y2)
+    반환: 중심점 (cx, cy), 하단 발끝 좌표 (fx, fy), 너비 w, 높이 h, 종횡비 aspect_ratio (w / h)
+    """
+    x1, y1, x2, y2 = bbox
+    w = max(0.0, float(x2 - x1))
+    h = max(0.0, float(y2 - y1))
+    
+    cx = (x1 + x2) / 2.0
+    cy = (y1 + y2) / 2.0
+    
+    # 작업자 위치 및 구역 진입 판정: 지면 접촉점인 하단 발끝(Bottom-Center) 좌표 기준
+    fx = cx
+    fy = float(y2)
+    
+    # 쓰러짐 판정: 가로가 세로보다 현저히 크면(aspect_ratio >= 1.2 등) 쓰러짐 의심
+    # ZeroDivision 완전 방어 (1e-6)
+    aspect_ratio = w / max(h, 1e-6)
+    
+    return {
+        "center": (cx, cy),
+        "foot": (fx, fy),
+        "width": w,
+        "height": h,
+        "aspect_ratio": aspect_ratio
+    }
+```
+
+#### (2) 위험구역(ROI) 침입 판정 (사각형 & 다각형 Ray-Casting & IoU)
+```python
+def is_point_in_rect(point, roi_rect, inclusive=True):
+    """
+    point: (x, y)
+    roi_rect: [rx1, ry1, rx2, ry2]
+    inclusive: 경계선 포함 여부 (<= vs <)
+    """
+    px, py = point
+    rx1, ry1, rx2, ry2 = roi_rect
+    if inclusive:
+        return (rx1 <= px <= rx2) and (ry1 <= py <= ry2)
+    return (rx1 < px < rx2) and (ry1 < py < ry2)
+
+def is_point_in_polygon(point, polygon):
+    """
+    2D 다각형 위험구역 내부 판정 (Ray-Casting Algorithm)
+    point: (x, y)
+    polygon: [(x1, y1), (x2, y2), ..., (xn, yn)]
+    """
+    px, py = point
+    inside = False
+    n = len(polygon)
+    p1x, p1y = polygon[0]
+    for i in range(n + 1):
+        p2x, p2y = polygon[i % n]
+        if min(p1y, p2y) < py <= max(p1y, p2y):
+            if px <= max(p1x, p2x):
+                if p1y != p2y:
+                    xinters = (py - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                if p1x == p2x or px <= xinters:
+                    inside = not inside
+        p1x, p1y = p2x, p2y
+    return inside
+
+def calculate_iou(boxA, boxB):
+    """
+    두 BBox [x1, y1, x2, y2] 간 IoU (Intersection over Union) 계산
+    """
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+
+    interArea = max(0.0, xB - xA) * max(0.0, yB - yA)
+    boxAArea = max(0.0, boxA[2] - boxA[0]) * max(0.0, boxA[3] - boxA[1])
+    boxBArea = max(0.0, boxB[2] - boxB[0]) * max(0.0, boxB[3] - boxB[1])
+    unionArea = boxAArea + boxBArea - interArea
+
+    return interArea / max(unionArea, 1e-6)
+```
+
+---
+
+### 3. 시간(Temporal) 연속 지속시간 판정 & 프레임 끊김 허용(Grace Period)
+
+단발성 오탐(1~2프레임 노이즈)을 제거하고 유효한 연속 사고 세션만 추출하는 로직:
+
+```python
+from datetime import datetime
+from collections import defaultdict
+
+def parse_iso_or_timestamp(ts):
+    if isinstance(ts, (int, float)):
+        return float(ts)
+    return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).timestamp()
+
+def process_spatio_temporal_events(detections, min_duration_sec=3.0, max_gap_sec=1.5):
+    """
+    detections: [
+        {
+            "camera_id": "CAM-01",
+            "track_id": 101,          # 또는 object_id
+            "event_type": "INTRUSION", # INTRUSION, FALL_DOWN, FIRE 등
+            "timestamp": 1700000000.0,
+            "confidence": 0.88,
+            "bbox": [100, 200, 150, 320]
+        }, ...
+    ]
+    """
+    # 1. 정렬: 카메라 + 객체(트랙) + 사고유형 기준 타임스탬프 오름차순
+    sorted_dets = sorted(detections, key=lambda d: (
+        d["camera_id"],
+        d.get("track_id", "GLOBAL"),
+        d["event_type"],
+        parse_iso_or_timestamp(d["timestamp"])
+    ))
+
+    # 2. 그룹별 연속 감지 세션 병합
+    sessions = defaultdict(list)
+    for det in sorted_dets:
+        key = (det["camera_id"], det.get("track_id", "GLOBAL"), det["event_type"])
+        t = parse_iso_or_timestamp(det["timestamp"])
+        
+        if not sessions[key]:
+            sessions[key].append({
+                "start_time": t,
+                "end_time": t,
+                "frame_count": 1,
+                "max_confidence": det.get("confidence", 0.0),
+                "samples": [det]
+            })
+        else:
+            last_sess = sessions[key][-1]
+            gap = t - last_sess["end_time"]
+            
+            if gap <= max_gap_sec:
+                # 허용 간격(Grace Period) 이내이면 세션 연장
+                last_sess["end_time"] = t
+                last_sess["frame_count"] += 1
+                last_sess["max_confidence"] = max(last_sess["max_confidence"], det.get("confidence", 0.0))
+                last_sess["samples"].append(det)
+            else:
+                # 간격 초과 시 새로운 연속 감지 세션 시작
+                sessions[key].append({
+                    "start_time": t,
+                    "end_time": t,
+                    "frame_count": 1,
+                    "max_confidence": det.get("confidence", 0.0),
+                    "samples": [det]
+                })
+
+    # 3. 최소 지속 시간(min_duration_sec) 필터링
+    valid_events = []
+    for key, sess_list in sessions.items():
+        cam_id, track_id, event_type = key
+        for sess in sess_list:
+            duration = sess["end_time"] - sess["start_time"]
+            if duration >= min_duration_sec:
+                valid_events.append({
+                    "camera_id": cam_id,
+                    "track_id": track_id,
+                    "event_type": event_type,
+                    "start_time": sess["start_time"],
+                    "end_time": sess["end_time"],
+                    "duration": round(duration, 2),
+                    "frame_count": sess["frame_count"],
+                    "confidence": sess["max_confidence"]
+                })
+                
+    return valid_events
+```
+
+---
+
+### 4. 24시간 모니터링 중복 알람 억제(Cooldown / Deduplication)
+
+동일 현장·동일 객체에서 발생하는 중복 알람 폭주를 차단하는 상태 머신:
+
+```python
+def merge_with_cooldown(valid_events, cooldown_sec=60.0):
+    """
+    동일 카메라 + 동일 사고 유형에 대해 cooldown_sec 이내 연속 발생 건을
+    단일 긴급 인시던트(Incident)로 병합
+    """
+    sorted_events = sorted(valid_events, key=lambda x: (x["camera_id"], x["event_type"], x["start_time"]))
+    
+    incidents = []
+    active_incidents = {} # key: (camera_id, event_type) -> incident
+    
+    for ev in sorted_events:
+        key = (ev["camera_id"], ev["event_type"])
+        ev_start = ev["start_time"]
+        ev_end = ev["end_time"]
+        
+        if key in active_incidents:
+            curr = active_incidents[key]
+            # 쿨다운 윈도우 판정: 이전 인시던트 종료 후 cooldown_sec 이내인가?
+            if ev_start <= (curr["incident_end"] + cooldown_sec):
+                # 기존 인시던트 갱신 병합
+                curr["incident_end"] = max(curr["incident_end"], ev_end)
+                curr["merged_event_count"] += 1
+                curr["max_confidence"] = max(curr["max_confidence"], ev["confidence"])
+                curr["total_duration"] = round(curr["incident_end"] - curr["incident_start"], 2)
+                continue
+            else:
+                # 쿨다운 기간 경과 -> 이전 인시던트 종결 후 신규 등록
+                incidents.append(curr)
+                del active_incidents[key]
+
+        # 신규 인시던트 생성
+        new_inc = {
+            "incident_id": f"INC-{ev['camera_id']}-{ev['event_type']}-{int(ev_start)}",
+            "camera_id": ev["camera_id"],
+            "event_type": ev["event_type"],
+            "track_id": ev.get("track_id"),
+            "incident_start": ev_start,
+            "incident_end": ev_end,
+            "total_duration": ev["duration"],
+            "max_confidence": ev["confidence"],
+            "merged_event_count": 1,
+            "status": "DETECTED"
+        }
+        active_incidents[key] = new_inc
+
+    # 남아있는 활성 인시던트 플러시
+    for inc in active_incidents.values():
+        incidents.append(inc)
+
+    return sorted(incidents, key=lambda x: x["incident_start"])
+```
+
+---
+
+### 5. CCTV 전용 5단계 전처리 건수 로깅 양식 (무감점 표준 출력)
+
+파이프라인 실행 시 터미널과 채점 로그에 반드시 아래 5단계 필터링 통계를 순서대로 명확히 출력합니다:
+
+```python
+def print_cctv_pipeline_summary(raw_count, filter1_count, filter2_count, filter3_count, final_incidents_count):
+    print("=" * 65)
+    print(" [CCTV Safety Vision AI 시공간 파이프라인 단계별 처리 리포트]")
+    print(f" 1단계 [RAW_FRAMES]:                  {raw_count:>6} 건 (원천 프레임 탐지 총합)")
+    print(f" 2단계 [CONFIDENCE_AND_STATUS_FILTER]:{filter1_count:>6} 건 (점검중 카메라/저신뢰도 제외 잔여)")
+    print(f" 3단계 [SPATIAL_ROI_MATCH]:            {filter2_count:>6} 건 (위험구역 내부 진입/특화 BBox 일치)")
+    print(f" 4단계 [TEMPORAL_DURATION_FILTER]:     {filter3_count:>6} 건 (단발성 노이즈 제거 유효 지속 세션)")
+    print(f" 5단계 [COOLDOWN_INCIDENT_MERGE]:      {final_incidents_count:>6} 건 (쿨다운 병합 최종 확정 사고)")
+    retention_rate = (final_incidents_count / max(raw_count, 1)) * 100
+    print(f" 최종 사고 보존 및 압축률:             {retention_rate:.2f}%")
+    print("=" * 65)
+```

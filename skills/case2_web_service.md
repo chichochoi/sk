@@ -246,3 +246,210 @@ curl -s http://0.0.0.0:8000/api/v1/logs | jq '.[0:3]'
 - **[근거]:** 실무자 DM 질의를 통해 과제 환경의 최우선 목적이 권한 분리보다 현장 작업자의 즉각적인 이상 조치 등록 속도와 가시성에 있음을 확인하였고, 3시간 제한 시간 내에 불안정한 인증 모듈보다 무결한 데이터 처리 파이프라인과 UI 반응성을 확보하는 것이 고득점 기준에 부합한다고 판단함.
 - **[검증]:** 서버를 `0.0.0.0:8000`에 바인딩하여 백그라운드로 띄운 후, 내장 브라우저에서 직접 등록 폼 입력 및 목록 갱신을 수동 수행하였으며, `curl`을 이용한 정상 등록(HTTP 201) 및 빈 입력 방어(HTTP 400) 스모크 테스트를 통해 무결성을 입증함.
 - **[한계]:** 현재 구조는 인메모리 및 로컬 파일 기반으로 설계되어 서버 재시작 시 동시 접속자가 많을 경우 트랜잭션 락(Lock) 경합이 발생할 수 있으며, 향후 엔터프라이즈 환경 전환을 위해서는 RDBMS 연동과 Redis 기반의 분산 세션 관리 및 작업자 권한(RBAC) 체계 도입이 보완되어야 함.
+
+
+---
+
+## 🚨 [CCTV / SDX 특화] 24시간 현장 안전관제 실시간 모니터링 웹 서비스 공략
+
+> **만약 CCTV(현장 안전관제 대시보드 / 침입·쓰러짐·추락·화재 실시간 알림 웹 서비스)에 관련된 문제라면, 위 기존의 일반 업무용 조회·등록 게시판 예제가 아니라 아래 새로 만든 [24시간 CCTV 안전관제 대시보드 및 경보 상태 머신] 내용을 참고하세요.**
+
+---
+
+### 1. CCTV 안전관제 웹 서비스 아키텍처 및 평가 포인트
+- 단순 CRUD 게시판과 달리, 24시간 CCTV 현장 안전관제 웹 서비스는 **실시간 위험 가시성(최상단 KPI 배지)**, **경보(Alert) 라이프사이클 상태 전이 엄격성**, **카메라 비전 이벤트 수집 멱등성(Idempotency)**이 핵심 평가 요소입니다.
+- 평가관은 다음 3가지를 집중 검증합니다:
+  1. 대시보드 상단에 관제사가 한눈에 봐야 할 긴급 미조치 건수와 카메라 상태가 즉시 렌더링되는가?
+  2. 사고 상태 변경 시 불가능한 전이(예: 조치완료 후 재감지로 역행, 사유 없이 오탐 종결 등)를 HTTP 400으로 견고하게 차단하는가?
+  3. 초당 수십 프레임씩 쏟아지는 동일 이벤트 인입 시 중복 레코드를 방어(Idempotency)하는가?
+
+---
+
+### 2. 관제 대시보드 최상단 필수 요약 배지(KPI) UI/API 규격
+
+관제 화면 최상단에는 항상 아래 4개 핵심 영역의 지표가 고정 노출되어야 합니다:
+
+1. **전체 누적 경보 건수 (TOTAL ALERTS)**
+2. **🚨 미조치 긴급 건수 (CRITICAL / UNACKNOWLEDGED ALERTS)**: 즉각 출동 또는 관제 확인이 필요한 최우선 지표 (붉은색 점멸/강조)
+3. **사고 유형별 카운트 (INCIDENT BREAKDOWN)**: 침입(INTRUSION), 쓰러짐(FALL_DOWN), 추락(FALL_OFF), 화재(FIRE)
+4. **카메라 네트워크 상태 (CAMERA HEALTH)**: 정상 가동(ONLINE) vs 점검중/오프라인(OFFLINE/MAINTENANCE)
+
+#### 프론트엔드 KPI 헤더 예시 스니펫 (`static/index.html`):
+```html
+<header class="kpi-dashboard-header">
+  <div class="kpi-card total">
+    <span class="label">총 경보</span>
+    <span class="value" id="kpi-total">0</span>
+  </div>
+  <div class="kpi-card critical blink">
+    <span class="label">🚨 미조치 긴급</span>
+    <span class="value" id="kpi-unack">0</span>
+  </div>
+  <div class="kpi-card breakdown">
+    <span class="label">유형별 현황</span>
+    <span class="subtext">침입: <b id="cnt-intrusion">0</b> | 쓰러짐: <b id="cnt-falldown">0</b> | 추락: <b id="cnt-falloff">0</b> | 화재: <b id="cnt-fire">0</b></span>
+  </div>
+  <div class="kpi-card cameras">
+    <span class="label">카메라 가동률</span>
+    <span class="subtext">정상: <b id="cam-online">0</b> / 점검: <b id="cam-offline">0</b></span>
+  </div>
+</header>
+```
+
+---
+
+### 3. 사고 경보(Alert) 라이프사이클 상태 머신 및 전이 검증 (FastAPI 백엔드)
+
+사고 경보는 다음 라이프사이클만 허용되며, 상태 머신 규칙을 위배하거나 필수 파라미터가 누락된 요청은 `400 Bad Request`로 단호히 거절해야 합니다:
+
+```
+[ DETECTED (신규감지) ]
+       │
+       ▼ (관제사 접수: ACKNOWLEDGED)
+[ ACKNOWLEDGED (현장확인중) ]
+       ├──▶ [ RESOLVED (조치완료) ]    *필수: resolver_id, resolution_note
+       └──▶ [ FALSE_ALARM (오탐종결) ]  *필수: resolver_id, false_alarm_reason
+```
+
+#### FastAPI 상태 검증 구현 예시:
+```python
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, Field
+from typing import Optional, Dict
+from enum import Enum
+import time
+
+class AlertStatus(str, Enum):
+    DETECTED = "DETECTED"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    RESOLVED = "RESOLVED"
+    FALSE_ALARM = "FALSE_ALARM"
+
+# 허용되는 전이 규칙 테이블 (Strict State Transition Matrix)
+ALLOWED_TRANSITIONS = {
+    AlertStatus.DETECTED: {AlertStatus.ACKNOWLEDGED, AlertStatus.FALSE_ALARM},
+    AlertStatus.ACKNOWLEDGED: {AlertStatus.RESOLVED, AlertStatus.FALSE_ALARM},
+    AlertStatus.RESOLVED: set(),    # 종결 상태는 재오픈 불가
+    AlertStatus.FALSE_ALARM: set()  # 종결 상태는 재오픈 불가
+}
+
+class UpdateAlertStatusRequest(BaseModel):
+    new_status: AlertStatus
+    operator_id: str = Field(..., min_length=1, description="작업/조치 담당자 ID")
+    note: Optional[str] = Field(None, description="조치 내용 또는 오탐 사유")
+
+app = FastAPI(title="24/7 Safety Vision Surveillance API")
+
+# 인메모리 저장소
+alerts_db: Dict[str, dict] = {}
+
+@app.patch("/api/v1/alerts/{alert_id}/status")
+def update_alert_status(alert_id: str, req: UpdateAlertStatusRequest):
+    if alert_id not in alerts_db:
+        raise HTTPException(status_code=404, detail="Alert not found")
+        
+    alert = alerts_db[alert_id]
+    curr_status = AlertStatus(alert["status"])
+    target_status = req.new_status
+    
+    # 1. 상태 전이 유효성 검증
+    if target_status not in ALLOWED_TRANSITIONS[curr_status]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"비정상 상태 전이: '{curr_status}' 상태에서는 '{target_status}'(으)로 변경할 수 없습니다."
+        )
+        
+    # 2. 필수 조치 기록/사유 검증
+    if target_status in (AlertStatus.RESOLVED, AlertStatus.FALSE_ALARM):
+        if not req.note or not req.note.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"'{target_status}' 상태로 종결 시 조치 내역 또는 사유(note) 입력이 필수입니다."
+            )
+            
+    # 상태 갱신
+    alert["status"] = target_status.value
+    alert["last_operator_id"] = req.operator_id
+    alert["last_note"] = req.note
+    alert["updated_at"] = time.time()
+    
+    return {"message": "상태가 성공적으로 갱신되었습니다.", "alert": alert}
+```
+
+---
+
+### 4. 웹훅/비전 이벤트 인입 멱등성(Idempotency) 및 쿨다운 방어
+
+CCTV Edge AI 엔진이 동일 프레임이나 짧은 주기로 중복 POST 요청을 보낼 때, 동일 사건이 다중 등록되지 않도록 하는 멱등성 필터:
+
+```python
+from fastapi import Header
+
+class VisionEventPayload(BaseModel):
+    camera_id: str
+    event_type: str
+    timestamp: float
+    confidence: float
+    bbox: list[float]
+    frame_id: Optional[int] = None
+
+# 최근 인입 이벤트 캐시 (메모리 누수 방지용 TTL 관리)
+recent_events_cache: Dict[str, float] = {}
+
+@app.post("/api/v1/events/webhook", status_code=status.HTTP_201_CREATED)
+def receive_vision_event(
+    event: VisionEventPayload,
+    x_idempotency_key: Optional[str] = Header(None)
+):
+    # 1. 멱등키 생성 (헤더 우선, 미제공 시 카메라+이벤트+프레임 기반 합성)
+    idemp_key = x_idempotency_key or f"{event.camera_id}:{event.event_type}:{event.frame_id or int(event.timestamp)}"
+    curr_time = time.time()
+
+    # 2. 동일 키 또는 3초 이내 동일 카메라/사건 중복 방어
+    if idemp_key in recent_events_cache:
+        last_seen = recent_events_cache[idemp_key]
+        if (curr_time - last_seen) < 5.0:
+            # 중복 인입은 무시하되 200/208 또는 무해한 기존 응답 반환
+            return {"status": "ignored", "reason": "중복 이벤트(Idempotent duplicate)"}
+
+    recent_events_cache[idemp_key] = curr_time
+
+    # 3. 신규 경보 생성 로직
+    alert_id = f"ALT-{int(curr_time*1000)}"
+    alerts_db[alert_id] = {
+        "alert_id": alert_id,
+        "camera_id": event.camera_id,
+        "event_type": event.event_type,
+        "confidence": event.confidence,
+        "bbox": event.bbox,
+        "status": AlertStatus.DETECTED.value,
+        "created_at": curr_time
+    }
+    return {"status": "created", "alert_id": alert_id}
+```
+
+---
+
+### 5. 현장 안전관제 웹 검증 체크리스트 및 curl 테스트
+
+```bash
+# 1. 정상 이벤트 수신 (HTTP 201)
+curl -s -X POST http://0.0.0.0:8000/api/v1/events/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"camera_id": "CAM-01", "event_type": "INTRUSION", "timestamp": 1700000000.0, "confidence": 0.92, "bbox": [100, 150, 200, 350], "frame_id": 105}' | jq .
+
+# 2. 동일 이벤트 중복 인입 방어 테스트 (멱등성 확인: ignored 반환)
+curl -s -X POST http://0.0.0.0:8000/api/v1/events/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"camera_id": "CAM-01", "event_type": "INTRUSION", "timestamp": 1700000000.0, "confidence": 0.92, "bbox": [100, 150, 200, 350], "frame_id": 105}' | jq .
+
+# 3. 비정상 상태 전이 방어 테스트: DETECTED -> RESOLVED 직행 차단 (기대: 400 Bad Request)
+curl -s -X PATCH http://0.0.0.0:8000/api/v1/alerts/ALT-1/status \
+  -H "Content-Type: application/json" \
+  -d '{"new_status": "RESOLVED", "operator_id": "OP-101", "note": "임의 조치"}' | jq .
+
+# 4. 사유 누락 종결 방어 테스트: note 누락 차단 (기대: 400 Bad Request)
+curl -s -X PATCH http://0.0.0.0:8000/api/v1/alerts/ALT-1/status \
+  -H "Content-Type: application/json" \
+  -d '{"new_status": "FALSE_ALARM", "operator_id": "OP-101", "note": ""}' | jq .
+```

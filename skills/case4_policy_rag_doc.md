@@ -296,3 +296,180 @@ VERIFICATION_TEST_SUITE = [
 - **[근거]:** 실무자 DM 질의를 통해 잘못된 규정 해석으로 인한 오지급 발생 시 회수 절차가 극히 어렵다는 현업 리스크를 확인하였으며, AI의 그럴듯한 환각(Hallucination)보다 보수적인 수동 검토 분류가 비즈니스 관점에서 손실 비용을 원천 차단하는 최선책이라는 점을 근거로 삼음.
 - **[검증]:** 규정 원문의 조항 및 라인 번호를 색인화한 후, 6개 유형의 자작 검증 세트(정상 2건, 경계 2건, 자료 부재 1건, 규정 충돌 1건)를 구축하여 파이프라인 테스트를 실행한 결과 6건 모두 기대 결과와 100% 일치함을 확인하였고, 미기재 항목에 대해 정확히 근거 부재 메시지가 반환됨을 검증함.
 - **[한계]:** 키워드 및 규칙 기반의 색인 및 엄격한 근거 매칭 방식은 환각 발생률을 0%로 억제할 수 있으나, 규정 문서에 쓰인 단어와 신청자가 입력한 동의어(예: '식대' vs '중식비')가 완벽히 일치하지 않을 경우 정상 건임에도 수동 검토로 과다 분류될 수 있으므로, 향후 도메인 특화 동의어 사전(Thesaurus) 및 의미 기반 임베딩 검색의 보완이 필요함.
+
+
+---
+
+## 🚨 [CCTV / SDX 특화] 현장 안전관리 규정(SOP) 교차 판정 및 수동 검토 큐(Manual Review) 공략
+
+> **만약 CCTV(SDX 안전관리 디지털 전환 / 사고 유형별 안전 규정·SOP 판정 / 비상대응 자동화)에 관련된 문제라면, 위 기존의 일반 회계·정산 규정 예시가 아니라 아래 새로 만든 [SDX 안전규정 매칭 및 AI-인간 책임 분리 구조]를 참고하세요.**
+
+---
+
+### 1. SDX 현장 안전관리 규정(SOP) 교차 판정 개요 및 평가 핵심
+- SDX(Safety Digital Transformation, 안전 디지털 전환) 과제는 단순히 비전 AI의 탐지 결과만 출력하는 것에 그치지 않고, 현장의 **작업 허가서(PTW, Permit To Work)**, **구역 위험 등급(Zone Level)**, **주/야간 시간대**를 사내 안전 규정(SOP)과 교차 검증하여 최종 조치 수준을 결정하는 의사결정 파이프라인입니다.
+- 특히 생명·안전 도메인에서는 **"AI 모델의 100% 완전무결성을 신뢰하지 않는다"**는 점이 평가의 핵심 철학입니다.
+- AI 판정이 애매한 경계 구간이거나, 비전 AI와 현장 IoT 센서(열화상/온습도/연기) 데이터가 서로 충돌할 때는 임의로 무시(오탐 처리)하거나 자동 경보(소방서 출동)를 울리지 않고, **'수동 검토 큐(MANUAL_REVIEW)'로 격리하여 관제사의 최종 확인을 거치도록 설계(Human-in-the-Loop)**해야 최고점을 받습니다.
+
+---
+
+### 2. 다차원 안전 규정 매칭 매트릭스 (사고유형 × 구역 × 작업허가 × 시간대)
+
+| 사고 유형 (Event) | 발생 구역 (Zone) | 작업허가서 (Permit) | 시간대 (Shift) | 판정 등급 (Action Level) | 적용 SOP 근거 조항 (Grounding) | 비고 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **침입 (INTRUSION)** | 통제구역 (Zone A) | 무 (None) | 주/야 무관 | **🚨 CRITICAL (긴급 사이렌+경비출동)** | 안전수칙 제14조 제1항 (무단침입 엄벌) | 즉시 현장 차단 |
+| **침입 (INTRUSION)** | 통제구역 (Zone A) | 유 (Valid) | 인가 시간 내 | **ℹ️ INFO (정상 작업 진입 허용)** | 안전수칙 제14조 제3항 (허가작업 예외) | 로그만 기록 |
+| **침입 (INTRUSION)** | 주의구역 (Zone B) | 무 (None) | 주간 (08~18) | **⚠️ WARNING (현장 안내방송 경고)** | 안전수칙 제15조 제2항 (주의구역 통제) | 5분 내 퇴거 확인 |
+| **침입 (INTRUSION)** | 주의구역 (Zone B) | 무 (None) | 야간 (18~08) | **🚨 CRITICAL (상황실 즉시 보고)** | 안전수칙 제15조 제4항 (야간 보안강화) | 야간 무단진입 경보 |
+| **쓰러짐 (FALL_DOWN)** | 전 구역 | 무관 | 무관 | **🚨 CRITICAL (비상 응급의료팀 호출)** | SOP 응급대응 제3조 제1항 (인명 전도) | 골든타임 3분 내 출동 |
+| **추락 (FALL_OFF)** | 고소작업구역 | 무관 | 무관 | **🚨 EMERGENCY (전사 비상방송+구조)** | SOP 중대재해대응 제7조 (고소 추락) | 전사 비상 대응 가동 |
+| **화재 (FIRE)** | 전 구역 | 화기작업허가 없음 | 무관 | **🚨 EMERGENCY (방화셔터+소방서 연동)** | 소방법 및 사내소방규정 제9조 | 소방시설 자동 연동 |
+| **화재 (FIRE)** | 용접구역 | 화기작업허가 유 | 작업 시간 내 | **⚠️ MONITOR (불티 모니터링 모드)** | 소방규정 제9조 제4항 (인가 화기작업) | 감시인 배치 확인 |
+
+#### 다차원 교차 판정 Python 표준 구현 함수:
+```python
+def evaluate_safety_sop(event, zone_info, permit_info, is_night_shift=False):
+    """
+    event: {"event_type": "INTRUSION", "confidence": 0.91, "camera_id": "CAM-01"}
+    zone_info: {"zone_id": "ZONE-A", "danger_level": "RESTRICTED"} # RESTRICTED(통제), CAUTION(주의), GENERAL(일반)
+    permit_info: {"has_permit": False, "permit_type": None, "is_valid_time": False}
+    """
+    ev_type = event["event_type"]
+    level = zone_info.get("danger_level", "GENERAL")
+    has_valid_permit = permit_info.get("has_permit", False) and permit_info.get("is_valid_time", False)
+
+    # 1. 인명 피해 응급 사안 (쓰러짐 / 추락) -> 허가 여부 무관 최우선 긴급 조치
+    if ev_type == "FALL_DOWN":
+        return {
+            "action_level": "CRITICAL",
+            "action_type": "DISPATCH_MEDIC",
+            "sop_rule": "SOP 응급대응 제3조 제1항 (인명 전도 골든타임)",
+            "message": "작업자 전도 감지: 사내 응급구조팀 즉시 출동 및 관제 화면 최우선 팝업"
+        }
+    if ev_type == "FALL_OFF":
+        return {
+            "action_level": "EMERGENCY",
+            "action_type": "TRIGGER_ALARM_ALL",
+            "sop_rule": "SOP 중대재해대응 제7조 (고소 추락사고)",
+            "message": "고소 추락 의심 사고: 현장 라인 즉시 가동 중지 및 비상 구조"
+        }
+
+    # 2. 화재 감지
+    if ev_type == "FIRE":
+        if has_valid_permit and permit_info.get("permit_type") == "HOT_WORK":
+            return {
+                "action_level": "MONITOR",
+                "action_type": "LOG_AND_WATCH",
+                "sop_rule": "소방규정 제9조 제4항 (인가 화기작업)",
+                "message": "사전 허가된 화기/용접 작업 구역 내 불꽃 감지. 현장 감시자 상주 여부 모니터링"
+            }
+        return {
+            "action_level": "EMERGENCY",
+            "action_type": "CALL_FIRE_STATION",
+            "sop_rule": "사내 소방규정 제9조 제1항 (무인가 화재 발생)",
+            "message": "화기 미허가 구역 화재 감지: 사내 소방대 및 119 자동 연동 출동"
+        }
+
+    # 3. 침입 감지 (구역 등급 × 허가서 × 시간대)
+    if ev_type == "INTRUSION":
+        if level == "RESTRICTED":
+            if has_valid_permit:
+                return {
+                    "action_level": "INFO",
+                    "action_type": "PASS",
+                    "sop_rule": "안전수칙 제14조 제3항 (통제구역 허가작업 예외)",
+                    "message": "작업허가서 승인 인원 통제구역 진입 확인 (정상)"
+                }
+            return {
+                "action_level": "CRITICAL",
+                "action_type": "DISPATCH_SECURITY",
+                "sop_rule": "안전수칙 제14조 제1항 (통제구역 무단침입)",
+                "message": "통제구역(Zone A) 무단 침입 발생: 즉시 비상 사이렌 및 보안요원 출동"
+            }
+        elif level == "CAUTION":
+            if is_night_shift:
+                return {
+                    "action_level": "CRITICAL",
+                    "action_type": "DISPATCH_SECURITY",
+                    "sop_rule": "안전수칙 제15조 제4항 (주의구역 야간 보안강화)",
+                    "message": "야간 주의구역 미인가자 진입: 보안실 상황 전파"
+                }
+            return {
+                "action_level": "WARNING",
+                "action_type": "BROADCAST_WARNING",
+                "sop_rule": "안전수칙 제15조 제2항 (주의구역 통제)",
+                "message": "주간 주의구역 인가 미확인 인원 접근: 안내 경고 방송 송출"
+            }
+
+    return {
+        "action_level": "NORMAL",
+        "action_type": "LOG",
+        "sop_rule": "일반 안전 관리 수칙",
+        "message": "정상 모니터링 유지"
+    }
+```
+
+---
+
+### 3. 생명·안전 도메인의 AI 환각/불확실성 통제 (수동 검토 큐 분리 패턴)
+
+#### 불확실성 3단계 분기 원칙 (Tri-band Decision)
+1. **고신뢰 구간 (`confidence >= 0.85`)**: 사전 정의된 SOP에 따라 자동 경보 및 시스템 연동 즉시 집행 (`AUTO_DISPATCH`).
+2. **불확실/경계 구간 (`0.50 <= confidence < 0.85`) 또는 센서 상충**: 시스템이 임의로 결정을 내리지 않고, 사건 스냅샷 및 센서 시계열 데이터를 즉시 **`MANUAL_REVIEW(수동 검토 큐)`**로 격리하여 관제원에게 화면 점멸 및 1클릭 확인창 제공.
+3. **저신뢰 노이즈 구간 (`confidence < 0.50`)**: 단순 필터링 및 통계용 로그에만 적재 (`NOISE_SUPPRESSED`).
+
+#### 비전-IoT 센서 크로스체크 및 수동 검토 큐 분리 코드:
+```python
+def classify_with_human_in_the_loop(vision_event, iot_sensor_data, high_th=0.85, low_th=0.50):
+    """
+    vision_event: {"event_type": "FIRE", "confidence": 0.72, "camera_id": "CAM-03"}
+    iot_sensor_data: {"temperature": 26.5, "smoke_ppm": 12} (화재 센서 정상치)
+    """
+    conf = vision_event.get("confidence", 0.0)
+    ev_type = vision_event.get("event_type")
+
+    # [조건 1] AI Confidence 경계값 구간
+    is_borderline = (low_th <= conf < high_th)
+
+    # [조건 2] CCTV 비전 결과와 현장 물리 센서 간 상충 발생
+    # 예: 비전은 화재라고 판정했으나 열화상/온도계 및 연기 감지기는 완전히 평시 수치인 경우
+    sensor_conflict = False
+    if ev_type == "FIRE":
+        temp = iot_sensor_data.get("temperature", 20.0)
+        smoke = iot_sensor_data.get("smoke_ppm", 0)
+        # 온도가 50도 미만이고 연기 농도가 기준치 이하이면 비전과 센서 상충
+        if temp < 50.0 and smoke < 30:
+            sensor_conflict = True
+
+    # 격리 결정 로직: 불확실 구간이거나 데이터 상충 시 수동 검토 큐로 격리
+    if is_borderline or sensor_conflict:
+        reason = "AI 신뢰도 경계 구간" if is_borderline else "비전 탐지와 IoT 물리 센서 데이터 상충"
+        return {
+            "decision": "MANUAL_REVIEW",
+            "priority": "HIGH",
+            "reason": reason,
+            "review_payload": {
+                "camera_id": vision_event.get("camera_id"),
+                "event_type": ev_type,
+                "confidence": conf,
+                "sensor_readings": iot_sensor_data,
+                "requires_human_confirmation": True
+            }
+        }
+
+    # 저신뢰 노이즈
+    if conf < low_th:
+        return {"decision": "NOISE_SUPPRESSED", "confidence": conf}
+
+    # 고신뢰 확정 건: SOP 자동 집행
+    return {"decision": "AUTO_DISPATCH", "confidence": conf}
+```
+
+---
+
+### 4. 보고서 및 서술형 평가 답변용 [결정]-[근거]-[검증]-[한계] 예시 (SDX 안전 특화)
+
+- **[결정]:** CCTV 비전 AI 기반 현장 안전관제 시스템에서 비전 모델 단독으로 긴급 경보(소방서 호출/비상 출동)를 100% 자동 실행하지 않고, 작업허가서(PTW) 및 구역 위험 등급(Zone A/B)과의 다차원 SOP 매칭 엔진을 구축하였으며, 신뢰도 경계 구간(0.50~0.85) 및 비전-IoT 센서 상충 발생 시 `MANUAL_REVIEW` 큐로 분리하여 관제사의 육안 확인을 거치는 'Human-in-the-Loop' 구조를 채택함.
+- **[근거]:** 산업안전보건법 및 사내 SOP 규정상 무단 침입과 허가 작업의 명확한 분기 처리가 법적 책임의 핵심이며, 생명·안전 도메인에서 비전 AI의 반사광/연무로 인한 오탐이 공장 셧다운이나 불필요한 공공 소방력 낭비를 초래할 수 있으므로 보수적 안전 격리 원칙을 근거로 삼음.
+- **[검증]:** 4대 사고 유형(침입/쓰러짐/추락/화재)과 8개 시나리오(허가 유무, 주야간, 센서 상충 케이스 등)로 구성된 검증 데이터셋을 실행하여, 허가된 통제구역 진입은 정상 예외(INFO)로 처리되고 센서 미감지 화재 건은 100% `MANUAL_REVIEW` 큐로 무결하게 격리 분류됨을 온더플라이 단위 테스트로 검증함.
+- **[한계]:** 비전 AI와 현장 IoT 센서 간 통신 지연(Network Latency) 발생 시 센서 데이터 동기화 지연으로 인해 일시적인 수동 검토 대기열 병목이 발생할 수 있으므로, 향후 엣지(Edge) 컴퓨팅 기반 센서 융합(Sensor Fusion) 아키텍처 및 관제사 부재 시 자동 단계적 에스컬레이션(Escalation) 정책이 추가 보완되어야 함.
