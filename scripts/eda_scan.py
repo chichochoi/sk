@@ -31,6 +31,11 @@ IGNORE_DIRS = {
     '__pycache__', 'dist', 'build', '.next', '.idea', '.vscode'
 }
 
+IGNORE_HARNESS_FILES = {
+    'eda_summary.txt', 'notes.md', 'notes_temp.md',
+    'handoff.md', 'task_spec.md', 'sub_result.md', 'submission_report.md'
+}
+
 MISSING_TOKENS = {
     '', 'null', 'none', 'nan', 'na', 'n/a', '-999', '-999.0'
 }
@@ -397,6 +402,17 @@ def scan_jsonl(full_path: Path):
             else:
                 rows.append([str(item)])
         analyze_tabular(keys, rows, full_path.name, truncated)
+        first_item = items[0]
+        nested_hints = []
+        for sub_k, sub_v in first_item.items():
+            if isinstance(sub_v, list):
+                sample_repr = str(sub_v[0])[:60] if sub_v else "[]"
+                nested_hints.append(f"'{sub_k}' (리스트 {len(sub_v)}개, 첫 항목: {sample_repr})")
+            elif isinstance(sub_v, dict):
+                dict_keys_repr = str(list(sub_v.keys())[:5])
+                nested_hints.append(f"'{sub_k}' (dict 키: {dict_keys_repr})")
+        if nested_hints:
+            print(f"    * [하위 중첩 필드 구조 힌트]: {', '.join(nested_hints)}")
     else:
         print(f"  * 총 {len(items):,}개 레코드, 샘플: {items[:3]}")
 
@@ -421,6 +437,8 @@ def scan_workspace(root_path: str):
         rel_dir = Path(dirpath).relative_to(root)
 
         for f in sorted(filenames):
+            if f.lower() in IGNORE_HARNESS_FILES:
+                continue
             rel_p = rel_dir / f if str(rel_dir) != '.' else Path(f)
             if is_test_file(rel_p):
                 test_files.append(rel_p)

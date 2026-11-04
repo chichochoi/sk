@@ -315,7 +315,7 @@ curl -s http://0.0.0.0:8000/api/v1/logs | jq '.[0:3]'
 ```python
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from enum import Enum
 import time
 
@@ -384,13 +384,14 @@ CCTV Edge AI 엔진이 동일 프레임이나 짧은 주기로 중복 POST 요�
 
 ```python
 from fastapi import Header
+from typing import List, Optional, Dict
 
 class VisionEventPayload(BaseModel):
     camera_id: str
     event_type: str
     timestamp: float
     confidence: float
-    bbox: list[float]
+    bbox: List[float]
     frame_id: Optional[int] = None
 
 # 최근 인입 이벤트 캐시 (메모리 누수 방지용 TTL 관리)
@@ -401,8 +402,9 @@ def receive_vision_event(
     event: VisionEventPayload,
     x_idempotency_key: Optional[str] = Header(None)
 ):
-    # 1. 멱등키 생성 (헤더 우선, 미제공 시 카메라+이벤트+프레임 기반 합성)
-    idemp_key = x_idempotency_key or f"{event.camera_id}:{event.event_type}:{event.frame_id or int(event.timestamp)}"
+    # 1. 멱등키 생성 (헤더 우선, 미제공 시 카메라+이벤트+프레임 기반 합성 - frame_id=0 안전 처리)
+    fid_part = event.frame_id if event.frame_id is not None else int(event.timestamp)
+    idemp_key = x_idempotency_key or f"{event.camera_id}:{event.event_type}:{fid_part}"
     curr_time = time.time()
 
     # 2. 동일 키 또는 3초 이내 동일 카메라/사건 중복 방어

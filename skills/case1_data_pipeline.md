@@ -384,14 +384,21 @@ bash .probe-kit/scripts/pre_submit_audit.sh
 
 #### (1) BBox 좌표 및 지표 계산 함수
 ```python
-def extract_bbox_features(bbox):
+def extract_bbox_features(bbox, fmt="xyxy"):
     """
-    bbox: [x1, y1, x2, y2] (좌상단 x1, y1, 우하단 x2, y2)
+    bbox: [x1, y1, x2, y2] (fmt="xyxy") 또는 [x, y, w, h] (fmt="xywh")
     반환: 중심점 (cx, cy), 하단 발끝 좌표 (fx, fy), 너비 w, 높이 h, 종횡비 aspect_ratio (w / h)
     """
-    x1, y1, x2, y2 = bbox
-    w = max(0.0, float(x2 - x1))
-    h = max(0.0, float(y2 - y1))
+    if fmt == "xywh":
+        x, y, w_raw, h_raw = bbox
+        x1, y1 = float(x), float(y)
+        w = max(0.0, float(w_raw))
+        h = max(0.0, float(h_raw))
+        x2, y2 = x1 + w, y1 + h
+    else:
+        x1, y1, x2, y2 = [float(v) for v in bbox]
+        w = max(0.0, x2 - x1)
+        h = max(0.0, y2 - y1)
     
     cx = (x1 + x2) / 2.0
     cy = (y1 + y2) / 2.0
@@ -427,24 +434,41 @@ def is_point_in_rect(point, roi_rect, inclusive=True):
         return (rx1 <= px <= rx2) and (ry1 <= py <= ry2)
     return (rx1 < px < rx2) and (ry1 < py < ry2)
 
-def is_point_in_polygon(point, polygon):
+def _is_point_on_segment(px, py, x1, y1, x2, y2, eps=1e-9):
+    """점 (px, py)가 선분 (x1, y1)-(x2, y2) 위에 존재하는지 판정"""
+    cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1)
+    if abs(cross) > eps:
+        return False
+    return (min(x1, x2) - eps <= px <= max(x1, x2) + eps) and (min(y1, y2) - eps <= py <= max(y1, y2) + eps)
+
+def is_point_in_polygon(point, polygon, inclusive=True):
     """
-    2D 다각형 위험구역 내부 판정 (Ray-Casting Algorithm)
+    2D 다각형 위험구역 내부 판정 (경계선/꼭짓점 정확 판정 + Ray-Casting Algorithm)
     point: (x, y)
     polygon: [(x1, y1), (x2, y2), ..., (xn, yn)]
+    inclusive: 다각형 경계선/꼭짓점 위의 점을 포함할지 여부 (<= vs <)
     """
-    px, py = point
-    inside = False
+    if not polygon or len(polygon) < 3:
+        return False
+    px, py = float(point[0]), float(point[1])
     n = len(polygon)
-    p1x, p1y = polygon[0]
-    for i in range(n + 1):
-        p2x, p2y = polygon[i % n]
-        if min(p1y, p2y) < py <= max(p1y, p2y):
-            if px <= max(p1x, p2x):
-                if p1y != p2y:
-                    xinters = (py - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                if p1x == p2x or px <= xinters:
-                    inside = not inside
+
+    # 1. 경계선(선분/꼭짓점) 위에 정확히 위치한 경우 우선 판정
+    for i in range(n):
+        x1, y1 = float(polygon[i][0]), float(polygon[i][1])
+        x2, y2 = float(polygon[(i + 1) % n][0]), float(polygon[(i + 1) % n][1])
+        if _is_point_on_segment(px, py, x1, y1, x2, y2):
+            return inclusive
+
+    # 2. Ray-Casting 내부 판정
+    inside = False
+    p1x, p1y = float(polygon[0][0]), float(polygon[0][1])
+    for i in range(1, n + 1):
+        p2x, p2y = float(polygon[i % n][0]), float(polygon[i % n][1])
+        if (p1y > py) != (p2y > py):
+            xinters = (py - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+            if px < xinters:
+                inside = not inside
         p1x, p1y = p2x, p2y
     return inside
 
@@ -478,7 +502,11 @@ from collections import defaultdict
 def parse_iso_or_timestamp(ts):
     if isinstance(ts, (int, float)):
         return float(ts)
-    return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).timestamp()
+    s = str(ts).strip()
+    try:
+        return float(s)
+    except ValueError:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
 
 def process_spatio_temporal_events(detections, min_duration_sec=3.0, max_gap_sec=1.5):
     """
@@ -662,6 +690,30 @@ def is_second_friday(d: date) -> bool:
     """해당 월의 둘째 주 금요일(해피프라이데이 등)인지 판정 (weekday 4 == Friday)"""
     return d.weekday() == 4 and 8 <= d.day <= 14
 
+def build_watch_subslots(shift_start: int, shift_end: int, assigned_emp_ids: list, max_continuous_watch_hours: int = 2):
+    """
+    연속 관제 시간 상한(예: 2시간마다 교대/휴식)을 만족하도록 교대조 내부 모니터링 서브슬롯 생성
+    배정된 인원들이 max_continuous_watch_hours 단위로 순환(Round-Robin)하며 집중 모니터링을 수행
+    """
+    subslots = []
+    if not assigned_emp_ids:
+        return subslots
+    n_emps = len(assigned_emp_ids)
+    step = max(1, int(max_continuous_watch_hours))
+    slot_idx = 0
+    for h in range(shift_start, shift_end, step):
+        sub_end = min(h + step, shift_end)
+        primary_watcher = assigned_emp_ids[slot_idx % n_emps]
+        resting_or_sub = [eid for eid in assigned_emp_ids if eid != primary_watcher]
+        subslots.append({
+            "subslot_hours": f"{h % 24:02d}:00~{sub_end % 24:02d}:00",
+            "duration_hours": sub_end - h,
+            "active_monitor_emp_id": primary_watcher,
+            "rotation_support_emp_ids": resting_or_sub
+        })
+        slot_idx += 1
+    return subslots
+
 def schedule_24h_safety_roster(
     dates,                  # ["2026-11-01", ...]
     shifts,                 # [{"id": "DAY", "start": 6, "end": 14, "min_staff": 2}, {"id": "EVENING", "start": 14, "end": 22, "min_staff": 2}, {"id": "NIGHT", "start": 22, "end": 30, "min_staff": 2}]
@@ -669,13 +721,16 @@ def schedule_24h_safety_roster(
     leave_set,              # {("E001", "2026-11-13"), ...} (취소/반려 제외된 확정 휴가)
     min_rest_hours=11,
     max_consecutive_nights=2,
-    max_weekly_hours=52
+    max_weekly_hours=52,
+    max_continuous_watch_hours=2
 ):
-    # 직원별 상태 추적: 누적 시간, 야간 횟수, 마지막 근무 종료 시각(시간 단위), 연속 야간 일수
+    # 직원별 상태 추적: 누적 시간, 주간별 시간, 야간 횟수, 마지막 근무일/종료시각, 연속 야간 일수
     emp_stats = {
         e["emp_id"]: {
             "total_hours": 0,
+            "weekly_hours": {},
             "night_count": 0,
+            "last_work_day_idx": -999,
             "last_end_abs_hour": -999,
             "consec_nights": 0,
             "last_night_day_idx": -999,
@@ -688,6 +743,7 @@ def schedule_24h_safety_roster(
 
     for day_idx, d_str in enumerate(dates):
         base_abs_hour = day_idx * 24
+        week_idx = day_idx // 7
         for sh in shifts:
             sh_id = sh["id"]
             sh_start = base_abs_hour + sh["start"]
@@ -701,10 +757,16 @@ def schedule_24h_safety_roster(
                 # 1. 휴가자 제외
                 if (emp_id, d_str) in leave_set:
                     continue
-                # 2. 최소 휴식 시간 보장 (직전 근무 종료 후 min_rest_hours 이상 경과)
+                # 2. 동일 일자 중복 배정 금지 (1일 최대 1개 교대조)
+                if st["last_work_day_idx"] == day_idx:
+                    continue
+                # 3. 최소 휴식 시간 보장 (직전 근무 종료 후 min_rest_hours 이상 경과)
                 if (sh_start - st["last_end_abs_hour"]) < min_rest_hours:
                     continue
-                # 3. 야간 연속 근무 상한 체크
+                # 4. 주당 최대 근무시간(예: 52시간) 상한 체크
+                if st["weekly_hours"].get(week_idx, 0) + duration > max_weekly_hours:
+                    continue
+                # 5. 야간 연속 근무 상한 체크
                 if sh_id == "NIGHT":
                     consec = st["consec_nights"] if st["last_night_day_idx"] == (day_idx - 1) else 0
                     if consec >= max_consecutive_nights:
@@ -731,6 +793,8 @@ def schedule_24h_safety_roster(
             for eid in assigned:
                 st = emp_stats[eid]
                 st["total_hours"] += duration
+                st["weekly_hours"][week_idx] = st["weekly_hours"].get(week_idx, 0) + duration
+                st["last_work_day_idx"] = day_idx
                 st["last_end_abs_hour"] = sh_end
                 if sh_id == "NIGHT":
                     st["night_count"] += 1
@@ -744,6 +808,7 @@ def schedule_24h_safety_roster(
                 "date": d_str,
                 "shift": sh_id,
                 "assigned_emp_ids": assigned,
+                "watch_rotation": build_watch_subslots(sh["start"], sh["end"], assigned, max_continuous_watch_hours),
                 "is_full": len(assigned) == needed
             })
 
@@ -756,12 +821,13 @@ def schedule_24h_safety_roster(
 - **핵심 경계값 체크리스트**:
   1. **근속연수(`service_years`) 계산**: 기준일(`ref_date`) 대비 만 근속연수 (윤년 2월 29일 입사자 안전 처리).
   2. **기본 연차(Annual Leave)**: 1년 이상 기본 15일 + 매 2년 초과(`(years - 1) // 2`)마다 1일 가산, **최대 25일 상한(`min(25, 15 + (years - 1) // 2)`)**.
-  3. **장기근속 휴가(Long-Service Leave)**: 5년차·10년차 등 부여 시 **10년차에 5년·10년 중복 부여 여부(`cumulative=False/True`)**를 DM 확인 결과에 따라 파라미터로 즉시 제어.
+  3. **장기근속 휴가(Long-Service Leave)**: 5년차·10년차 등 부여 시 **10년차에 5년·10년 중복 부여 여부(`long_service_mode="tier" | "exact_year" | "cumulative"`)**를 DM 확인 결과에 따라 파라미터로 즉시 제어.
   4. **차감 제외 및 소수점**: `HAPPY_FRIDAY`(해피프라이데이), 공휴일, `CANCELLED`/`REJECTED` 상태는 연차 차감에서 제외. 반차(`0.5`), 반반차(`0.25`) 정확히 차감.
-  5. **팀별 동시 휴가 제한**: 같은 날짜·같은 팀(`team_id`)의 휴가 인원이 최소 근무 인원(`team_size - max_leave_per_day`)을 침범하는지 검증.
+  5. **팀별 동시 휴가 제한**: 같은 날짜·같은 팀(`team`)의 휴가 인원이 최소 근무 인원(`min_team_working`)을 침범하는지 검증.
 
 ```python
 from datetime import date
+from collections import defaultdict
 
 def calc_full_years(join_date: date, ref_date: date) -> int:
     """입사일로부터 기준일까지의 정확한 만 근속연수 계산 (윤년 2/29 안전 처리)"""
@@ -778,11 +844,12 @@ def calc_full_years(join_date: date, ref_date: date) -> int:
     return max(0, years)
 
 def calculate_employee_leave_balance(
-    emp,                    # {"emp_id": "E01", "join_date": "2016-05-01", "team": "T1"}
-    usage_rows,             # [{"emp_id": "E01", "date": "2026-06-12", "type": "HALF_AM", "category": "ANNUAL", "status": "APPROVED"}, ...]
+    emp,                        # {"emp_id": "E01", "join_date": "2016-05-01", "team": "T1"}
+    usage_rows,                 # [{"emp_id": "E01", "date": "2026-06-12", "type": "HALF_AM", "category": "ANNUAL", "status": "APPROVED"}, ...]
     ref_date=date(2026, 11, 4),
-    mid_year_grant=3.0,     # 연중 리프레시 휴가 기본 부여일
-    long_service_Overlap=False # True면 10년차에 5년+10년 합산, False면 해당 구간/당해만 부여
+    mid_year_grant=3.0,         # 연중 리프레시 휴가 기본 부여일
+    long_service_mode="tier",   # "tier"(구간별 대체: 5~9년 5일, 10년+ 10일) | "exact_year"(5년차/10년차 당해만) | "cumulative"(5년+10년 중복 합산 15일)
+    long_service_overlap=False  # 하위 호환 플래그 (True이면 "cumulative"와 동일)
 ):
     join_d = date.fromisoformat(emp["join_date"])
     years = calc_full_years(join_d, ref_date)
@@ -797,17 +864,23 @@ def calculate_employee_leave_balance(
     else:
         annual_grant = float(min(25, 15 + (years - 1) // 2))
 
-    # 2. 장기근속 휴가 (예: 5년 5일, 10년 10일 - DM 기준에 맞게 수치 조정)
+    # 2. 장기근속 휴가 (예: 5년 5일, 10년 10일 - DM 기준에 맞게 모드/수치 조정)
+    mode = "cumulative" if long_service_overlap else long_service_mode
     long_grant = 0.0
-    if long_service_Overlap:
+    if mode == "cumulative":
         if years >= 5:
             long_grant += 5.0
         if years >= 10:
             long_grant += 10.0
-    else:
-        if years == 5: # 또는 5 <= years < 10
+    elif mode == "exact_year":
+        if years == 5:
             long_grant = 5.0
-        elif years == 10: # 또는 years >= 10
+        elif years == 10:
+            long_grant = 10.0
+    else:  # "tier" (가장 일반적인 구간별 부여: 5~9년 5일, 10년 이상 10일)
+        if 5 <= years < 10:
+            long_grant = 5.0
+        elif years >= 10:
             long_grant = 10.0
 
     # 3. 사용 일수 차감 (취소/반려 및 해피프라이데이 제외)
@@ -859,13 +932,52 @@ def calculate_employee_leave_balance(
         "long_service_remained": round(long_grant - used_long, 2),
         "total_remained": round((annual_grant - used_annual) + (mid_year_grant - used_mid) + (long_grant - used_long), 2)
     }
+
+def validate_team_concurrent_leave(employees, usage_rows, min_team_working=2, count_half_as_absent=False):
+    """
+    같은 날 한 팀에서 너무 많이 쉬면 안 된다는 최소 근무 인원(동시 휴가 상한) 위반 일자/팀 검출
+    """
+    team_members = defaultdict(set)
+    emp_to_team = {}
+    for e in employees:
+        t = e.get("team", "DEFAULT")
+        team_members[t].add(e["emp_id"])
+        emp_to_team[e["emp_id"]] = t
+
+    # (team, date) -> 휴가자 사번 집합
+    team_date_leaves = defaultdict(set)
+    for r in usage_rows:
+        if str(r.get("status", "APPROVED")).upper() in ("CANCELLED", "REJECTED"):
+            continue
+        l_type = str(r.get("type", "FULL")).upper()
+        if not count_half_as_absent and l_type in ("HALF", "HALF_AM", "HALF_PM", "QUARTER"):
+            continue
+        eid = r.get("emp_id")
+        if eid in emp_to_team:
+            team_date_leaves[(emp_to_team[eid], r["date"])].add(eid)
+
+    violations = []
+    for (team, d_str), absent_ids in sorted(team_date_leaves.items()):
+        total_size = len(team_members[team])
+        working_count = total_size - len(absent_ids)
+        if working_count < min_team_working:
+            violations.append({
+                "team": team,
+                "date": d_str,
+                "team_size": total_size,
+                "absent_count": len(absent_ids),
+                "working_count": working_count,
+                "min_required_working": min_team_working,
+                "absent_emp_ids": sorted(absent_ids)
+            })
+    return violations
 ```
 
 ---
 
 ### 시나리오 ③: CCTV 감지 이벤트 중복 묶기·우선순위·구역별 대응자 배정 및 에스컬레이션
 - **핵심 비즈니스 규칙 체크리스트**:
-  1. **같은 카메라 N분 내 반복 감지 묶기**: `(camera_id, event_type)` 기준 타임스탬프 정렬 후 $N$분(`window_sec = N * 60`) 이내 이벤트 병합.
+  1. **같은 카메라 N분 내 반복 감지 묶기**: `(camera_id, event_type)` 기준 타임스탬프 정렬 후 $N$분(`window_sec = N * 60`) 이내 이벤트 병합 (`sliding` vs `fixed` 윈도우 모드 지원).
   2. **우선순위 산정 (화재 최우선)**: `FIRE(1순위) > FALL_OFF/FALL_DOWN(2순위) > INTRUSION(3순위) > PPE/NO_HELMET(4순위)`.
   3. **오탐 다발 카메라 필터링 & 화재 예외**: 오탐률이 높거나 낮은 신뢰도 이벤트는 억제/수동검토로 빼되, **`FIRE`(화재)는 오탐 이력과 무관하게 무조건 즉시 최우선 배정**.
   4. **구역별 대응자 배정 & 미응답 에스컬레이션**: 사건 구역(`zone_id`)의 가용(`AVAILABLE`) 대응자에게 배정하고, `ack_timeout_sec` 이내에 미응답(`status == 'ASSIGNED'`)이면 2순위 예비 대응자 또는 안전팀장(`MANAGER`)에게 자동 에스컬레이션.
@@ -880,6 +992,83 @@ PRIORITY_RANK = {
     "NO_HELMET": 4,     # 보호구 미착용
     "OTHER": 5
 }
+
+def dedup_cctv_logs_within_n_minutes(
+    raw_logs,                   # [{"camera_id": "CAM-01", "zone_id": "Z1", "event_type": "FIRE", "timestamp": 1700000000.0, "confidence": 0.91}, ...]
+    window_minutes=5.0,
+    window_mode="sliding",      # "sliding"(직전 감지 시각 기준 N분 연장) | "fixed"(최초 감지 시각 기준 N분 고정)
+    false_alarm_cameras=None,   # 오탐 다발 카메라 집합 (예: {"CAM-99"})
+    min_confidence=0.5,
+    high_conf_for_noisy_cam=0.85
+):
+    """
+    같은 카메라의 반복 감지를 N분 안에서 하나로 묶고, 오탐 다발 카메라 무시 경향을 방어하되
+    화재(FIRE)는 어떠한 경우에도 최우선 통과시키는 전처리 함수
+    """
+    noisy_cams = set(false_alarm_cameras or [])
+    window_sec = float(window_minutes) * 60.0
+
+    # 1. 오탐/저신뢰도 필터링 (단, FIRE는 무조건 보존!)
+    filtered = []
+    for row in raw_logs:
+        ev_type = str(row.get("event_type", "OTHER")).upper()
+        conf = float(row.get("confidence", 1.0))
+        cam_id = row["camera_id"]
+
+        if ev_type != "FIRE":
+            if conf < min_confidence:
+                continue
+            if cam_id in noisy_cams and conf < high_conf_for_noisy_cam:
+                continue
+        filtered.append(row)
+
+    # 2. 카메라 + 이벤트 유형 + 시각 순 정렬
+    sorted_logs = sorted(filtered, key=lambda r: (
+        r["camera_id"],
+        str(r.get("event_type", "OTHER")).upper(),
+        parse_iso_or_timestamp(r["timestamp"])
+    ))
+
+    # 3. N분 이내 반복 감지 하나로 묶기
+    merged_incidents = []
+    active = {}  # key: (camera_id, event_type)
+
+    for r in sorted_logs:
+        cam_id = r["camera_id"]
+        ev_type = str(r.get("event_type", "OTHER")).upper()
+        t = parse_iso_or_timestamp(r["timestamp"])
+        conf = float(r.get("confidence", 1.0))
+        key = (cam_id, ev_type)
+
+        if key in active:
+            curr = active[key]
+            ref_t = curr["incident_end"] if window_mode == "sliding" else curr["incident_start"]
+            if (t - ref_t) <= window_sec:
+                curr["incident_end"] = max(curr["incident_end"], t)
+                curr["merged_count"] += 1
+                curr["max_confidence"] = max(curr["max_confidence"], conf)
+                continue
+            else:
+                merged_incidents.append(curr)
+                del active[key]
+
+        active[key] = {
+            "incident_id": f"INC-{cam_id}-{ev_type}-{int(t)}",
+            "camera_id": cam_id,
+            "zone_id": r.get("zone_id", "DEFAULT"),
+            "event_type": ev_type,
+            "incident_start": t,
+            "incident_end": t,
+            "max_confidence": conf,
+            "merged_count": 1,
+            "status": "DETECTED",
+            "excluded_responders": []
+        }
+
+    for inc in active.values():
+        merged_incidents.append(inc)
+
+    return merged_incidents
 
 def assign_and_escalate_cctv_incidents(
     incidents,              # 병합된 사건 리스트
@@ -898,12 +1087,17 @@ def assign_and_escalate_cctv_incidents(
     resp_map = {r["resp_id"]: r for r in responders}
 
     for inc in sorted_incidents:
+        # JSON 직렬화 호환을 위해 list 형태로 관리
+        excluded_list = list(inc.get("excluded_responders", []))
+
         # 이미 배정되었으나 미응답 타임아웃이 경과한 경우 -> 에스컬레이션!
         if inc.get("status") == "ASSIGNED" and not inc.get("acknowledged_at"):
             elapsed = current_time_sec - float(inc.get("assigned_at", current_time_sec))
             if elapsed >= ack_timeout_sec:
                 prev_resp_id = inc.get("assigned_to")
-                inc.setdefault("excluded_responders", set()).add(prev_resp_id)
+                if prev_resp_id and prev_resp_id not in excluded_list:
+                    excluded_list.append(prev_resp_id)
+                inc["excluded_responders"] = excluded_list
                 inc["escalation_count"] = inc.get("escalation_count", 0) + 1
                 inc["status"] = "ESCALATED_PENDING"
                 if prev_resp_id in resp_map:
@@ -911,7 +1105,7 @@ def assign_and_escalate_cctv_incidents(
 
         # 신규 감지 또는 에스컬레이션 재배정 대상인 경우
         if inc.get("status") in ("DETECTED", "ESCALATED_PENDING"):
-            excluded = inc.get("excluded_responders", set())
+            excluded_set = set(inc.get("excluded_responders", []))
             target_zone = inc.get("zone_id")
 
             # 1차: 동일 구역 가용 대응자 탐색 (당일 배정 건수 적은 순 -> 사번 순)
@@ -919,7 +1113,7 @@ def assign_and_escalate_cctv_incidents(
                 r for r in responders
                 if r["zone_id"] == target_zone
                 and r["status"] == "AVAILABLE"
-                and r["resp_id"] not in excluded
+                and r["resp_id"] not in excluded_set
             ]
             same_zone_cands.sort(key=lambda r: (r.get("assigned_count", 0), r["resp_id"]))
 
@@ -930,7 +1124,7 @@ def assign_and_escalate_cctv_incidents(
                 # 2차(에스컬레이션/가용 인원 부재 시): 안전팀장(MANAGER) 또는 타 구역 가용 예비 인력
                 fallback_cands = [
                     r for r in responders
-                    if r["status"] == "AVAILABLE" and r["resp_id"] not in excluded
+                    if r["status"] == "AVAILABLE" and r["resp_id"] not in excluded_set
                 ]
                 fallback_cands.sort(key=lambda r: (0 if r.get("role") == "MANAGER" else 1, r.get("assigned_count", 0), r["resp_id"]))
                 if fallback_cands:
