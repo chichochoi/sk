@@ -453,3 +453,61 @@ curl -s -X PATCH http://0.0.0.0:8000/api/v1/alerts/ALT-1/status \
   -H "Content-Type: application/json" \
   -d '{"new_status": "FALSE_ALARM", "operator_id": "OP-101", "note": ""}' | jq .
 ```
+
+
+---
+
+## 🚨 [최유력 3대 시나리오 웹앱 특화] '운영자 CSV 업로드·배정' + '직원 개인별 조회' 양방향(Two-Way) 웹앱 공략
+
+> **만약 문제가 ① 24시간 안전 관제 인력 근무표 웹앱, ② 휴가 잔여일 계산·관리 웹앱, ③ CCTV 감지 이벤트 처리·대응자 배정 웹앱으로 나왔다면, 아래의 [운영자 업로드 탭 ↔ 직원 조회 탭 양방향 구조]를 참고하여 수직 완성(MVP)하세요.**
+
+### 1. 3대 시나리오 공통 웹앱 UI/API 필수 동선 (Vertical Slice)
+세 시나리오 모두 **"운영자가 CSV를 올리면 서버가 규칙대로 계산/배정하고, 직원은 자기 사번(또는 구역)으로 결과를 조회·액션한다"**는 동일한 뼈대를 가집니다:
+
+| 구분 | 시나리오 ①: 24시간 관제 근무표 | 시나리오 ②: 휴가 잔여일 관리 | 시나리오 ③: CCTV 감지·대응자 배정 |
+| :--- | :--- | :--- | :--- |
+| **운영자 액션 (Admin)** | 휴가자/직원 CSV 업로드 ➔ 24시간 관제 근무표 자동 재편성 및 결원/제약 위반 경고 확인 | 입사일·휴가사용 CSV 업로드 ➔ 전 직원 연차/연중/장기근속 잔여일 일괄 산출 및 동시휴가 초과 확인 | CCTV 감지 로그 CSV 업로드 ➔ N분 중복 묶기·화재 최우선 정렬·구역별 대응자 자동 배정 및 미응답 에스컬레이션 |
+| **직원 액션 (Employee)** | 내 사번(`emp_id`) 입력 ➔ **내 근무 일정, 교대 시간, 보장된 휴식 시간** 조회 | 내 사번(`emp_id`) 입력 ➔ **내 연차·연중·장기근속 잔여일 상세 및 해피프라이데이 제외 내역** 조회 / 휴가 신청 | 내 사번 또는 담당 구역(`zone_id`) 선택 ➔ **내 구역 배정 알림 조회 및 `확인(ACK)` / `조치완료(RESOLVED)` / `오탐(FALSE_ALARM)` 처리** |
+| **최상단 요약 배지** | 총 근무 슬롯 / 정상 배정률 / 결원 경고 슬롯 수 / 해피프라이데이 여부 | 총 직원 수 / 평균 잔여 연차 / 동시 휴가 제한 초과 일자 수 | 총 묶인 사건 수 / **미조치 화재·긴급 건수** / 미응답 에스컬레이션 건수 / 가용 대응자 수 |
+
+### 2. FastAPI CSV 업로드 & 직원 조회 양방향 엔드포인트 표준 템플릿
+```python
+import csv
+import io
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+
+app = FastAPI()
+STATE_DB = {
+    "records": [],
+    "results": {},
+    "warnings": []
+}
+
+@app.post("/api/upload-csv")
+async def upload_csv(file: UploadFile = File(...)):
+    raw_bytes = await file.read()
+    # 인코딩 자동 방어 (utf-8-sig -> cp949)
+    try:
+        text = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw_bytes.decode("cp949", errors="replace")
+
+    reader = csv.DictReader(io.StringIO(text))
+    rows = [ {k.strip(): (v.strip() if v else "") for k, v in r.items() if k} for r in reader ]
+    if not rows:
+        raise HTTPException(status_code=400, detail="빈 CSV 파일이거나 유효한 데이터 행이 없습니다.")
+
+    # 시나리오 ①/②/③ 핵심 계산 함수 호출 후 STATE_DB 갱신
+    STATE_DB["records"] = rows
+    return {"status": "success", "loaded_rows": len(rows)}
+
+@app.get("/api/employee/{emp_id}")
+def get_employee_view(emp_id: str, zone_id: str = Query(None)):
+    # 직원이 자기 사번(또는 구역)으로 근무표 / 휴가 잔여일 / 구역 CCTV 알림 조회
+    if not emp_id.strip():
+        raise HTTPException(status_code=400, detail="사번(emp_id)을 입력해 주세요.")
+    data = STATE_DB["results"].get(emp_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"사번 '{emp_id}'에 해당하는 데이터를 찾을 수 없습니다.")
+    return data
+```
