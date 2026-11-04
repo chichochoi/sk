@@ -214,6 +214,10 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 - [인터페이스 불변] - 기존 run_pipeline() 함수의 파라미터 시그니처 및 반환 dict 구조 절대 유지
 - [우선순위] - 화려한 UI나 복잡한 패턴보다 데이터 정합성을 최우선시
 ```
+추가 질문
+```markdown
+`NOTES_TEMP.md`를 읽고, 추가적으로 DM담당자에게 질문해야할 내용이 있으면.probe-kit/dm_question.md 파일의 맨 위에 적어줘.
+```
 
 ✅ **완료 시그널:**
 `NOTES_TEMP.md`에 실무자 DM 확인 조건이 구체적 수치 및 예외 규칙과 함께 1줄씩 정리되어 저장됨.
