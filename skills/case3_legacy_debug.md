@@ -159,29 +159,103 @@ diff baseline_test_result.log after_fix_test_result.log || true
 
 ## 9. 서브 에이전트(`GPT 5.6-terra medium`)에게 넘길 TASK_SPEC 예시
 
+메인 에이전트(`Sol 6.1 xhigh`)는 아래 [시작 · 정의 · 기준 · 종료] 4대 핵심 축 기반 7대 표준 규격의 명세서를 작성하여 서브 에이전트에게 구현을 위임한다.
+
 ```markdown
-# TASK_SPEC: 인증 토큰 만료 버그 수정 및 세션 연장 API 추가
+# [TASK_SPEC] 인증 토큰 조기 만료 버그 수정 및 세션 연장 API 추가 (최소 범위 수정)
 
-## 1. 작업 개요
-- 대상 파일: `services/auth_service.py`, `routers/auth_router.py` (단 2개 파일만 수정 허용)
-- 신규 테스트 파일: `tests/test_auth_patch.py`
-- 담당 역할: 서브 에이전트 (GPT 5.6-terra medium)
+> **작성자:** 메인 아키텍트 (`Sol 6.1 xhigh`)  
+> **수신자:** 서브 워커 (`GPT 5.6-terra medium`)  
+> **핵심 원칙:** [시작 · 정의 · 기준 · 종료] 4대 축 기반 명세 준수 및 지정 범위 외 임의 수정 절대 금지. 완료 후 `.probe-kit/runtime/SUB_RESULT.md`에 핵심 결과와 변경 사항 위주의 명확한 요약 보고를 남길 것 (불필요한 줄 수 제한 없음).
 
-## 2. 세부 구현 요구사항
-1. 버그 수정 (`services/auth_service.py`):
-   - 현상: 토큰 만료 시간 계산 시 UTC 타임존 오프셋 누락으로 조기 만료 판정 발생.
-   - 조치: `datetime.now(timezone.utc)` 기준으로 만료 여부를 판정하도록 수정.
-   - 금지: 기존 암호화 알고리즘(HS256) 및 시크릿 키 로딩 로직은 절대 수정 금지.
-2. 기능 추가 (`routers/auth_router.py`):
-   - 엔드포인트: `POST /api/v1/auth/refresh`
-   - 요청 헤더: `Authorization: Bearer <old_token>`
-   - 응답 스키마: `{"status": "SUCCESS", "data": {"token": "refreshed_jwt_token_sample", "expires_in": 3600}}` (기존 로그인 응답 구조와 100% 일치시킬 것)
-   - 만료되었거나 변조된 토큰 전송 시: HTTP 401 `{"status": "ERROR", "message": "Invalid token"}` 반환.
+---
 
-## 3. 검증 기준
-- 수정 전 기존 테스트 통과 유지: `pytest tests/test_legacy_auth.py` PASS.
-- 신규 태스크 맞춤 온더플라이 테스트 통과: `pytest tests/test_auth_patch.py` 3개 케이스(정상 연장, 만료 토큰 연장 거부, 위조 토큰 거부) PASS (git commit 금지, untracked 유지).
-- `git diff --stat` 검증 시 변경 파일이 2개(`auth_service.py`, `auth_router.py`) 외에 없을 것.
+### 1. [시작 / Start] 단일 목표 및 진입 조건 (Entry Conditions)
+- **단일 목표 (Single Goal):** 인증 토큰 만료 판정 시 UTC 타임존 오프셋 누락 버그 수정(`services/auth_service.py`) 및 세션 토큰 연장 엔드포인트(`routers/auth_router.py`) 최소 범위 국소 구현
+- **선행 완료 상태 (Pre-conditions):**
+  - 기존 코드베이스 및 테스트 스위트 구동 환경 확인
+  - Git 작업 트리가 깨끗한 상태(uncommitted 변경 사항 없음)인지 확인
+- **사전 베이스라인 체크 (Baseline Pre-check):**
+  - 코드 수정 착수 전 기존 테스트 스위트 100% PASS 확인 (`pytest tests/test_legacy_auth.py` 또는 `pytest -v | tee baseline_test_result.log`)
+  - 사전 베이스라인 실패 시 코드 작성 시작을 금지하고 즉시 원인 보고
+
+### 2. [통제 / Scope] 대상 파일 범위 및 금지 사항 (Hard Constraints)
+- **수정 허용 파일 (엄격 제한: 단 2개 파일):**
+  - `services/auth_service.py` (함수: `is_token_expired` 타임존 오프셋 버그 수정)
+  - `routers/auth_router.py` (엔드포인트: `POST /api/v1/auth/refresh` 추가)
+  - `tests/test_auth_patch.py` (신규 재현 및 예외 검증 온더플라이 테스트)
+- **수정 절대 금지 파일:**
+  - `services/user_service.py`, `models/`, `config/settings.py` 등 지정 외 모듈
+  - `.gitignore` (Git 트래킹 제외 목록 수정 금지 - 임시 파일은 `.git/info/exclude`로 통제)
+- **5대 금지사항 (Hard Constraints):**
+  - 전체 포매터 일괄 적용(Prettier, Black 등)으로 인한 무차별 공백/인덴트 라인 변경 절대 금지
+  - 기존 암호화 알고리즘(HS256) 및 시크릿 키 로딩 로직 임의 리팩토링 금지
+  - 시크릿, 패스워드, 개인 식별 정보, API 키 코드 내 하드코딩 절대 금지
+  - `.gitignore` 파일 수정 금지 (임시 파일은 `.git/info/exclude`로 통제)
+  - 시험 중 `git add` / `git commit` / `git reset` / `git clean` 실행 전면 금지 (테스트 코드는 커밋하지 않으며 test 파일은 untracked 상태 유지)
+
+### 3. [정의 / Definition] 도메인 용어·상태 및 입출력 스키마
+- **레거시 함수 시그니처 및 반환 타입 불변 계약:**
+  - `is_token_expired(payload: dict) -> bool`:
+    - 입력: JWT 디코딩 페이로드 (`{"user_id": str, "exp": int/float}`)
+    - 반환: 만료 시 `True`, 유효 시 `False` (타입 변경 금지)
+  - `verify_jwt_token(token: str) -> dict`:
+    - 유효 토큰: 디코딩된 `payload` 딕셔너리 반환
+    - 만료 토큰: `TokenExpiredError` 예외 발생
+    - 변조/위조 토큰: `InvalidTokenError` 예외 발생
+- **신규 API 요청/응답 JSON 스키마 및 에러 코드 불변 계약:**
+  - **엔드포인트:** `POST /api/v1/auth/refresh`
+  - **요청 헤더:** `Authorization: Bearer <old_token>` (형식 불일치 시 401 반환)
+  - **성공 응답 (HTTP 200 OK):**
+    - JSON 구조: `{"status": "SUCCESS", "data": {"token": string, "expires_in": 3600}}` (기존 로그인 성공 응답 규격과 100% 일치)
+  - **실패 응답 (HTTP 401 Unauthorized):**
+    - JSON 구조: `{"status": "ERROR", "message": "Invalid token"}`
+    - 헤더 누락 시: `{"status": "ERROR", "message": "Authorization header missing"}`
+
+### 4. [기준 / Criteria] 비즈니스 판정 기준 및 경계값 (Acceptance & Boundary Criteria)
+- **실무자 DM 확인 비즈니스 규칙:**
+  - 기존 프론트엔드 및 모바일 클라이언트와의 하위 호환성을 100% 보장해야 함 (응답 JSON 키 변경 금지)
+  - 토큰 갱신 시 기존 사용자 세션 정보(`user_id`, `role`)는 그대로 유지되어야 함
+- **수치 및 타임존 경계값 기준:**
+  - 만료 시간 판정: 로컬 OS 시간(`datetime.now()`) 사용 금지, 반드시 `datetime.now(timezone.utc).timestamp()` 기준 판정
+  - 경계값: 만료 예정 시각과 현재 시각이 정확히 일치하는 순간(`exp <= current_time`)은 만료로 판정
+- **결측/예외 처리 기준:**
+  - 만료된 토큰으로 refresh 요청 시 갱신 거부 (401 에러)
+  - 서명이 위조된 토큰으로 요청 시 401 에러 처리
+- **충돌 시 우선순위:**
+  - 코드 미화나 구조 개선보다 **기존 인터페이스 하위 호환성 불변 및 국소 최소 수정** 최우선
+
+### 5. [검증 / Verification] 실행할 검증 명령어
+- **1) 사전/사후 베이스라인 회귀 검증:**
+  - `pytest tests/test_legacy_auth.py` (기존 18건 테스트 전원 통과 확인)
+- **2) 태스크 맞춤 온더플라이(On-the-fly) ad-hoc 테스트 (필수):**
+  - 실무자 DM 요구사항에 맞춘 온더플라이 테스트(`tests/test_auth_patch.py`) 작성 및 3대 핵심 케이스 검증
+    - Case A: 버그 재현 및 UTC 타임존 판정 해결 확인
+    - Case B: 정상 세션 연장(200 OK 및 신규 토큰 반환)
+    - Case C: 만료/변조 토큰 전송 시 401 에러 방어
+  - `pytest tests/test_auth_patch.py -v` (통과 확인, *git commit 없이 untracked 유지*)
+- **3) 전체 회귀 테스트 스위트 재실행:**
+  - `pytest -v | tee after_fix_test_result.log`
+  - `diff baseline_test_result.log after_fix_test_result.log || true` (회귀 실패 0건 확인)
+- **4) 변경 범위 검사 (최소 범위 준수):**
+  - `git diff --stat` (수정 파일이 단 2개 파일 `auth_service.py`, `auth_router.py` 외에 없음을 확인)
+
+### 6. [정의 & 기준 / DoD] 완료 정의 (Definition of Done)
+- [ ] 기존 레거시 테스트 스위트(18건)가 단 1건의 실패도 없이 100% 통과할 것
+- [ ] 신규 버그 재현 및 refresh API 온더플라이 테스트 3종이 100% PASS할 것 (git commit 금지, untracked 유지)
+- [ ] 기존 API 시그니처 및 JSON 응답 구조 불변 계약이 100% 유지될 것
+- [ ] `git diff --stat` 검증 시 수정된 파일이 합의된 2개 파일 외에 전혀 없을 것
+
+### 7. [종료 / End] 종료 조건, 멈춤 조건 및 완료 후 조치 (Exit & Stop Protocol)
+- **멈춤 조건 (Stop / Abort Condition) - 발견 즉시 구현 중단 및 대기:**
+  - 지정된 2개 파일 외에 타 모듈이나 설정 파일 수정이 불가피한 구조적 결함을 발견했을 때
+  - 기존 인터페이스의 변경 없이는 버그 해결이 불가능한 상충 상황이 발생했을 때
+  - 사전 베이스라인 테스트 실패 원인이 불명확할 때
+  - *위 상황 발생 시 즉시 구현을 멈추고 `SUB_RESULT.md`에 [차단(블로커)] 사유 기록 후 메인 보고*
+- **완료 후 필수 조치 (Post-Completion Actions):**
+  1. `.probe-kit/runtime/SUB_RESULT.md` 요약 보고서 작성 (필수 항목 표준 양식 준수, 불필요한 줄 수 제한 없음)
+  2. `bash .probe-kit/scripts/handoff.sh log "sub done: legacy bugfix and refresh API complete"` 실행 (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "legacy bugfix and refresh API complete"`, 여의치 않을 시 `runtime/HANDOFF.md` 표에 직접 추가)
+  3. 메인 에이전트에게 완료 보고 후 **서브 터미널에서 즉시 `/clear` 실행** (누적 토큰 리셋)
 ```
 
 ---

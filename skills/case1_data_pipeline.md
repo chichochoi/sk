@@ -4,6 +4,7 @@
 - **Case 1 적용 상황:** 복수의 원천 데이터 파일(CSV, JSON, TSV, DB 덤프, 텍스트 로그 등)이 제공되고, 데이터 정제(결측/중복/이상치 처리) 및 통계 집계, 결과 파일 생성(CSV/Excel 등), 요약 리포트 작성이 요구되는 과제.
 - **Case 5 적용 상황:** SK하이닉스 제조 공정, 웨이퍼(Wafer), 수율(Yield), 장비 파라미터, 센서 시계열 로그, 불량(Defect) 판정 용어가 등장하며, 특정 임계값(Threshold)을 기준으로 정상/주의/위험 등 등급 판정 및 후속 조치 리포팅이 요구되는 과제.
 - **혼합형 기본 상황:** 시험 시작 후 10분 내에 문제 유형이 단일 케이스로 특정되지 않을 경우, 기본 골격으로 본 스킬(데이터 정제·집계)과 Case 3(코드 수정·검증)을 결합하여 착수한다.
+- **반도체 정밀 품질·계측·재무 정규화 심화 상황:** 원소재 CoA 성적서 단위 환산(ppm/ppb/ppt)·`< DL` 대치·SPC 공정능력($C_p, C_{pk}$)·PCN 인터락, 2D 웨이퍼 Edge Exclusion 및 6-Parameter OLS 오버레이 계측(ADI REWORK/AEI SCRAP), 또는 경쟁사 FY/CY 캘린더 보간·재무 지표 Waterfall 분해가 요구되는 과제는 [`.probe-kit/skills/case6_semicon_data_spc.md`](case6_semicon_data_spc.md)를 즉시 참조하여 적용한다.
 
 ---
 
@@ -297,35 +298,104 @@ if __name__ == "__main__":
 
 ## 8. 서브 에이전트(`GPT 5.6-terra medium`)에게 넘길 TASK_SPEC 예시
 
-메인 에이전트(`Sol 6.1 xhigh`)는 아래 규격의 명세서를 작성하여 서브 에이전트에게 구현을 위임한다.
+메인 에이전트(`Sol 6.1 xhigh`)는 아래 [시작 · 정의 · 기준 · 종료] 4대 핵심 축 기반 7대 표준 규격의 명세서를 작성하여 서브 에이전트에게 구현을 위임한다.
 
 ```markdown
-# TASK_SPEC: 데이터 정제 및 이상 판정 파이프라인 구현
+# [TASK_SPEC] 데이터 정제 및 반도체 공정 이상 판정 파이프라인 구현
 
-## 1. 작업 개요
-- 대상 파일: `data/wafer_sensor_raw.csv`
-- 산출 파일: `output/wafer_quality_report.csv`
-- 담당 역할: 서브 에이전트 (GPT 5.6-terra medium)
+> **작성자:** 메인 아키텍트 (`Sol 6.1 xhigh`)  
+> **수신자:** 서브 워커 (`GPT 5.6-terra medium`)  
+> **핵심 원칙:** [시작 · 정의 · 기준 · 종료] 4대 축 기반 명세 준수 및 지정 범위 외 임의 수정 절대 금지. 완료 후 `.probe-kit/runtime/SUB_RESULT.md`에 핵심 결과와 변경 사항 위주의 명확한 요약 보고를 남길 것 (불필요한 줄 수 제한 없음).
 
-## 2. 세부 구현 요구사항
-1. `src/pipeline.py`를 작성하여 데이터를 로드하고 단계별 건수 로깅을 표준 출력으로 출력할 것.
-   - 1단계: 원본 레코드 수 출력
-   - 2단계: `sensor_temp`가 null, empty, -999인 결측치 제거 건수 출력
-   - 3단계: 동일 `wafer_id` 기준 최신 `timestamp` 1건만 유지하고 중복 제거 건수 출력
-   - 4단계: `status == 'DISCARDED'` 및 비정상 범위(0도 미만, 1500도 초과) 제거 건수 출력
-   - 5단계: 최종 처리 건수 및 보존율 출력
-2. 판정 로직:
-   - CRITICAL: `sensor_temp >= 450.0` 또는 `defect_count >= 50`
-   - WARNING: `sensor_temp >= 400.0` 또는 `defect_count >= 20`
-   - NORMAL: 그 외 정상 수치
-3. 최종 CSV 저장 포맷:
-   - 컬럼: `wafer_id`, `lot_id`, `sensor_temp`, `defect_count`, `grade`, `processed_at`
-   - 정렬: `grade` 우선순위(CRITICAL -> WARNING -> NORMAL), 동일 등급 내 `wafer_id` 오름차순
-   - 수치 포맷: `sensor_temp`는 소수점 둘째자리 반올림
+---
 
-## 3. 검증 기준
-- `python3 -m unittest tests/test_sample_check.py` 실행 시 15건 표본 테스트 100% 통과할 것.
-- 실행 중 OOM 및 예외 발생 없이 종료 코드 0으로 완료될 것.
+### 1. [시작 / Start] 단일 목표 및 진입 조건 (Entry Conditions)
+- **단일 목표 (Single Goal):** 웨이퍼 센서 데이터 정제(결측/중복/취소 제거) 및 이상 등급(`CRITICAL`/`WARNING`/`NORMAL`) 판정 파이프라인(`src/pipeline.py`) 구현
+- **선행 완료 상태 (Pre-conditions):**
+  - 원천 데이터 `data/wafer_sensor_raw.csv` 존재 및 `EDA_SUMMARY.txt` 스키마/행 수 확인 완료
+  - Git 작업 트리가 깨끗한 상태(uncommitted 변경 사항 없음)인지 확인
+- **사전 베이스라인 체크 (Baseline Pre-check):**
+  - 파이프라인 수정 착수 전 기존 테스트 베이스라인 100% PASS 확인 (`python3 -m unittest discover -s tests -v` 또는 기본 스모크 테스트)
+  - 사전 베이스라인 실패 시 코드 작성 시작을 금지하고 즉시 원인 보고
+
+### 2. [통제 / Scope] 대상 파일 범위 및 금지 사항 (Hard Constraints)
+- **수정 허용 파일:**
+  - `src/pipeline.py` (파이프라인 로직 및 단계별 건수 로깅 구현)
+  - `tests/test_sample_check.py` (신규 표본 검증 온더플라이 단위 테스트)
+- **수정 절대 금지 파일:**
+  - `data/wafer_sensor_raw.csv` (원천 데이터 파일 수정/변조 절대 금지)
+  - `config/` 또는 시스템 글로벌 환경 설정 파일
+  - `.gitignore` (Git 트래킹 제외 목록 수정 금지 - 임시 파일은 `.git/info/exclude`로 통제)
+- **5대 금지사항 (Hard Constraints):**
+  - 원본 데이터를 프롬프트에 직접 복사하거나 메모리에 통째로 올려 OOM을 유발하는 비효율적 구현 금지
+  - 시크릿, 패스워드, 개인 식별 정보, API 키 코드 내 하드코딩 절대 금지
+  - 웹/서비스 연계 시 `localhost` 바인딩 금지 (반드시 `0.0.0.0` 준수)
+  - `.gitignore` 파일 수정 금지 (임시 파일은 `.git/info/exclude`로 통제)
+  - 시험 중 `git add` / `git commit` / `git reset` / `git clean` 실행 전면 금지 (테스트 코드는 커밋하지 않으며 test 파일은 untracked 상태 유지)
+
+### 3. [정의 / Definition] 도메인 용어·상태 및 입출력 스키마
+- **도메인 핵심 용어 및 단위 정의:**
+  - `1 row (센서 계측 레코드)`: 개별 웨이퍼의 특정 공정 챔버 1회 계측 단위 (고유 식별 복합키: `wafer_id` + `timestamp`)
+  - `유효 웨이퍼 (Valid Wafer)`: 필수 센서 데이터가 정상 수집되고 공정이 취소/폐기되지 않은 품질 검사 대상 건
+- **상태 코드(Status) 정의:**
+  - `ACTIVE`: 정상 진행 완료 공정 건 (모든 집계 및 수율 통계의 분모·분자에 포함)
+  - `CANCELLED`: 공정 취소 건 (수율 통계 및 분모에서 완전 제외)
+  - `DISCARDED` / `SCRAP`: 공정 폐기 또는 중복 계측 중 이전 타임스탬프 만료 건 (집계 분모에서 제외)
+- **입출력 데이터 스키마 및 저장 계약:**
+  - **입력 CSV (`data/wafer_sensor_raw.csv`):**
+    - `wafer_id`: string (웨이퍼 식별자, 필수)
+    - `lot_id`: string (로트 식별자)
+    - `timestamp`: string (ISO-8601 `YYYY-MM-DDTHH:MM:SSZ`)
+    - `sensor_temp`: float (공정 온도 센서값, null/-999 허용 불가)
+    - `defect_count`: int (검출 결함 수, `defect_count >= 0`)
+    - `status`: string (`ACTIVE` | `CANCELLED` | `DISCARDED` | `SCRAP`)
+  - **출력 CSV (`output/wafer_quality_report.csv`):**
+    - 컬럼 순서: `wafer_id`, `lot_id`, `sensor_temp`, `defect_count`, `grade`, `processed_at`
+    - 정렬 순서: `grade` 우선순위(`CRITICAL` -> `WARNING` -> `NORMAL`), 동일 등급 내 `wafer_id` 오름차순
+    - 수치 포맷: `sensor_temp`는 소수점 둘째자리 반올림(`round(x, 2)`), 결함 수는 정수형
+
+### 4. [기준 / Criteria] 비즈니스 판정 기준 및 경계값 (Acceptance & Boundary Criteria)
+- **실무자 DM 확인 비즈니스 규칙:**
+  - **규칙 1 (단계별 전처리 로깅):** 원본 건수 → 결측 제거 → 중복 제거 → 취소/이상치 제외 → 최종 건수 단계별 건수와 사유를 표준 출력에 의무 출력
+  - **규칙 2 (중복 제거 최신화):** 동일 `wafer_id` 중복 유입 시 최신 `timestamp` 1건만 유지
+  - **규칙 3 (취소/폐기 건 분모 제외):** `status == 'CANCELLED'` 또는 `DISCARDED`/`SCRAP`은 수율 및 집계 분모에서 배제
+- **수치 경계값 및 임계값(Threshold) 판정 기준 (부등호 엄격 준수):**
+  - `CRITICAL`: `sensor_temp >= 450.0` 또는 `defect_count >= 50`
+  - `WARNING`: `sensor_temp >= 400.0` 또는 `defect_count >= 20` (단, CRITICAL 조건 미충족 시)
+  - `NORMAL`: `sensor_temp < 400.0` 이고 `defect_count < 20`
+- **결측/이상치 처리 기준:**
+  - 센티널 결측치(`-999`, `-9999`, `null`, `NaN`) 및 물리적 불가 범위(온도 < 0.0 또는 > 1500.0)는 즉시 드롭 및 로깅
+- **충돌 시 우선순위:**
+  - 등급 판정 시 `CRITICAL` 조건이 `WARNING`보다 절대 우선
+
+### 5. [검증 / Verification] 실행할 검증 명령어
+- **1) 사전/사후 베이스라인 회귀 검증:**
+  - `python3 -m unittest discover -s tests -v` (기존 테스트 전원 통과 확인)
+- **2) 태스크 맞춤 온더플라이(On-the-fly) ad-hoc 테스트 (필수):**
+  - 실무자 DM 요구사항에 맞춘 온더플라이 단위 테스트(`tests/test_sample_check.py`) 작성 및 15건 표본(정상, 경계값 400.0/450.0, 결측치 -999, 취소 건, 중복 건) 전수 검증
+  - `python3 tests/test_sample_check.py` (통과 확인, *git commit 없이 untracked 유지*)
+- **3) 파이프라인 실행 및 단계별 로깅 검증:**
+  - `python3 src/pipeline.py data/wafer_sensor_raw.csv output/wafer_quality_report.csv`
+- **4) 출력 무결성 검사 (센티널 잔존 여부):**
+  - `grep -E -- "-999|null|NaN" output/wafer_quality_report.csv || echo "결측 센티널값 0건 확인 완료"`
+
+### 6. [정의 & 기준 / DoD] 완료 정의 (Definition of Done)
+- [ ] 파이프라인 실행 시 단계별 건수 로깅(Step 1~5)이 표준 출력에 누락 없이 출력될 것
+- [ ] `[정의]` 섹션의 출력 CSV 컬럼(`wafer_id`, `lot_id`, `sensor_temp`, `defect_count`, `grade`, `processed_at`) 및 정렬 순서 계약을 100% 준수할 것
+- [ ] `[기준]` 섹션의 임계값(400.0/450.0 등호) 및 취소/중복 제외 규칙이 정확히 반영될 것
+- [ ] 15건 수동 표본 검증 온더플라이 테스트(`tests/test_sample_check.py`)가 100% 통과할 것 (git commit 금지, untracked 유지)
+- [ ] `git diff --stat` 확인 시 지정된 수정 허용 파일(`src/pipeline.py`) 외 변경이 없을 것
+
+### 7. [종료 / End] 종료 조건, 멈춤 조건 및 완료 후 조치 (Exit & Stop Protocol)
+- **멈춤 조건 (Stop / Abort Condition) - 발견 즉시 구현 중단 및 대기:**
+  - 원천 데이터 스키마가 `wafer_sensor_raw.csv` 정의와 상이하거나 핵심 컬럼이 누락되어 있을 때
+  - 임계값 판정 기준이나 결측치 처리 정책에 모호성이 있어 자의적 해석이 필요할 때
+  - 사전 베이스라인 테스트 실패 원인이 불명확할 때
+  - *위 상황 발생 시 즉시 구현을 멈추고 `SUB_RESULT.md`에 [차단(블로커)] 사유 기록 후 메인 보고*
+- **완료 후 필수 조치 (Post-Completion Actions):**
+  1. `.probe-kit/runtime/SUB_RESULT.md` 요약 보고서 작성 (필수 항목 표준 양식 준수, 불필요한 줄 수 제한 없음)
+  2. `bash .probe-kit/scripts/handoff.sh log "sub done: wafer pipeline complete"` 실행 (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "wafer pipeline complete"`, 여의치 않을 시 `runtime/HANDOFF.md` 표에 직접 추가)
+  3. 메인 에이전트에게 완료 보고 후 **서브 터미널에서 즉시 `/clear` 실행** (누적 토큰 리셋)
 ```
 
 ---

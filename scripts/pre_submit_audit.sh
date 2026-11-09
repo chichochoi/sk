@@ -1,15 +1,30 @@
 #!/usr/bin/env bash
 # [참고] Windows PowerShell/CMD 환경에서는 Python 버전(scripts/pre_submit_audit.py)을 직접 실행할 수 있습니다.
 # scripts/pre_submit_audit.sh: 제출 직전(12:40) 종합 무감점 사전 점검 스크립트
-# - Git 변경 범위(diff --stat)
-# - 민감정보 평문 노출 스캔
-# - localhost/127.0.0.1 바인딩 경고
-# - 시스템 메모리 상태
-# - 임시/하네스 파일 git 노출 확인 및 클린업 안내
+# - [1] Git 변경 범위(diff --stat)
+# - [2] 민감정보 평문 노출 스캔
+# - [3] localhost/127.0.0.1 바인딩 경고
+# - [4] 시스템 메모리 상태
+# - [5] 임시/하네스 파일 git 노출 확인 및 클린업 안내
+# - [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
+# - [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)
 
 # 감사 스크립트는 실패 항목이 있어도 끝까지 완주해야 하므로 errexit(-e)는 사용하지 않음
 set -u
 set -o pipefail 2>/dev/null || true
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  echo "사용법: bash pre_submit_audit.sh [WORKSPACE_ROOT]"
+  echo "제출 직전(12:40) 종합 무감점 사전 점검 스크립트:"
+  echo "  [1] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)"
+  echo "  [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔"
+  echo "  [3] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검"
+  echo "  [4] 시스템 메모리 상태 점검"
+  echo "  [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검 (.git/info/exclude)"
+  echo "  [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)"
+  echo "  [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)"
+  exit 0
+fi
 
 # 워크스페이스 루트 절대 경로 자동 판별 및 작업 디렉토리 고정
 TARGET_DIR="${1:-}"
@@ -71,6 +86,7 @@ if command -v grep >/dev/null 2>&1; then
     --exclude-dir={.git,node_modules,__pycache__,.venv,venv,dist,build,.probe-kit,probe-kit} \
     --exclude="*.md" \
     --exclude="pre_submit_audit.sh" \
+    --exclude="pre_submit_audit.py" \
     "${WORKSPACE_ROOT}" 2>/dev/null || true)
 
   if [ -n "$LEAK_RESULTS" ]; then
@@ -95,6 +111,8 @@ if command -v grep >/dev/null 2>&1; then
   BINDING_FOUND=$(grep -rnEI "${BINDING_PATTERN}" \
     --include="*.py" --include="*.js" --include="*.ts" --include="*.sh" --include="*.yaml" --include="*.yml" \
     --exclude-dir={.git,node_modules,__pycache__,.venv,venv,dist,build,.probe-kit,probe-kit} \
+    --exclude="pre_submit_audit.sh" \
+    --exclude="pre_submit_audit.py" \
     "${WORKSPACE_ROOT}" 2>/dev/null || true)
 
   if [ -n "$BINDING_FOUND" ]; then
@@ -152,6 +170,29 @@ if [ -f "${WORKSPACE_ROOT}/HANDOFF.md" ] || [ -f "${WORKSPACE_ROOT}/.probe-kit/r
   HARNESS_PRESERVED=1
 fi
 
+DETECTED_SKILLS=""
+for sdir in "${WORKSPACE_ROOT}/.probe-kit/skills" "${WORKSPACE_ROOT}/probe-kit/skills" "${WORKSPACE_ROOT}/skills"; do
+  if [ -d "$sdir" ]; then
+    for f in "$sdir"/case[5-7]*.md; do
+      if [ -f "$f" ]; then
+        bname="$(basename "$f")"
+        if [ -z "$DETECTED_SKILLS" ]; then
+          DETECTED_SKILLS="$bname"
+        else
+          case "$DETECTED_SKILLS" in
+            *"$bname"*) ;;
+            *) DETECTED_SKILLS="${DETECTED_SKILLS}, ${bname}" ;;
+          esac
+        fi
+      fi
+    done
+  fi
+done
+
+if [ -n "$DETECTED_SKILLS" ]; then
+  echo "   ℹ️ [스킬 팩 감지] case5~7 고급 도메인 스킬 발견: ${DETECTED_SKILLS}"
+fi
+
 if [ "$HARNESS_PRESERVED" -eq 1 ]; then
   record_pass "하네스 영구 보존 확인됨 (의도/인지 가점 확보)"
 else
@@ -159,7 +200,87 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [7] 제출 직전 확인 지침
+# [7] 도메인 산출물 센티널 잔존 및 무결성 점검
+# --------------------------------------------------------------------------
+echo -e "\n📌 [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)"
+SENTINEL_PATTERN="((^|[^0-9])-9999([^0-9]|$)|(^|[^0-9])-999(\.0+)?([^0-9]|$)|<[[:space:]]*[Dd][Ll]|(^|[^a-zA-Z0-9_])(NaN|nan|NAN)([^a-zA-Z0-9_]|$))"
+
+OUTPUT_TARGETS=()
+for cand in "output" "outputs" "dist" "result" "results" "submission" "submissions" "artifacts"; do
+  if [ -d "${WORKSPACE_ROOT}/${cand}" ]; then
+    while IFS= read -r f; do
+      [ -n "$f" ] && OUTPUT_TARGETS+=("$f")
+    done < <(find "${WORKSPACE_ROOT}/${cand}" -type f ! -name ".*" 2>/dev/null || true)
+  fi
+done
+
+for ext in "csv" "tsv" "json"; do
+  for rf in "${WORKSPACE_ROOT}"/*."${ext}"; do
+    if [ -f "$rf" ]; then
+      bname="$(basename "$rf")"
+      case "$bname" in
+        package*.json|tsconfig*.json|jsconfig*.json|settings*.json|composer*.json|manifest*.json|config*.json)
+          ;;
+        *)
+          OUTPUT_TARGETS+=("$rf")
+          ;;
+      esac
+    fi
+  done
+done
+
+for prefix in "submission" "result" "prediction" "output"; do
+  for rf in "${WORKSPACE_ROOT}/${prefix}"*; do
+    if [ -f "$rf" ]; then
+      bname="$(basename "$rf")"
+      case "$bname" in
+        *.sh|*.py|*.md|*.txt|*.toml|*.yaml|*.yml)
+          ;;
+        *)
+          OUTPUT_TARGETS+=("$rf")
+          ;;
+      esac
+    fi
+  done
+done
+
+UNIQUE_TARGETS=()
+if [ ${#OUTPUT_TARGETS[@]} -gt 0 ]; then
+  while IFS= read -r line; do
+    [ -n "$line" ] && UNIQUE_TARGETS+=("$line")
+  done < <(printf '%s\n' "${OUTPUT_TARGETS[@]}" | sort -u)
+fi
+
+if command -v grep >/dev/null 2>&1; then
+  if [ ${#UNIQUE_TARGETS[@]} -eq 0 ]; then
+    record_pass "산출물 파일 없음 또는 생성 전 (산출물 센티널 누수 없음)"
+  else
+    SENTINEL_LEAKS=""
+    for tf in "${UNIQUE_TARGETS[@]}"; do
+      if [ -f "$tf" ]; then
+        match=$(grep -EnI "${SENTINEL_PATTERN}" "$tf" 2>/dev/null | head -n 5 || true)
+        if [ -n "$match" ]; then
+          while IFS= read -r mline; do
+            [ -n "$mline" ] && SENTINEL_LEAKS="${SENTINEL_LEAKS}${tf}:${mline}"$'\n'
+          done <<< "$match"
+        fi
+      fi
+    done
+
+    if [ -n "$SENTINEL_LEAKS" ]; then
+      echo "⚠️ [주의] 아래 산출물에서 처리되지 않은 결측/센티널(-999, < DL, NaN 등)이 발견되었습니다:"
+      printf "%s" "$SENTINEL_LEAKS" | head -n 10
+      record_warn "산출물에 센티널(-999, < DL, NaN 등)이 남아있습니다. 도메인 전처리/대체(Imputation)를 확인하세요."
+    else
+      record_pass "도메인 산출물 센티널 점검 통과 (${#UNIQUE_TARGETS[@]}개 파일 검사 완료, 결측/센티널 잔존 없음)"
+    fi
+  fi
+else
+  echo "⚪ [SKIP] grep 명령을 사용할 수 없어 산출물 센티널 점검을 건너뜁니다."
+fi
+
+# --------------------------------------------------------------------------
+# [8] 제출 직전 확인 지침
 # --------------------------------------------------------------------------
 echo -e "\n=========================================================="
 echo "🧹 [제출 직전(12:40) 필수 확인 지침]"
@@ -173,7 +294,7 @@ echo "   (에디터 미저장 파일은 제출 시점 채점기에 반영되지 
 echo "=========================================================="
 
 # --------------------------------------------------------------------------
-# [8] 감사 결과 요약 및 종료 코드 반환
+# [9] 감사 결과 요약 및 종료 코드 반환
 # --------------------------------------------------------------------------
 echo ""
 echo "=========================================================="

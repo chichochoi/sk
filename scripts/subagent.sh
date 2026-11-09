@@ -31,7 +31,7 @@ cmd_run() {
     SUB_GUIDE_INSTRUCTION="${SUB_AGENTS_FILE} 지침과 "
   fi
 
-  PROMPT="[SUB] ${SUB_GUIDE_INSTRUCTION}${SPEC_FILE} 의 지시사항을 읽고 지정된 범위의 코드 구현 및 테스트 검증을 수행한 뒤, 핵심 결과와 변경 사항 위주로 간결하고 명확하게 ${RESULT_FILE} 에 기록해줘 (불필요한 줄 수 제한 없음)."
+  PROMPT="[SUB] ${SUB_GUIDE_INSTRUCTION}${SPEC_FILE} 의 [시작·정의·기준·종료] 규격을 준수하여, 1) 사전 베이스라인 확인, 2) 정의·기준에 맞춘 허용 범위 내 코드 구현, 3) 태스크 맞춤 온더플라이 테스트 검증을 수행하고, 멈춤 조건 발생 시 즉시 중단 보고하며, 완료 후 ${RESULT_FILE} 에 핵심 결과와 변경 사항 위주로 기록해줘. (보고 완료 후 터미널 /clear 필수)"
 
   echo "=========================================================="
   echo "🚀 [Sub-Agent: GPT 5.6-terra medium] 작업 위임 시작"
@@ -78,24 +78,32 @@ cmd_guide() {
 
 1. 터미널 분담 원칙
    - [터미널 1 (좌측)] 메인 에이전트: Sol 6.1 xhigh
-     * 역할: 요구사항 분석, 실무자 DM 협의, 설계, TASK_SPEC.md 작성
+     * 역할: 요구사항 분석, 실무자 DM 협의, 아키텍처 설계, TASK_SPEC.md 작성
+     * 명세 규격: [시작 · 정의 · 기준 · 종료] 4대 축 기반 7대 표준 섹션 준수
      * 절대 금지: 직접 코드 수정, 대용량 파일 열람, 직접 테스트 실행
    - [터미널 2 (우측)] 서브 에이전트: GPT 5.6-terra medium
-     * 역할: 코드 구현, 단위/통합 테스트 실행, 디버깅, SUB_RESULT.md 작성
-     * 절대 금지: 메인 합의 범위를 벗어난 임의 파일 수정
+     * 역할: 사전 베이스라인 확인, 정의·기준 준수 구현, 온더플라이 테스트 검증, SUB_RESULT.md 작성
+     * 절대 금지: 메인 합의 범위를 벗어난 임의 파일 수정, 멈춤 조건 무시 자의적 판단
 
-2. 핸드셰이크 프로토콜
-   [단계 1] 메인(Sol)이 .probe-kit/runtime/TASK_SPEC.md 작성
-   [단계 2] 서브(GPT 5.6-terra) 실행:
-           - CLI 환경: bash .probe-kit/scripts/subagent.sh run
-           - TUI 환경: 터미널 2에 '[SUB] TASK_SPEC 실행해' 입력
-   [단계 3] 서브(GPT 5.6-terra)가 작업 완료 후 .probe-kit/runtime/SUB_RESULT.md 기록
-   [단계 4] 메인(Sol)이 SUB_RESULT.md 내용 검토 후 다음 태스크 진행
+2. 핸드셰이크 프로토콜 (4대 핵심 축 기반)
+   [단계 1 - 시작(Start)] 메인(Sol)이 .probe-kit/runtime/TASK_SPEC.md 작성
+                          (단일 목표, 진입 조건, 허용 범위, 5대 금지사항 선언)
+   [단계 2 - 시작(Start)] 서브(GPT 5.6-terra)가 착수 전 사전 베이스라인 테스트 PASS 확인
+                          (베이스라인 실패 또는 멈춤 조건 발생 시 즉시 구현 중단 및 보고)
+   [단계 3 - 정의·기준(Definition & Criteria)]
+                          서브가 TASK_SPEC에 명시된 도메인 스키마와 비즈니스 기준을 준수하여
+                          지정된 수정 허용 파일에 한해 국소 구현
+   [단계 4 - 검증(Verification)]
+                          서브가 베이스라인 회귀 검증 및 태스크 맞춤 온더플라이 ad-hoc 테스트
+                          (tests/test_*.py) 직접 작성·실행 (git commit 금지, untracked 유지)
+   [단계 5 - 종료(End)]   서브가 작업 완료 후 .probe-kit/runtime/SUB_RESULT.md 요약 보고서 기록
+                          → handoff.sh log 실행 → 메인(Sol)에게 보고 후 서브 터미널 /clear 실행
+   [단계 6 - 메인 검토]   메인(Sol)이 SUB_RESULT.md 및 git diff 검토 후 다음 태스크 진행
 
 3. ⚠️ 컨텍스트 초기화 (/clear) 타이밍 (토큰 70% 절감 핵심)
    - 터미널 2 (GPT 5.6-terra): 각 단위 작업(TASK_SPEC) 완료 및 SUB_RESULT.md 보고 직후
      반드시 '/clear' 실행! (새 작업 전 컨텍스트를 비워 환각 및 토큰 폭발 방지)
-   - 터미널 1 (Sol): 대단위 마일스톤 완료 후 핵심 결정을 NOTES.md에 기록한 뒤
+   - 터미널 1 (Sol): 대단위 마일스톤 완료 후 핵심 결정을 NOTES_TEMP.md에 기록한 뒤
      필요 시 '/clear' 실행
 ======================================================================
 EOF

@@ -6,6 +6,7 @@
 - **Case 7 적용 상황:** 문서 기반 질의응답 챗봇(RAG), 사내 문서 자동 분류기 구축 과제. 외부 API가 금지된 환경에서 환각(Hallucination) 통제 및 근거 인용이 핵심.
 - **Case 8 적용 상황:** 기술 도입, 아키텍처 선정, 정책 변경 등 복수의 대안을 비교 분석하여 경영진/의사결정권자에게 최적 권고안과 포기 사유, 실패 조건(리스크)을 보고하는 과제.
 - **Case 9 적용 상황:** 소과제가 2개 이상이거나, 데이터 분석 결과가 후속 웹 대시보드/API 개발로 이어지는 파이프라인 결합 과제.
+- **연계 스킬 교차 참조:** 반도체 밸류체인 DAG 수급 충격·병목 What-If 시뮬레이터(#14), 직무별 Level-Adaptive 설명 및 치명 오판 FAIL_INTERLOCK AI 튜터(#15), 멀티 페르소나 듀얼 웹앱 과제는 [.probe-kit/skills/case7_fde_valuechain_app.md](case7_fde_valuechain_app.md)를 적용하며, 식단 편성/추천 변형(#12)은 Case 5 및 Case 7 연계를 참조한다.
 
 ---
 
@@ -264,28 +265,122 @@ VERIFICATION_TEST_SUITE = [
 
 ## 9. 서브 에이전트(`GPT 5.6-terra medium`)에게 넘길 TASK_SPEC 예시
 
+메인 에이전트(`Sol 6.1 xhigh`)는 아래 [시작 · 정의 · 기준 · 종료] 4대 핵심 축 기반 7대 표준 규격의 명세서를 작성하여 서브 에이전트에게 구현을 위임한다.
+
 ```markdown
-# TASK_SPEC: 규정 기반 RAG 파이프라인 및 수동 검토 분류기 구현
+# [TASK_SPEC] 규정 기반 RAG 파이프라인 및 수동 검토 분류기 구현
 
-## 1. 작업 개요
-- 입력 파일: `docs/company_regulations.md`, `data/employee_requests.json`
-- 출력 파일: `output/decision_results.json`, `output/manual_review_queue.csv`
-- 담당 역할: 서브 에이전트 (GPT 5.6-terra medium)
+> **작성자:** 메인 아키텍트 (`Sol 6.1 xhigh`)  
+> **수신자:** 서브 워커 (`GPT 5.6-terra medium`)  
+> **핵심 원칙:** [시작 · 정의 · 기준 · 종료] 4대 축 기반 명세 준수 및 지정 범위 외 임의 수정 절대 금지. 완료 후 `.probe-kit/runtime/SUB_RESULT.md`에 핵심 결과와 변경 사항 위주의 명확한 요약 보고를 남길 것 (불필요한 줄 수 제한 없음).
 
-## 2. 세부 구현 요구사항
-1. 규정 파서 및 색인 (`src/policy_indexer.py`):
-   - `grep -n` 방식으로 조항별 라인 번호 색인 맵 생성.
-2. 판정 및 분류 파이프라인 (`src/evaluator.py`):
-   - 조건 만족 시 `AUTO_APPROVED` + 인용 조항(문서명, 라인 번호) 출력.
-   - 조건 미달 시 `AUTO_REJECTED` + 반려 사유 출력.
-   - 경계 케이스(한도 근접, 모호 조항, 서류 누락)는 `MANUAL_REVIEW`로 분류하고 `manual_review_queue.csv`에 기록.
-   - 규정에 없는 내용 질문 시 반드시 `"제공된 자료에서 확인할 수 없습니다"` 문자열 반환.
-3. 자작 검증 스크립트 (`tests/test_verification_suite.py`):
-   - 태스크 DM 요구사항 맞춤 온더플라이 테스트 작성 및 실행 (6개 케이스: 정상 2, 경계 2, 근거없음 1, 충돌 1, git commit 없이 untracked 유지).
+---
 
-## 3. 검증 기준
-- 온더플라이 태스크 맞춤 검증 세트 실행 시 100% 통과할 것 (git commit 없이 untracked 유지).
-- `output/decision_results.json`에 `grounding_citation` 필드가 누락 없이 채워질 것.
+### 1. [시작 / Start] 단일 목표 및 진입 조건 (Entry Conditions)
+- **단일 목표 (Single Goal):** 사내 규정 문서(`docs/company_regulations.md`) 색인 기반 판정 파이프라인 구축 및 불확실/경계 건에 대한 `needs_manual_review` 수동 검토 격리 큐(`output/manual_review_queue.csv`) 분리 생성
+- **선행 완료 상태 (Pre-conditions):**
+  - 규정 문서 `docs/company_regulations.md` 및 신청 데이터 `data/employee_requests.json` 원본 무결성 확인
+  - Git 작업 트리가 깨끗한 상태(uncommitted 변경 사항 없음)인지 확인
+- **사전 베이스라인 체크 (Baseline Pre-check):**
+  - 기존 규정 파서 또는 검증 스크립트 실행 결과 확인 (`pytest tests/test_verification_suite.py` 또는 기본 스모크 테스트)
+  - 사전 베이스라인 실패 시 코드 작성 시작을 금지하고 즉시 원인 보고
+
+### 2. [통제 / Scope] 대상 파일 범위 및 금지 사항 (Hard Constraints)
+- **수정 허용 파일:**
+  - `src/policy_indexer.py` (규정 조항 및 라인 색인화 모듈)
+  - `src/evaluator.py` (판정 및 수동 검토 분류기 파이프라인)
+  - `tests/test_verification_suite.py` (자작 검증 세트 6종 온더플라이 테스트)
+- **수정 절대 금지 파일:**
+  - `docs/company_regulations.md` (원천 규정 문서 1바이트 수정도 절대 금지)
+  - 시스템 글로벌 환경설정 파일
+  - `.gitignore` (Git 트래킹 제외 목록 수정 금지 - 임시 파일은 `.git/info/exclude`로 통제)
+- **5대 금지사항 (Hard Constraints):**
+  - 외부 상용 LLM API(OpenAI, Anthropic 등) 호출 금지 (환경 내 로컬 룰/프롬프트 파이프라인 준수)
+  - 규정 원문에 없는 내용을 상식이나 외부 지식으로 추측하여 환각(Hallucination) 답변 생성 금지
+  - 시크릿, 패스워드, 개인 식별 정보, API 키 코드 내 하드코딩 절대 금지
+  - `.gitignore` 파일 수정 금지 (임시 파일은 `.git/info/exclude`로 통제)
+  - 시험 중 `git add` / `git commit` / `git reset` / `git clean` 실행 전면 금지 (테스트 코드는 커밋하지 않으며 test 파일은 untracked 상태 유지)
+
+### 3. [정의 / Definition] 도메인 용어·상태 및 입출력 스키마
+- **규정/문서 청크(Chunk) 및 우선순위 메타데이터 정의:**
+  - `chunk_id`: `CH-NNN` (조항 단위 분할 고유 식별자)
+  - `doc_name`: 원천 규정 문서 파일명 (예: `company_policy_v2.md`)
+  - `article_no`: 조항 번호 (예: `제3조 2항`)
+  - `line_range`: 원천 텍스트 라인 번호 범위 (예: `L45-L52`)
+  - `priority_tier`: 조항 적용 우선순위
+    - `Tier 1 (최우선)`: 특정 직무/조건 대상 특별 예외 조항 ("단, ~는 제외")
+    - `Tier 2 (우선)`: 신규 개정 부칙 및 경과 조치 조항
+    - `Tier 3 (기본)`: 일반 원칙 조항
+- **판정 상태 및 수동 검토 플래그 정의:**
+  - `AUTO_APPROVED`: 필수 서류 완비 및 규정 요건 100% 충족 승인
+  - `AUTO_REJECTED`: 명백한 지원 제외 품목 또는 자격 미달 반려
+  - `needs_manual_review`: boolean
+    - `true`: 수동 검토 보류 대상 (`output/manual_review_queue.csv`에 격리 저장)
+    - `false`: 자동 판정 완료
+- **입출력 데이터 스키마 및 저장 계약:**
+  - **판정 결과 JSON (`output/decision_results.json`):**
+    ```json
+    [
+      {
+        "request_id": "REQ-2026-001",
+        "applicant_id": "EMP-1042",
+        "decision": "AUTO_APPROVED",
+        "needs_manual_review": false,
+        "grounding_citation": {
+          "doc_name": "company_policy_v2.md",
+          "article_no": "제3조",
+          "line_range": "L45-L52"
+        },
+        "reason": "기본 연간 복지 포인트 지원 요건 충족",
+        "processed_at": "2026-10-28T14:30:00+09:00"
+      }
+    ]
+    ```
+  - **수동 검토 격리 큐 CSV (`output/manual_review_queue.csv`):**
+    - 컬럼 순서: `request_id`, `applicant_id`, `amount`, `review_reason`, `evidence_doc`, `evidence_line`
+
+### 4. [기준 / Criteria] 비즈니스 판정 기준 및 경계값 (Acceptance & Boundary Criteria)
+- **실무자 DM 확인 비즈니스 규칙:**
+  - **규칙 1 (환각 원천 차단):** 규정집에 명시되지 않은 질문/항목은 절대 임의 추측하지 않고 반드시 `"제공된 자료에서 확인할 수 없습니다"` 문자열 반환
+  - **규칙 2 (안전 분리 격리):** 오지급 리스크 방지를 위해 조금이라도 모호한 신청 건은 즉시 `needs_manual_review: true`로 분류하여 사람에게 이관
+- **수치 경계값 및 판정 기준:**
+  - 신청 금액 경계: 승인 한도 금액의 100% 초과 105% 이하 구간은 즉시 `needs_manual_review: true` 처리
+  - 근속 기간 경계: 입사 3개월 미만 수습 사원은 월할 계산식 적용, 3개월 이상은 전액 인정
+- **충돌 시 우선순위:**
+  - 특별 예외 조항(Tier 1) > 개정 부칙(Tier 2) > 일반 기본 원칙(Tier 3)
+
+### 5. [검증 / Verification] 실행할 검증 명령어
+- **1) 규정 조항 색인화 실행 및 라인 번호 대조:**
+  - `python3 src/policy_indexer.py docs/company_regulations.md`
+- **2) 태스크 맞춤 온더플라이(On-the-fly) 자작 검증 세트 6종 테스트 (필수):**
+  - 실무자 DM 요구사항에 맞춘 온더플라이 테스트(`tests/test_verification_suite.py`) 작성 및 6개 케이스 검증
+    - 케이스 1~2: 정상 경로 질의 (명확한 조항 인용 및 승인)
+    - 케이스 3~4: 경계값 질의 (한도 근접 및 수동 검토 플래그 격리)
+    - 케이스 5: 근거 부재(Out-of-domain) 질의 ("제공된 자료에서 확인할 수 없습니다" 반환)
+    - 케이스 6: 충돌/함정 유도 질의 (우선순위 조항 적용 확인)
+  - `pytest tests/test_verification_suite.py -v` (통과 확인, *git commit 없이 untracked 유지*)
+- **3) 파이프라인 일괄 실행 및 결과 산출물 검사:**
+  - `python3 src/evaluator.py docs/company_regulations.md data/employee_requests.json`
+  - `jq '.[0]' output/decision_results.json` (`grounding_citation` 메타데이터 누락 여부 확인)
+  - `cat output/manual_review_queue.csv` (수동 검토 큐 정상 격리 확인)
+
+### 6. [정의 & 기준 / DoD] 완료 정의 (Definition of Done)
+- [ ] 자작 검증 세트 6개 케이스가 100% 통과할 것 (git commit 금지, untracked 유지)
+- [ ] `output/decision_results.json`의 모든 판정 항목에 `grounding_citation`(`doc_name`, `article_no`, `line_range`)이 누락 없이 채워질 것
+- [ ] 자료에 없는 질의 시 정확히 `"제공된 자료에서 확인할 수 없습니다"`가 반환될 것
+- [ ] 경계값/모호 건이 누락 없이 `output/manual_review_queue.csv`로 분리될 것
+- [ ] `git diff --stat` 확인 시 지정된 수정 허용 파일 외 변경이 없을 것
+
+### 7. [종료 / End] 종료 조건, 멈춤 조건 및 완료 후 조치 (Exit & Stop Protocol)
+- **멈춤 조건 (Stop / Abort Condition) - 발견 즉시 구현 중단 및 대기:**
+  - 규정 문서 내 조항 충돌 시 우선순위 해석이 모호하여 실무자 DM 질의가 불가피할 때
+  - 신청 데이터 스키마 불일치로 판정 로직 적용이 불가능할 때
+  - 사전 베이스라인 테스트 실패 원인이 불명확할 때
+  - *위 상황 발생 시 즉시 구현을 멈추고 `SUB_RESULT.md`에 [차단(블로커)] 사유 기록 후 메인 보고*
+- **완료 후 필수 조치 (Post-Completion Actions):**
+  1. `.probe-kit/runtime/SUB_RESULT.md` 요약 보고서 작성 (필수 항목 표준 양식 준수, 불필요한 줄 수 제한 없음)
+  2. `bash .probe-kit/scripts/handoff.sh log "sub done: policy RAG and review queue complete"` 실행 (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "policy RAG and review queue complete"`, 여의치 않을 시 `runtime/HANDOFF.md` 표에 직접 추가)
+  3. 메인 에이전트에게 완료 보고 후 **서브 터미널에서 즉시 `/clear` 실행** (누적 토큰 리셋)
 ```
 
 ---

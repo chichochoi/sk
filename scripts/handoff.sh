@@ -395,8 +395,8 @@ EXTRACTED_DM_QA=""
 if [ -n "${NOTES_FILE}" ] && [ -f "${NOTES_FILE}" ]; then
   EXTRACTED_DECISIONS="$(awk '/^##[[:space:]]*4\.[[:space:]]*핵심[[:space:]]*의사결정/{flag=1; next} /^##[[:space:]]*5\./{flag=0} flag' "${NOTES_FILE}" | grep -v '______' | sed -e '/^[[:space:]]*$/d' || true)"
   EXTRACTED_DM_QA="$(awk '
-    /^##[[:space:]]*3\.[[:space:]]*(실무자|현업|DM|질의응답|질의|Q&A|확인)/ { flag=1; next }
-    /^##[[:space:]]*4\./ { flag=0 }
+    /^##[[:space:]]*([0-9]+\.)?[[:space:]]*(실무자|현업|DM|질의응답|질의|Q&A|확인)/ { flag=1; next }
+    flag && /^##[[:space:]]/ { flag=0; exit }
     flag
   ' "${NOTES_FILE}" | grep -E '^[[:space:]]*(\||[-*]([[:space:]]|\[)|[0-9]+\.)' | grep -v '______' | sed -e '/^[[:space:]]*$/d' || true)"
 

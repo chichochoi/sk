@@ -9,14 +9,26 @@
 1. **직접 코드 구현 및 반복 디버깅 금지 (토큰 절약 핵심):**
    - 당신은 비즈니스 소스 코드나 대용량 데이터 파일을 직접 읽고 수정하거나, 긴 테스트 에러 로그를 반복 디버깅하는 데 토큰을 소모하지 마세요.
    - 초기 탐색은 `.probe-kit/runtime/EDA_SUMMARY.txt`와 `README.md`, 그리고 사용자가 정리한 `NOTES_TEMP.md`(실무자 DM 확인 조건)만 읽고 수행하세요.
-2. **작업 명세서(`.probe-kit/runtime/TASK_SPEC.md`) 작성으로 위임:**
+   - **온디맨드 케이스 스킬 라우팅 (Case 1~7 선별 로드 & 토큰 예산 절대 보호):**
+     * 초기 탐색 시 `.probe-kit/runtime/EDA_SUMMARY.txt`의 `[CASE_SIGNAL]`과 과제 지시서(`README.md`) 키워드를 먼저 확인하여 이번 과제의 유형을 **Case 1~7(또는 복합형)** 중 하나로 신속히 분류합니다.
+     * **[토큰 보호 절대 규칙] 7개 스킬 파일을 한꺼번에 사전 로드(Preload)하는 행위는 엄격히 금지됩니다.** 메인(`Sol 6.1 xhigh`)의 컨텍스트 윈도우와 토큰 예산을 보호하기 위해, 판별된 유형과 일치하는 **단 1~2개의 매칭 스킬 파일만 온디맨드로 선별 로드**하세요:
+       - **Case 1 (데이터 파이프라인/배치/정제):** `.probe-kit/skills/case1_data_pipeline.md`
+       - **Case 2 (실무형 웹 서비스/대시보드/0.0.0.0):** `.probe-kit/skills/case2_web_service.md`
+       - **Case 3 (레거시 코드 디버깅/인터페이스 불변):** `.probe-kit/skills/case3_legacy_debug.md`
+       - **Case 4 (사내 규정 RAG/업무 자동화/수동 검토 플래그):** `.probe-kit/skills/case4_policy_rag_doc.md`
+       - **Case 5 (수리·조합 최적화/CSP/배차·스케줄링):** `.probe-kit/skills/case5_optimization_csp.md`
+       - **Case 6 (반도체 CoA·SPC 통계/웨이퍼 오버레이/재무 정규화):** `.probe-kit/skills/case6_semicon_data_spc.md`
+       - **Case 7 (FDE/풀스택 밸류체인 시뮬레이터 & 교육 AI 웹앱):** `.probe-kit/skills/case7_fde_valuechain_app.md`
+2. **작업 명세서(`.probe-kit/runtime/TASK_SPEC.md`) 작성으로 위임 — [시작 · 정의 · 기준 · 종료] 4대 축 체계화:**
    - 사용자가 모듈 구현이나 수정을 요청하면, 직접 비즈니스 코드를 고치는 대신 **서브 에이전트(`GPT 5.6-terra medium`)가 읽고 즉시 실행할 수 있는 `.probe-kit/runtime/TASK_SPEC.md`** 파일만 작성(또는 갱신)하세요.
-   - `TASK_SPEC.md`에는 반드시 다음 5가지만 간결하게 명시합니다:
-     1) **이번 단계 목표 (단일 모듈/기능)**
-     2) **수정/생성할 정확한 파일 경로 및 함수 범위**
-     3) **절대 지켜야 할 현업 예외 조건(Edge Cases) 및 기존 인터페이스 제약**
-     4) **금지 사항 (오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버는 `0.0.0.0` 바인딩 필수, git add/commit/reset/clean 금지)**
-     5) **서브 에이전트가 실행해야 할 구체적인 검증/테스트 명령어 (태스크별 DM 요구사항 검증을 위한 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지, SUB_RESULT 보고)**
+   - `TASK_SPEC.md`에는 반드시 **[시작 · 정의 · 기준 · 종료]** 4대 핵심 개념을 중심으로 다음 7대 표준 섹션을 체계적으로 명시합니다:
+     1) **[시작 / Start] 이번 단계 단일 목표 및 진입 조건:** 이번 단계 단일 모듈 MVP 목표, 직전 단계 선행 완료 상태, 착수 전 기존 베이스라인 테스트 100% PASS 확인
+     2) **[통제 / Scope] 대상 파일 범위 및 금지 사항:** 수정 허용 파일·함수 경로, 수정 절대 금지 파일(기존 라우터, 글로벌 설정, `.gitignore` 등), 5대 금지 사항(오버엔지니어링 전면 금지, API 키·시크릿 하드코딩 금지, 웹 서버 `0.0.0.0` 바인딩 필수, `.gitignore` 수정 금지, 시험 중 `git add/commit/reset/clean` 실행 전면 금지)
+     3) **[정의 / Definition] 도메인 용어·상태 및 입출력 스키마 정의:** 도메인 핵심 용어 정의(비즈니스 단위 레코드 의미 등), 상태 코드(Status/State) 정의(ACTIVE/CANCELLED/DISCARDED 등), 입·출력 데이터 스키마 및 계약(필드 타입, 반올림, 정렬 순서 등)
+     4) **[기준 / Criteria] 비즈니스 판정 기준 및 경계값:** 실무자 DM 확인 비즈니스 규칙(취소 건 분모 제외, 중복 주문 최신화 등), 수치 경계값/임계값(Threshold) 기준(이상/이하 vs 초과/미만 부등호), 결측치·이상치 처리 및 격리 기준, 기준 충돌 시 우선순위(처리 속도보다 데이터 정합성 최우선)
+     5) **[검증 / Verification] 구체적 검증 명령어:** 베이스라인 회귀 검증 명령, 태스크 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행 명령(tests/test_*.py 즉석 작성, 고정 템플릿 금지, git commit 없이 untracked 유지), 정상 경로 및 예외/경계값 검증 명령 (도메인 표본 대조 스크립트 활용: Case 1 `sample_check_template.py`, Case 5 `sample_check_opt.py`, Case 6 `sample_check_spc.py`)
+     6) **[정의 & 기준 / DoD] 완료 정의 (Definition of Done):** 베이스라인 100% 통과, 입·출력 스키마/타입 계약 일치, 비즈니스 규칙 및 경계값 조건 통과, 온더플라이 테스트 통과, `git diff --stat` 허용 파일 범위 준수
+     7) **[종료 / End] 종료 조건, 멈춤 조건 및 완료 후 조치:** 멈춤 조건(Stop Condition: 범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 임의 추측 구현을 즉시 멈추고 `SUB_RESULT.md`에 [차단(블로커)] 사유 보고 후 대기), 완료 후 조치(`.probe-kit/runtime/SUB_RESULT.md` 요약 보고, `bash .probe-kit/scripts/handoff.sh log "sub done: <요약>"` 기록, 서브 터미널에서 즉시 `/clear` 실행하여 누적 토큰 0 리셋)
 3. **서브 에이전트 호출 및 결과 검수:**
    - `TASK_SPEC.md` 작성 후, `bash .probe-kit/scripts/subagent.sh` 실행을 제안하거나 사용자가 서브 터미널(`GPT 5.6-terra medium`)에서 실행하도록 안내하세요.
    - 서브 작업이 끝나면 전체 코드를 다 읽지 말고 `.probe-kit/runtime/SUB_RESULT.md`와 `git diff --stat`만 확인하여 다음 단계 지시서(`TASK_SPEC.md`)를 수립하세요.
@@ -77,8 +89,14 @@
 1. **터미널 2개 분리 운용 (가장 확실하고 빠른 방법):**
    - **터미널 1 (`Main - Sol 6.1 xhigh`):** 아키텍트 전용. 비즈니스 코드를 직접 짜게 하지 말고, 구조 진단·작업 분할·`.probe-kit/runtime/TASK_SPEC.md` 작성·최종 제출 문서 초안 작성만 수행합니다.
    - **터미널 2 (`Sub - GPT 5.6-terra medium`):** 워커 전용. `TASK_SPEC.md`를 읽고 실제 파일 수정·단위 테스트 실행·디버깅만 수행하게 한 뒤, 모듈 1개가 끝날 때마다 `/clear`를 입력해 컨텍스트를 초기화합니다 (토큰 절약 핵심).
-2. **모든 `TASK_SPEC.md`에 필수 요소 강제:**
-   - ① 이번 단계 목표, ② 변경 파일 범위, ③ 유지할 제약(담당자 DM 조건), ④ 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, git add/commit/reset/clean 금지), ⑤ 검증 테스트 명령어(매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행 요구 필수: 고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지, SUB_RESULT 보고)를 반드시 명시합니다.
+2. **모든 `TASK_SPEC.md`에 [시작 · 정의 · 기준 · 종료] 4대 핵심 축 필수 강제:**
+   - ① **[시작(Start)]** 이번 단계 단일 목표, 선행 완료 상태, 사전 베이스라인 100% 통과 확인
+   - ② **[통제(Scope)]** 변경 허용/절대 금지 파일 범위, 절대 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 `0.0.0.0` 바인딩 필수, `.gitignore` 수정 금지, `git add/commit/reset/clean` 전면 금지)
+   - ③ **[정의(Definition)]** 도메인 핵심 용어, 상태 코드(Status/State), 입·출력 데이터 스키마 및 계약
+   - ④ **[기준(Criteria)]** 실무자 DM 확인 비즈니스 규칙, 수치 경계값/임계값 판정 기준, 결측치·이상치 처리 및 격리 기준, 충돌 시 우선순위(데이터 정합성 최우선)
+   - ⑤ **[검증(Verification)]** 베이스라인 회귀 검증, 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행(고정 템플릿 금지, tests/test_*.py 등 ad-hoc 작성, git commit 없이 untracked 유지), 정상 및 예외/경계값 검증 명령
+   - ⑥ **[DoD]** 완료 정의 체크리스트(베이스라인 통과, 스키마 일치, 비즈니스 규칙/경계값 검증, diff 범위 준수)
+   - ⑦ **[종료(End)]** 멈춤 조건(범위 밖 수정·모호성 발견 시 임의 추측 구현 즉시 중단 및 보고 대기), `SUB_RESULT.md` 요약 보고, `handoff.sh log "sub done: ..."` 갱신, 서브 터미널 즉시 `/clear` 실행(누적 토큰 0 리셋)
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:**
    - 한 번에 하나씩 쪼개서 서브에 위임하고, 시키지 않은 거창한 기능(불필요한 쓰기 가드, 복잡한 캐싱/패턴 등)을 넣지 못하도록 통제합니다.
 4. **버그 수정도 '원인 보고 → 범위 합의' 후에만:**

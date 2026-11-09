@@ -13,13 +13,13 @@
 | :--- | :--- | :--- | :--- |
 | **10:00** | **[1단계]** 원클릭 하네스 설치 | 외부 Git 차단 및 하네스 자동 장착 | `git clone ... && bash init.sh` |
 | **10:02** | **[2단계]** 환경 검증 & 듀얼 터미널 | 무토큰 EDA 확인 및 Sol/GPT 5.6-terra 분리 기동 | `git status` / `EDA_SUMMARY` / `codex` |
-| **10:05** | **[3단계]** 문제 탐색 & Case 식별 | 과제 문제 README 분석 및 스킬 매핑 | 메인 프롬프트 (`NOTES_TEMP.md` 기록) |
+| **10:05** | **[3단계]** 문제 탐색 & Case 식별 | 과제 README·[CASE_SIGNAL] 분석 및 Case 1~7 스킬 매핑 | 메인 프롬프트 (`NOTES_TEMP.md` 기록) |
 | **10:10** | **[4단계]** DM 실무자 만능 질의 | 목표, 입출력, 결측/중복, 인터페이스 질의 | 우측 DM 창 (범용 템플릿) |
-| **10:20** | **[5단계]** 케이스별 DM 질문 질의 | `dm_question.md` 기반 심층 질문 및 기록 | `.probe-kit/dm_question.md` |
+| **10:20** | **[5단계]** 케이스별 DM 질문 질의 | Case 1~7 / #6~#15 전용 DM 질문 및 스킬 온디맨드 로드 | `.probe-kit/dm_question.md` |
 | **10:25** | **[6단계]** 솔루션 브레인스토밍 | N단계 분할 ➔ 트레이드오프 ➔ 주도적 결정 | 3-Part 메인 프롬프트 & 결정 로깅 |
 | **10:35** | **[6.5단계]** 구현 & 온더플라이 검증 | `TASK_SPEC` 발행 ➔ 서브 구현 ➔ `/clear` | 터미널 1 ↔ 터미널 2 핑퐁 반복 |
 | **상시** | **[7단계]** 다음 단계 전환 시그널 | ALL PASS / FAIL / Drift 상황별 액션 | 전환 시그널 판정표 |
-| **12:20** | **[8단계]** 마무리 검증 & 사전 감사 | 코드 동결 ➔ 사전 감사 ➔ 하네스 디스크 보존 | `pre_submit_audit.py` / `.sh` |
+| **12:20** | **[8단계]** 마무리 검증 & 사전 감사 | 코드 동결 ➔ Case 1/5/6/7 표본 검증 ➔ 사전 감사 | `sample_check_*.py` / `pre_submit_audit.py` |
 | **12:45** | **[9단계]** 실무자 DM 최종 완료 보고 | 검증 결과 보고 및 만족도 확인 요청 | 메인 초안 작성 ➔ 우측 DM 전송 |
 | **12:47** | **[10단계]** 제출 보고서 3대 요소 점검 | [판단·근거]-[검증]-[남은 한계] 점검 | 메인 보고서 검토 프롬프트 |
 | **12:50** | **[11단계]** 보안 취약점 전수 점검 | API 키, 0.0.0.0 바인딩, 로그 누출 점검 | 메인 보안 감사 프롬프트 |
@@ -64,15 +64,19 @@ git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe
 # 1. Git 격리 검증 (Untracked files에 .probe-kit, NOTES_TEMP.md 등이 나타나지 않아야 함)
 git status
 
-# 2. 무토큰 데이터/코드 구조 요약 확인
+# 2. 무토큰 데이터/코드 구조 요약 및 [CASE_SIGNAL] 확인
 cat .probe-kit/runtime/EDA_SUMMARY.txt
 
 # 3. Handoff 로깅 동작 검증 (에이전트가 실행되는 터미널과 같은 셸에서 확인)
 bash .probe-kit/scripts/handoff.sh log "검증" "하네스 환경 검증" || python3 .probe-kit/scripts/handoff.py log "검증" "하네스 환경 검증"
+
+# 4. 기존 프로젝트 베이스라인 테스트 1회 사전 실행 (초기 건강 상태 확인)
+pytest || npm test || python3 -m unittest discover || echo "기존 단위 테스트 스위트 없음 (확인 완료)"
 ```
 
 > ⚠️ **웹 터미널 붙여넣기:** 터미널 명령어 입력 시 `Ctrl+V` 대신 반드시 `Ctrl+Shift+V`(또는 우클릭 > 붙여넣기)를 사용하세요.  
 > 💡 **비-Git 워크스페이스 안내:** 워크스페이스가 Git 저장소가 아닌 일반 디렉토리(예: `/home/user`)인 경우, `init.sh`에서 `.git/info/exclude` 등록 단계가 경고와 함께 안전하게 건너뛰어집니다(정상 동작). 이 경우 `git status` 격리 확인은 생략하고 바로 `cat .probe-kit/runtime/EDA_SUMMARY.txt`부터 확인하세요.  
+> 💡 **[CASE_SIGNAL] 단서 포착:** `EDA_SUMMARY.txt` 상단과 데이터 요약에서 파일명, 컬럼 목록, 결측치 센티널(`-999`, `< DL`), 좌표 컬럼(`x`, `y`, `dx`, `dy`) 등의 시그널을 확인하여 이번 과제가 Case 1~7 중 어느 방향인지 1차 감을 잡습니다.
 > 💡 **Handoff 실행 규칙:** handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가.
 
 ### 🖥️ 듀얼 터미널 기동 및 모델 선택
@@ -102,13 +106,13 @@ codex
 > ⚠️ **주의:** `Astra` 모델이나 자동 화면 조작(`Computer Use`)은 규정상 금지되어 있으며 사용 시 실격 처리됩니다.
 
 ✅ **완료 시그널:**
-`git status` 출력 시 하네스 파일이 노출되지 않고, `EDA_SUMMARY.txt`에서 컬럼/테스트 파일 목록을 확인했으며, 터미널 1(`Sol 6.1 xhigh`)과 터미널 2(`GPT 5.6-terra medium`)가 대기 상태인 것. (진행 중 문제가 발생하면 [13. 비상 상황 트러블슈팅](#13-비상-상황-트러블슈팅-if-something-breaks) 참조)
+`git status` 출력 시 하네스 파일이 노출되지 않고, `EDA_SUMMARY.txt`에서 컬럼/테스트 파일 목록 및 `[CASE_SIGNAL]` 단서를 확인했으며, 터미널 1(`Sol 6.1 xhigh`)과 터미널 2(`GPT 5.6-terra medium`)가 대기 상태인 것. (진행 중 문제가 발생하면 [13. 비상 상황 트러블슈팅](#13-비상-상황-트러블슈팅-if-something-breaks) 참조)
 
 ---
 
 ## 3단계: ⏱ 10:05 ~ 10:10 | 👉 과제 지시서(README.md) 탐색 및 Case·스킬 식별
 
-과제 루트의 문제 지시서(`README.md`)를 메인 에이전트가 읽고 어떤 Case에 해당하는지 판별하도록 지시합니다.  
+과제 루트의 문제 지시서(`README.md`)와 `.probe-kit/runtime/EDA_SUMMARY.txt` 상단의 `[CASE_SIGNAL]`을 메인 에이전트가 읽고 어떤 Case에 해당하는지 판별하도록 지시합니다.  
 *(⚠️ 주의: 키트의 README가 아니라 **시험장 과제 루트의 문제 README.md**를 읽게 해야 합니다.)*
 
 터미널 1 (`Sol 6.1 xhigh`)에 아래 프롬프트를 복사하여 입력합니다:
@@ -116,24 +120,34 @@ codex
 ```text
 [MAIN] 먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.
 아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
-현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt 를 분석해줘. (키트 내부 README가 아닌 과제 문제 지시서여야 함)
-다음 항목을 핵심 위주로 명확하게 브리핑하고, 워크스페이스 루트의 NOTES_TEMP.md 에 기록해줘:
-1. 이번 과제가 아래 Case 1~4 중 어느 유형에 해당하는지 판별하고, 연동할 .probe-kit/skills/ 스킬 파일 경로를 지정해줘:
-   - Case 1: 데이터 정제·집계·이상치/반도체 수율 판정 -> .probe-kit/skills/case1_data_pipeline.md
-   - Case 2: 실무형 웹 서비스 / 웹앱 / 대시보드 구축 -> .probe-kit/skills/case2_web_service.md
-   - Case 3: 기존 레거시 코드베이스 디버깅 및 기능 확장 -> .probe-kit/skills/case3_legacy_debug.md
-   - Case 4: 규정 색인·판정, 사내 업무 자동화, RAG -> .probe-kit/skills/case4_policy_rag_doc.md
-   - 위 4개의 케이스에 없는거면 없다고 말해.(케이스 복합이면->~구조의 복합이라 스킬 뭐와 뭐를 쓸지 나에게 보고)
-2. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
-3. 절대 변경하면 안 되는 기존 시스템의 불변 제약 (API 규격, 인증 방식, 함수 시그니처 등)
-4. 불필요한 오버엔지니어링을 배제한 최소 핵심 기능(MVP) 목표
+현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑하고 워크스페이스 루트의 NOTES_TEMP.md 에 기록해줘: (키트 내부 README가 아닌 과제 문제 지시서여야 함)
+1. EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 과제 지시서 키워드를 분석하여 이번 과제가 Case 1~7 (또는 복합형 Case 9) 중 어느 유형인지 분류하고, 연관된 SK하이닉스 도메인 아키타입(#6~#15, 예: #6 시장전략/경쟁사, #7 원소재 CoA/SPC, #8 통근버스 VRP, #9 식단 CSP, #10 CCTV 기하, #13 포토/웨이퍼 오버레이, #14 밸류체인 시뮬레이터, #15 교육 튜터 등)과 매칭해줘.
+2. 매칭된 단 1~2개의 전용 스킬 파일(.probe-kit/skills/caseX_*.md)과 .probe-kit/dm_question.md의 해당 질문 카드/섹션 이름을 선택해줘. (Sol 토큰 예산 보호를 위해 7개 스킬 전체를 읽지 말고 판별된 스킬 1~2개만 온디맨드로 로드하고, dm_question.md에서 복사할 정확한 섹션 또는 카드 명칭을 출력해줘)
+3. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
+4. 절대 변경하면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 규격, 함수 시그니처, 파일 경로 등)
+5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 핵심 기능(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
+6. 기존 단위 테스트 스위트가 존재한다면 사전 베이스라인 실행 결과(PASS/FAIL 및 실패 내역)도 NOTES_TEMP.md에 함께 기록해줘.
 브리핑과 NOTES_TEMP.md 기록이 끝나면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 완료"
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "탐색" "Case 식별 및 초기 분석 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
 
+### 🗺️ 1-Page Quick Router (Case 1~7 및 SK하이닉스 #6~#15 즉시 매핑표)
+
+`EDA_SUMMARY.txt` 상단의 `[CASE_SIGNAL]` 및 과제 지시서의 키워드를 대조하여, 로드할 스킬과 DM 질문, 검증 도구를 즉시 결정합니다:
+
+| 키워드 / 데이터 특징 | 추정 과제 / 페르소나 | 로드할 스킬 (`.probe-kit/skills/...`) | DM 질문 섹션 (`.probe-kit/dm_question.md`) | 검증 스크립트 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Case 1**<br>CSV/JSON, wafer_id, lot_id, 센티널(-999), 결측치·중복행, 수율(Yield), 배치 집계·정제 | 범용 제조 데이터 정제, 수율 판정, 배치 집계 파이프라인 | `case1_data_pipeline.md` | `dm_question.md`<br>▶ **Case 1 섹션** (행 정의, 결측/중복, 경계값, 집계 단위) | `python3 .probe-kit/scripts/sample_check_template.py`<br>(또는 `--demo`) |
+| **Case 2**<br>Web/HTML, REST API, 대시보드, 등록/수정 폼, 단일 유저 동선 MVP, 0.0.0.0 바인딩 | 사내 운영 웹 서비스, 현황 모니터링 대시보드 구축 | `case2_web_service.md` | `dm_question.md`<br>▶ **Case 2 섹션** (핵심 유저 동선, 권한/인증, API 불변, 영속성) | `0.0.0.0:포트` 바인딩 + `curl` / 플랫폼 내장 Browser 직접 클릭·조작 |
+| **Case 3**<br>기존 `tests/`, 레거시 코드베이스, API 엔드포인트 유지, 하위 호환성, Zero Regression | 기존 레거시 시스템 버그 픽스, 신규 파라미터/기능 확장 | `case3_legacy_debug.md` | `dm_question.md`<br>▶ **Case 3 섹션** (인터페이스 불변, 기존 실패 테스트 분별, 회귀 방지) | `pytest` / `npm test`<br>(베이스라인 100% PASS 유지) |
+| **Case 4**<br>규정집/매뉴얼(PDF/TXT/MD), RAG, 업무 자동화, 수동 검토 큐, Strict Grounding, 환각 거절 | 사내 복지/인사 규정 판정기, 정책 대안 비교 보고서 | `case4_policy_rag_doc.md` | `dm_question.md`<br>▶ **Case 4 섹션** (업무 자동화 경계, 수동 검토 큐, 규정 충돌 우선순위) | 테스트 쿼리 15건 근거 조항 라인 대조 + 환각 거절 문구 검증 |
+| **Case 5**<br>배차/배치/편성/스케줄링, VRP, ILP, CSP, Hard vs Soft 제약, Makespan, 28초 타임아웃 | **[기출 3종 + 미출제 4종]**<br>• **#8 윤서영 책임** (통근버스 VRP/CSP)<br>• **#9 이하린 영양사** (월간 식단 CSP/ILP)<br>• **#10 정유진 TL & #11 Jordan** (CCTV Set Cover)<br>• **#13-A 이도윤 TL** (노광기 배정 & PM 스케줄링)<br>• **#7-A 박서연 책임** (원자재 공급사 쿼터 LP)<br>• **#6-B 김현우 책임** (HBM/DDR5 Product Mix LP)<br>• **#15-B 윤지안 TL** (선수지식 DAG 커리큘럼) | `case5_optimization_csp.md` | `dm_question.md`<br>▶ **Case 5 섹션**<br>(또는 페르소나별 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_opt.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
+| **Case 6**<br>화학 단위(ppm/ppb/ppt), `< DL`, Cpk, Nelson Rules, PCN, 좌표 $(x, y)$, $\Delta x, \Delta y$, 6-Param OLS, ADI/AEI, FY/CY 보간, Bit*ASP, DOI | **[반도체 특화 3종]**<br>• **#7-B 박서연 책임** (원소재 CoA 성적서, Cpk, PCN 3단 인터락)<br>• **#13-B 이도윤 TL** (웨이퍼 Overlay 6-Param OLS, ADI REWORK vs AEI SCRAP)<br>• **#6-A 김현우 책임** (경쟁사 실적 CY 보간, 환율 분리, Waterfall, DOI) | `case6_semicon_data_spc.md` | `dm_question.md`<br>▶ **Case 6 섹션**<br>(또는 반도체 도메인 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_spc.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
+| **Case 7**<br>밸류체인 DAG 수급 충격, HBM/CoWoS 후공정 병목 클리핑, 오개념 진단 튜터, `FAIL_INTERLOCK`, Role Switcher, `0.0.0.0` | **[FDE / Full-Stack 웹앱]**<br>• **#14 한서진 TL** (밸류체인 수급 충격 전파 What-If 시뮬레이터)<br>• **#15 윤지안 TL** (반도체 지식그래프 오개념 진단 AI 튜터)<br>• **#14+#15 듀얼 모드** (전략 분석가 ↔ 산업 교육자 통합 웹앱)<br>• **#6-C / #7-C / #13-C / #12** (FDE 인터랙티브 대시보드 확장) | `case7_fde_valuechain_app.md`<br>(보조: `case2_web_service.md`, `case4_policy_rag_doc.md`) | `dm_question.md`<br>▶ **Case 7 섹션**<br>(또는 FDE 밸류체인 특화 질문 카드) | `0.0.0.0:8000` 백그라운드 바인딩<br>+ `curl /api/simulate`<br>+ 내장 Browser `Role Switcher`·슬라이더·`FAIL_INTERLOCK` 직접 점검 |
+
 ✅ **완료 시그널:**
-메인 에이전트가 과제 유형(Case 1~4)과 매핑된 스킬 파일명을 보고하고, `NOTES_TEMP.md`에 문제 개요가 기록되며, `HANDOFF.md`에 탐색 로그가 추가됨.
+메인 에이전트가 과제 유형(Case 1~7 및 매핑 페르소나 #6~#15)과 로드할 스킬 파일명을 보고하고, `NOTES_TEMP.md`에 문제 개요가 기록되며, `HANDOFF.md`에 탐색 로그가 추가됨.
 
 ---
 
@@ -202,25 +216,51 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 
 ### 👉 수행 행동:
 1. 에디터에서 `.probe-kit/dm_question.md` 파일을 엽니다.
-2. 3단계에서 식별한 Case 섹션(Case 1, Case 2, Case 3, Case 4)으로 이동합니다.
-3. 해당 Case에 특화된 심층 질문을 복사하여 우측 DM 창에 질문합니다.
-4. 실무자 답변을 받는 즉시 워크스페이스 루트의 `NOTES_TEMP.md`를 열고 `## 1. 실무자 DM 확인 사항` 섹션에 아래 형식으로 기록합니다:
+2. 3단계에서 식별한 Case(1~7, 복합형 Case 9) 또는 페르소나(#6~#15) 섹션으로 이동합니다 (아래 3초 직행 색인표 참조).
+3. **식별된 Case(1~7) 또는 페르소나(#6~#15)에 해당하는 `.probe-kit/dm_question.md` 전용 질문 카드를 복사해 DM하고, `.probe-kit/skills/caseX_*.md`를 온디맨드로 딱 1개(복합형은 최대 2개)만 로드한다.**
+   > ⚠️ **토큰 절약 및 환각 방지 필수 규칙:** 모든 스킬을 한꺼번에 컨텍스트에 쏟아붓지 마세요. 식별된 단 1개(복합형은 최대 2개)의 전용 스킬만 온디맨드로 참조시켜야 에이전트의 컨텍스트 오염을 원천 차단할 수 있습니다.
+
+#### 📇 `.probe-kit/dm_question.md` 3초 직행 색인표 (Exact Section & Card Headers)
+
+| 구분 | dm_question.md 파일 내 정확한 헤더명 | 주요 대상 및 도메인 |
+| :--- | :--- | :--- |
+| **Case 1** | `## Case 1. 데이터 파이프라인 정제·집계 및 반도체/제조 판정` | 제조 데이터 정제, 수율 판정, 배치 집계 파이프라인 |
+| **Case 2** | `## Case 2. 실무형 웹 서비스 / 웹앱 구축` | 실무 웹 대시보드, 등록/조회 단일 동선 MVP |
+| **Case 3** | `## Case 3. 레거시 코드베이스 디버깅 및 신규 기능 확장` | 기존 테스트 보존, 무회귀 버그 픽스/파라미터 확장 |
+| **Case 4** | `## Case 4. 사내 업무 자동화, 규정 색인·판정, RAG·분류기, 전략 대안 비교` | 규정집/매뉴얼 색인, 수동 검토 큐, Strict Grounding |
+| **Case 5** | `## Case 5. 수리·조합 최적화 / CSP (배차·식단·CCTV·스케줄링·Product Mix·쿼터)` | VRP 배차, 식단 ILP, CCTV Set Cover, 30초 타임아웃 |
+| **Case 6** | `## Case 6. 반도체 CoA/SPC·2D Overlay·재무 정규화` | CoA 정량한계(< DL), Overlay 6-Param OLS, 재무 CY보간 |
+| **Case 7** | `## Case 7. 밸류체인 DAG·듀얼 페르소나·교육 AI/시뮬레이터` | 수급 충격 DAG, CoWoS 병목, AI 튜터, FAIL_INTERLOCK |
+| **Case 9** | `## Case 판별이 안 될 때 (복합형 및 모호한 상황 긴급 대응)` | 복합형(파이프라인 + 웹 UI) 우선순위 및 인터페이스 질의 |
+| **카드 #6** | `### 💳 [카드 #6] 김현우 책임매니저 (시장전략팀 — 메모리 시장·경쟁사 실적 분석)` | ASP, bit_growth, WSPM, Micron CY, Waterfall |
+| **카드 #7** | `### 💳 [카드 #7] 박서연 책임매니저 (소재품질팀 — 신규 소재·공급사 변경 검토)` | CoA < DL 대치, Cpk 기준, Nelson Rules, PCN 3단 인터락 |
+| **카드 #8** | `### 💳 [카드 #8] 윤서영 책임 (이천 HR운영팀 — 통근버스 노선 배차 및 정류장 최적화)` | 통근버스 VRP, 입석 금지(Hard), 목적지 마감 시각 |
+| **카드 #9/#12** | `### 💳 [카드 #9 & #12] 이하린 영양사 & Sarah Collins (이천 식단운영 / Dietitian)` | 월간 식단 CSP/ILP, 3일 연속 금지, 개인화 메뉴 추천 |
+| **카드 #10/#11** | `### 💳 [카드 #10 & #11] 정유진 TL & Jordan Reyes (안전 모니터링팀 / Safety Monitoring)` | CCTV 2D 도면 Set Cover, 가시성 극대화, 사각지대 |
+| **카드 #13** | `### 💳 [카드 #13] 이도윤 TL (이천 포토기술팀 — Overlay 품질·장비 운영 & 팹 엔지니어링)` | 노광 스케줄링(A), 2D Overlay OLS(B), 관제 대시보드(C) |
+| **카드 #14/#15** | `### 💳 [카드 #14 & #15] 한서진 TL & 윤지안 TL (skhynix-value-chain-*)` | 밸류체인 DAG 충격 시뮬레이터 + AI 튜터 통합 웹앱 |
+
+4. 실무자 답변을 받는 즉시 워크스페이스 루트의 `NOTES_TEMP.md`를 열고 `## 3. 실무자 DM Q&A 기록` 섹션에 아래 표(Table) 형식으로 기록합니다:
 
 ```markdown
-## 1. 실무자 DM 확인 사항
-- [산출물 포맷] - result.json 파일로 저장하며, 수치는 소수점 둘째 자리 반올림
-- [취소/반려 건 처리] - status가 'cancelled'인 레코드는 총합 및 평균 계산의 분모에서 완전 제외
-- [중복 레코드 처리] - 동일 ID 유입 시 timestamp가 가장 최신인 1건만 유지
-- [인터페이스 불변] - 기존 run_pipeline() 함수의 파라미터 시그니처 및 반환 dict 구조 절대 유지
-- [우선순위] - 화려한 UI나 복잡한 패턴보다 데이터 정합성을 최우선시
+## 3. 실무자 DM Q&A 기록
+
+| 시각 | 질문 내용 | 답변 요약 | 코드/설계 반영 위치 |
+| :---: | :--- | :--- | :--- |
+| 10:22 | 취소/반려 건 및 결측치 처리 기준 | status='cancelled'는 분모에서 완전 제외, 결측치는 경고 로그 남김 | `src/processor.py` line 45 |
+| 10:24 | 중복 레코드 및 산출물 포맷 | 동일 ID는 최신 timestamp 1건 유지, result.json(소수점 둘째자리 반올림) | `src/pipeline.py` |
+| 10:26 | 기존 인터페이스 및 우선순위 | 기존 run_pipeline() 시그니처 절대 불변, 화려한 기능보다 데이터 정합성 최우선 | `src/main.py` |
 ```
-추가 질문
-```markdown
-`NOTES_TEMP.md`를 읽고, 추가적으로 DM담당자에게 질문해야할 내용이 있으면.probe-kit/dm_question.md 파일의 맨 위에 적어줘. 특히 예외사항 등 상활 맥락은 한번에 안알려주고 해당 관점에서 자세히 물어봐야 답을 해주니 여러 각도에서 찔러볼 수 있는,물어볼 질문들을 알려줘.
+
+#### 💡 추가 심층 DM 질문 추천 요청 프롬프트 (터미널 1 - 메인 `Sol 6.1 xhigh`)
+현업 담당자가 한 번에 알려주지 않은 숨은 예외 규칙이나 경계값을 캐내기 위해 터미널 1에 입력합니다:
+
+```text
+[MAIN] NOTES_TEMP.md와 현재까지의 DM 답변을 읽고, 현업 담당자가 한 번에 알려주지 않은 숨은 예외 규칙·경계값을 찔러볼 추가 DM 질문 3~5개를 추천해줘. (읽기 전용인 dm_question.md는 수정하지 말고 터미널에 출력 및 NOTES_TEMP.md에 메모해줘)
 ```
 
 ✅ **완료 시그널:**
-`NOTES_TEMP.md`에 실무자 DM 확인 조건이 구체적 수치 및 예외 규칙과 함께 1줄씩 정리되어 저장됨.
+`NOTES_TEMP.md`의 `## 3. 실무자 DM Q&A 기록`에 실무자 확인 조건이 구체적 수치 및 예외 규칙과 함께 표로 정리되어 저장됨.
 
 ---
 
@@ -250,11 +290,17 @@ bash .probe-kit/scripts/handoff.sh log "결정" "[선택한 해결법] 채택 �
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "결정" "[선택한 해결법] 채택 확정 (이유: [장점 명시])"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 기록이 끝나면 코드는 짜지 말고 Step 1을 위한 준비 완료를 보고해줘.
 ```
-#### 9) [가설 제시 및 최종 구현 동의 (의도 축 가산점)]
-```text
-'말씀해주신 내용을 바탕으로 요구사항을 [A, B, C]로 구조화하여, [X 기준]으로 예외를 처리하고 [Y 구조]로 우선 구현하려 합니다. 현업의 의도와 부합할까요?' 라는 형식으로 담당자에게 묻고 싶어. 프롬프트를 짜줘.
 
+#### [6단계 마무리] 우측 실무자 DM에 가설 제시 및 구현 범위 최종 합의 전송 (의도 축 가산점)
+브레인스토밍과 주도적 결정이 끝난 직후(10:35경), 본격적인 코딩 착수 전 우측 DM의 실무자에게 가설을 제시하여 요구사항 일치 여부를 최종 확인하고 **의도(Intent) 축 가산점**을 확정합니다.
+
+터미널 1 (`Sol 6.1 xhigh`)에 입력하여 가설 확인 메시지를 생성합니다:
+```text
+[MAIN] 우리가 확정한 구현 방향(NOTES_TEMP.md)을 바탕으로, 우측 DM의 '업무 담당자'에게 보낼 가설 제시 및 구현 범위 최종 합의 메시지를 3~4줄로 작성해줘.
+형식: "말씀해주신 내용을 바탕으로 요구사항을 [A, B, C]로 구조화하여, [X 기준]으로 예외를 처리하고 [Y 구조]로 우선 구현하려 합니다. 현업의 의도와 부합할까요?"
+내가 우측 DM에 그대로 복사해서 보낼 수 있도록 메시지 본문만 깔끔하게 출력해줘.
 ```
+👉 **행동:** 메인이 출력한 메시지를 복사하여 우측 DM 창에 전송하고, 실무자의 확인/동의를 받습니다.
 
 ✅ **완료 시그널:**
 메인이 수험생의 결정을 확인하고 `NOTES_TEMP.md`와 `HANDOFF.md`에 의사결정 근거가 기록됨.
@@ -287,23 +333,21 @@ sequenceDiagram
 ```text
 [MAIN] 비즈니스 코드는 절대 직접 작성하거나 수정하지 마.
 우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(GPT 5.6-terra medium)가 수행할 [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
-TASK_SPEC.md 에는 다음 6대 필수 요소를 반드시 누락 없이 포함해야 해:
-1. 이번 단계의 명확한 단일 목표 (Single Goal)
-2. 수정이 허용된 정확한 파일 경로 (지정 외 파일 수정 절대 금지)
-3. 실무자 DM에서 확정한 필수 비즈니스 조건 및 예외 규칙 (취소 건 제외, 최신 중복 유지 등)
-4. 절대 준수해야 할 금지 사항:
-   - 불필요한 추상화/라이브러리 도입 등 오버엔지니어링 금지
-   - API 키, 시크릿, 개인정보 하드코딩 금지
-   - 웹 서버 호스트는 반드시 0.0.0.0 바인딩
-   - 시험 규정에 따라 git add / commit / reset / clean 일체 금지
-5. 서브 에이전트가 구현 직후 실행할 검증 요구사항:
-   - 기존 베이스라인 테스트 실행으로 회귀(Regression) 없음 증명
-   - 이번 태스크의 실무자 DM 요구사항에 맞춘 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등)를 즉석 작성하여 정상 경로(Happy Path) 및 예외 케이스(빈 값, 결측치, 중복 등)를 직접 실행 검증 (고정 템플릿 사용 금지, git commit 없이 untracked 유지)
-6. 완료 조건(Definition of Done) 및 .probe-kit/runtime/SUB_RESULT.md 기록 요구
-작성이 완료되면 터미널에서 다음 명령어를 실행해줘:
-bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완료"
-(실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC" "Step N 명세서 발행 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
-7. 담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
+TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 바탕으로 다음 7대 표준 섹션을 누락 없이 포함해야 해:
+1. [시작 / Start]: 이번 단계 단일 목표(MVP), 직전 단계 선행 완료 상태 확인, 착수 전 기존 베이스라인 테스트 100% PASS 확인
+2. [통제 / Scope]: 변경 허용 파일 및 절대 수정 금지 파일 범위, 5대 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, .gitignore 수정 금지, git add/commit/reset/clean 금지)
+3. [정의 / Definition]: 도메인 핵심 용어 정의, 상태 코드(Status/State) 의미, 입·출력 데이터 스키마 및 계약(반환 타입, 정렬, 반올림 등)
+4. [기준 / Criteria]: 실무자 DM 확인 비즈니스 판정 규칙(예: 취소 건 분모 제외, 중복 최신화 등), 수치 경계값/부등호(>= vs >) 판정 기준, 결측치·이상치 격리 기준, 기준 충돌 시 우선순위(데이터 정합성 최우선)
+   - [도메인 핵심 규칙 알림]
+     * Case 5 (최적화/CSP): 하드 제약과 소프트 목적함수 물리적 분리, is_valid(candidate, constraints) -> tuple[bool, list[str]] 독립 불리언 검증 필수, 실행가능 베이스라인 우선 확보, 30초 타임아웃 페일세이프 가드
+     * Case 6 (반도체/SPC/오버레이): < DL/ND 보수적 대치, 치명 불순물 초과 즉시 REJECT, Edge Exclusion(147mm) 마진 필터링, 6-Param OLS 잔차 및 제조공장 변경 PCN HOLD 인터락
+     * Case 7 (FDE/밸류체인 앱): 백엔드 수리 연산(DAG 충격전파/수율곱/병목클리핑)과 프론트 UI 분리, HTTP 500 방어(400/422 Bad Request), 웹 서버 0.0.0.0 바인딩 필수
+5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 사용 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
+6. [DoD]: 완료 정의 체크리스트 (베이스라인 100% 통과, 스키마 계약 일치, 비즈니스 규칙 및 경계값 검증 통과, git diff 범위 준수)
+7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 서브 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통과 완료" 실행 (실패 시 python3 .probe-kit/scripts/handoff.py log "sub done" "Step N 구현 및 검증 통과 완료") -> 서브 터미널 /clear 실행 대기)
+- 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
+메인이 TASK_SPEC.md 발행을 완료한 직후에는 내가 bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완료" (실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC" "Step N 명세서 발행 완료"`) 를 실행할 수 있게 안내해줘.
+담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
 
 ```
 
@@ -312,27 +356,39 @@ bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완�
 
 ```text
 [SUB] 먼저 .probe-kit/SUB_AGENTS.md를 읽고 그 규칙을 따라줘.
-.probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고, 명시된 파일 범위와 제약 조건을 엄격히 준수하여 코드를 구현해줘.
-구현 직후 다음 검증을 터미널에서 직접 실행해:
-1. 기존 베이스라인 테스트를 실행하여 기존 기능이 깨지지 않았는지 확인해.
-2. 이번 태스크의 실무자 DM 요구사항에 맞춘 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로와 예외 케이스를 모두 실행 검증해 (고정 템플릿 사용 금지, git add/commit/reset/clean 금지 및 untracked 유지).
-3. 테스트 실패 시 무작정 덮어쓰지 말고 실패 원인과 수정 범위를 먼저 진단해.
-모든 검증이 통과하면 변경 파일 목록, 테스트 실행 결과, 남은 한계점을 핵심 위주로 정리하여 .probe-kit/runtime/SUB_RESULT.md 에 기록하고, 다음 명령어를 터미널에서 실행해줘:
+.probe-kit/runtime/TASK_SPEC.md 와 지정된 스킬 파일을 읽고 [시작 · 정의 · 기준 · 종료] 4대 축 순서에 맞춰 실행해줘:
+1. [시작 / Start]: 코드 수정 전 기존 베이스라인 테스트 100% PASS 여부와 진입 조건을 먼저 확인해. (사전 베이스라인 실패 시 착수 금지, 즉시 원인 보고)
+2. [정의 & 기준]: 명시된 도메인 용어/상태 정의, 입·출력 스키마 계약, 실무자 DM 판정 규칙 및 경계값 기준을 숙지하고, 허용 파일 범위 내에서 MVP 최소 구현을 수행해. (범위 밖 수정 불가피하거나 스키마/기준 모호 시 임의 추측 구현 즉시 중단 및 보고)
+3. [검증 / Verification]: 베이스라인 회귀 테스트 + 매 태스크 DM 요구사항 맞춤 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로 및 예외/경계값(결측치, 경계 수치, 중복 등)을 직접 검증해. (고정 템플릿 금지, git add/commit/reset/clean 금지 및 untracked 유지. 실패 시 덮어쓰지 말고 원인 진단)
+4. [종료 / End]: DoD 완료 정의 점검 후 .probe-kit/runtime/SUB_RESULT.md 에 요약 보고서를 작성하고, 다음 명령어를 터미널에서 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통과 완료"
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "Step N 구현 및 검증 통과 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
-*(💡 비대화형 환경인 경우 메인 터미널에서 `bash .probe-kit/scripts/subagent.sh`를 실행해도 동일하게 서브 호출 가능)*
+
+#### 🚀 `subagent.sh` 스크립트 연동 명령어 3종 (단일 터미널 또는 CLI 자동화 환경 시)
+터미널 창을 분리하지 못했거나 스크립트로 상태를 확인하고 싶을 때 아래 명령어를 터미널에서 활용합니다:
+```bash
+# 1. 비대화형 환경에서 서브 에이전트 자동 호출 실행 (TASK_SPEC.md 읽고 구현 및 SUB_RESULT.md 생성):
+bash .probe-kit/scripts/subagent.sh run
+
+# 2. TASK_SPEC.md 및 SUB_RESULT.md 발행 상태 및 결과 확인:
+bash .probe-kit/scripts/subagent.sh status
+
+# 3. 터미널 2에 수동으로 복사-붙여넣기할 프롬프트 및 가이드 확인:
+bash .probe-kit/scripts/subagent.sh guide
+```
 
 > [!IMPORTANT]
 > **서브 작업 완료 즉시 필수 조치:**
 > 서브가 `SUB_RESULT.md` 작성을 마치면, **터미널 2에 반드시 `/clear`를 입력**하세요!  
 > 서브 세션의 이전 코드 잔재와 에러 로그를 비워 토큰을 0으로 리셋하고, 다음 모듈 구현 시 이전 기억과 혼동하여 발생하는 환각(Hallucination)을 원천 차단합니다.
 
-### 3) 메인 결과 검수 프롬프트 (터미널 1 - 메인 `Sol 6.1 xhigh`)
+### 3) 메인 결과 검수 및 다음 모듈 지시 프롬프트 (터미널 1 - 메인 `Sol 6.1 xhigh`)
 터미널 1 창으로 돌아와 아래 프롬프트를 입력합니다:
 
 ```text
 [MAIN] .probe-kit/runtime/SUB_RESULT.md 와 git diff --stat 만 확인해서 Step N이 실무자 DM 조건에 맞게 검증되었는지 엣지 케이스 관점에서 비판적으로 검토해줘.
+(방향 수정이 필요한 경우) 테스트/검토 결과를 보니 기존 [A 방식]은 [메모리 초과 / 현업 예외 충돌 / 불필요한 복잡도] 문제가 있어서 제외하기로 결정했어. 우선순위를 조정해서 더 안정적이고 단순한 [B 방식]으로 방향을 바꿔서 다음 단계 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
 검토가 완료되면 다음 모듈인 [Step N+1]에 대한 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
 담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
 
@@ -348,6 +404,9 @@ bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통�
 | **Case 2**<br>(실무형 웹 서비스) | `case2_web_service.md` | - 서버 기동 시 반드시 **`0.0.0.0` 호스트 바인딩** (`127.0.0.1` 금지)<br>- 서버 터미널 탭 유지, 플랫폼 내장 Browser에서 직접 클릭·입력 동작 수행 (클릭 로그가 채점됨)<br>- 회원가입 등 부가기능 제외, 핵심 유저 동선 1개(입력->처리->화면) 수직 완성 |
 | **Case 3**<br>(레거시 코드 디버깅) | `case3_legacy_debug.md` | - 코드 수정 전 기존 테스트 스위트 1회 먼저 실행하여 **베이스라인 로그 보존**<br>- 기존 API URL 엔드포인트, 응답 JSON 스키마, 함수 시그니처 100% 불변 유지<br>- `git diff`로 합의된 최소 범위(1~3개 파일) 외 무단 변경 절대 차단 |
 | **Case 4**<br>(규정 색인 / 자동화 / RAG) | `case4_policy_rag_doc.md` | - 문서를 통째 요약하지 말고 관련 조항/페이지 위치를 먼저 색인화<br>- 모호한 케이스는 임의 추측하지 않고 `'수동 검토 필요'` 또는 `'확인 불가'` 플래그 분리<br>- 단순 O/X가 아닌 판단 근거 조항(출처)을 결과물에 함께 출력 |
+| **Case 5**<br>(최적화 / CSP 스케줄링) | `case5_optimization_csp.md` | - **하드 제약(`is_valid`)과 소프트 목적함수 물리적 분리** (하드 제약 1개라도 위반 시 즉시 0점)<br>- 가장 단순한 결정론적/탐욕적 **실행가능 베이스라인(`generate_feasible_baseline`) 5분 내 우선 확보**<br>- **30초 채점 타임아웃 페일세이프**: `time.perf_counter()` 감시 25~28초 도달 시 Best Feasible 즉시 반환 |
+| **Case 6**<br>(반도체 SPC / Overlay / 재무) | `case6_semicon_data_spc.md` | - **전처리 5단계 건수 로깅(`[PIPELINE_STEP_1_LOAD]` ~ `[PIPELINE_STEP_5_FINAL]`) 콘솔 출력 필수**<br>- `< DL` 보수적 대치, Cpk 공식, Nelson Rules 1~4 및 PCN 3단 인터락(PASS/HOLD/REJECT) 분기<br>- 웨이퍼 에지 제외($r > 147\text{mm}$), 6-Param OLS 잔차 $3\sigma$, ADI(REWORK) vs AEI(SCRAP) 분기 |
+| **Case 7**<br>(밸류체인 / FDE 웹앱) | `case7_fde_valuechain_app.md` | - 서버 기동 시 반드시 **`0.0.0.0` 호스트 바인딩** (`uvicorn --host 0.0.0.0 --port 8000`)<br>- 순수 Python 백엔드 연산 엔진(`engine/`)과 FastAPI 엔드포인트/UI 관심사 철저 분리<br>- 상단 `Role Switcher` 토글, What-If 슬라이더, `FAIL_INTERLOCK` 경고 모달, 내장 Browser 직접 조작 |
 
 ✅ **완료 시그널:**
 `TASK_SPEC.md` 작성 ➔ 서브 구현 및 온더플라이 테스트 통과 ➔ `SUB_RESULT.md` 기록 ➔ 터미널 2 `/clear` 실행 완료.
@@ -361,11 +420,58 @@ bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통�
 | 시그널 (Signal) | 현재 상황 | 즉시 실행할 조치 (Action) |
 | :--- | :--- | :--- |
 | **`SUB_RESULT.md` ALL PASS** | 서브 구현 및 온더플라이 테스트 정상 통과 | 1) 터미널 2에 `/clear` 입력 (토큰 리셋)<br>2) 터미널 1에 메인 검수 프롬프트 입력<br>3) `bash .probe-kit/scripts/handoff.sh log "검증 완료" "<모듈 요약>"` 실행 (실패 시: `python3 .probe-kit/scripts/handoff.py log "검증 완료" "<모듈 요약>"` 또는 runtime/HANDOFF.md 직접 추가) |
+| **서브 에이전트 [차단(블로커)] 보고** | 허용 범위 밖 수정 불가피 / 요구사항·스키마 모호성 / 베이스라인 원인 불명 실패로 서브가 멈춤 조건을 발동하여 구현을 중단함 | 1) `SUB_RESULT.md`의 차단 사유 확인 ➔ 2) 터미널 1(메인)에 아래 `[차단 대응 메인 프롬프트]` 주입 ➔ 3) 필요 시 우측 DM 질의 후 재발행된 `TASK_SPEC.md`로 터미널 2 `/clear` 후 재착수 |
 | **온더플라이 / 단위 테스트 FAIL** | 서브 구현 결함 또는 엣지 케이스 충돌 | 무작정 코드를 덮어쓰지 말고, 터미널 2에서 에러 트레이스백과 원인 후보 2가지를 먼저 진단한 뒤 대상 파일만 최소 범위로 수정 (2회 이상 실패 시 단순 로직으로 전환) |
 | **기존 베이스라인 테스트 FAIL** | 회귀(Regression) 발생 (기존 기능 파손) | 즉시 `git diff`로 변경된 코드 확인. 기존 함수 시그니처나 반환 형식이 깨졌는지 확인 후 원래 규격에 맞게 롤백 (`git reset --hard` 절대 금지, 에디터에서 직접 수정) |
-| **메인 에이전트 제약 망각 (Drift)** | 메인이 DM 조건 누락하거나 불필요한 라이브러리 임의 제안 | **Handoff 골든 타이밍 발동!**<br>구 세션에서 `bash .probe-kit/scripts/handoff.sh` 실행 ➔ 새 터미널 1 열고 클린 `Sol 6.1 xhigh`에서 `[메인 프롬프트 6]`(.probe-kit/prompts/02_codex_prompts.md 참조)으로 복창/승인 |
+| **메인 에이전트 제약 망각 (Drift)** | 메인이 DM 조건 누락하거나 불필요한 라이브러리 임의 제안 | **Handoff 골든 타이밍 발동!**<br>구 세션에서 `bash .probe-kit/scripts/handoff.sh` 실행 ➔ 7단계 '세션 교체 (Handoff) 원클릭 SOP'의 `[메인 프롬프트 5 → 6]` 실행으로 무손실 세션 전환 및 복창/승인 |
 | **DM 실무자 요구사항 변경/추가** | 실무자가 새로운 조건이나 우선순위 변경 알림 | `NOTES_TEMP.md`에 즉시 반영하고, 메인 에이전트에게 변경 사항을 브리핑하여 다음 `TASK_SPEC.md`에 수정 반영 |
 | **⏱ 12:20 데드라인 도달** | 시험 종료 70분 전 | **신규 기능 추가 전면 중단 (Code Freeze)!** 미완성 기능은 과감히 배제하고, 구현된 핵심 기능의 정합성 검증 및 보고서 작성(8단계)으로 즉시 전환 |
+
+### 🛑 [MAIN] 서브 에이전트 [차단(블로커)] 대응 프롬프트 (터미널 1 - 메인 `Sol 6.1 xhigh`)
+> **용도:** 서브 에이전트가 허용 범위 밖 수정 필요, 스키마/요구사항 모호성, 또는 베이스라인 실패로 멈춤 조건을 발동하여 `SUB_RESULT.md`에 `[차단]`을 보고했을 때 메인 터미널에 주입하여 명세를 재정비합니다.
+
+```text
+[MAIN] 비즈니스 코드는 절대 직접 작성하거나 수정하지 마.
+서브 에이전트(GPT 5.6-terra medium)가 멈춤 조건을 발동하여 [차단(블로커)]을 보고하고 구현을 중단했어.
+.probe-kit/runtime/SUB_RESULT.md 의 차단 사유와 관련 파일/에러 로그를 분석해줘:
+1. 차단 원인 분석 (허용 파일 범위 확장 필요 여부, 스키마/요구사항 모호성, 베이스라인 충돌 원인 등)
+2. 실무자 DM 확인이 필요한 사항이 있다면 구체적인 질문 1~2개 제시
+3. 서브가 안전하게 구현을 재개할 수 있도록 수정·보완된 .probe-kit/runtime/TASK_SPEC.md 재발행
+분석 및 TASK_SPEC.md 재발행이 끝나면 보고해줘.
+```
+
+#### 🔄 세션 교체 (Handoff) 원클릭 SOP
+
+메인 에이전트의 컨텍스트가 비대해지거나 4대 골든 타이밍(Step 1 MVP 완료 직후 / 실무자 제약 망각 Drift 감지 / 대규모 방향 전환 / 12:20 최종 검증 진입 직전) 도달 시, 단순 `/clear` 대신 아래 4단계 무손실 인수인계 절차를 수행합니다:
+
+1. **1단계 (기계 초안 조립):** 터미널에서 `bash .probe-kit/scripts/handoff.sh` 실행 (초안 조립 및 단계별 로그 보존, 실패 시 `python3 .probe-kit/scripts/handoff.py`)
+2. **2단계 (인수인계서 최종 확정):** 구(Old) 메인 터미널(`Sol 6.1 xhigh`)에 아래 `[메인 프롬프트 5]` 복붙 실행 (`HANDOFF.md` 결정 로그·불변 제약·Next Actions 최종 확정)
+3. **3단계 (새 세션 기동):** 새(New) 터미널 탭 열고 `codex` 실행 (`Sol 6.1 xhigh` 모델 선택)
+4. **4단계 (인수 및 복창/승인):** 새(New) 메인 터미널에 아래 `[메인 프롬프트 6]` 복붙 실행 (인수 및 복창 확인 ➔ 인간 아키텍트의 `[승인(Approved)]`을 거쳐 다음 단계 착수)
+
+##### 📋 [메인 프롬프트 5 — 구 세션 `Sol 6.1 xhigh`] Handoff 문서 최종 확정 (Old Session)
+> **용도:** 골든 타이밍(Step 1 MVP 직후 / 제약 망각 Drift 감지 / 대규모 방향 전환 / 12:20 최종 검증 진입 직전) 도달 시 터미널 1에 입력하여, 신규 세션에 인계할 핵심 결정과 제약을 `HANDOFF.md`에 구조화해 기록하게 합니다.
+
+```text
+[MAIN] 우리는 현재 세션의 컨텍스트를 리셋하고 깨끗한 새 세션으로 전환할 거야.
+방금 bash .probe-kit/scripts/handoff.sh 로 생성된 HANDOFF.md 파일을 열고, 비즈니스 코드는 절대 수정하지 않은 채 아래 내용을 완벽히 보강하여 저장해줘:
+1. [아키텍처 결정 로그]: 지금까지 확정한 핵심 구조를 [결정] - [근거] - [포기한 대안] 3요소 중심으로 명확히 정리
+2. [실무자 불변 제약 체크리스트]: 실무자 DM에서 확정한 절대 위반하면 안 되는 비즈니스 규칙 및 불변 인터페이스 목록 작성
+3. [Next Actions 1~3]: 신규 세션이 즉시 이어받아 수행해야 할 모듈 작업 목표 3가지 명시
+작업이 완료되면 HANDOFF.md 저장 상태를 보고해줘.
+```
+
+##### 📋 [메인 프롬프트 6 — 신규 세션 `Sol 6.1 xhigh`] Handoff 인수 및 복창 (New Session)
+> **용도:** 신규 터미널 탭을 열고 `codex` 기동 후 첫 번째로 입력하여, 이전 세션의 의사결정과 제약을 완벽히 숙지했음을 복창하고 인간 승인을 대기하게 합니다.
+
+```text
+[MAIN] 너는 새로 투입된 메인 아키텍트(Sol 6.1 xhigh)야. 비즈니스 코드는 절대 직접 작성하지 마.
+먼저 워크스페이스의 HANDOFF.md 와 .probe-kit/runtime/TASK_SPEC.md 를 읽고 다음 사항을 간결하게 복창해줘:
+1. 이전 세션에서 확정한 현재 시스템 상태 및 핵심 구현 방식
+2. 실무자 DM에서 확정한 절대 위반하면 안 되는 불변 제약 사항들
+3. 네가 지금 즉시 서브 에이전트(GPT 5.6-terra medium)를 위해 작성할 Next Actions 1~3
+복창이 끝나면 코드를 작성하지 말고 인간 아키텍트의 [승인(Approved)]을 대기해.
+```
 
 ---
 
@@ -375,15 +481,85 @@ bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통�
 > **12:20 코드 동결 (Code Freeze):**
 > 12:20 이후로는 단 한 줄의 새로운 기능도 추가하지 않습니다. 불완전한 5개 기능보다 **완벽하게 검증되고 한계가 명시된 2~3개 핵심 기능(MVP)**이 훨씬 높은 점수를 받습니다.
 
-### 1) 표본 수동 대조 교차 검증 (데이터 과제 필수)
-```bash
-# 15건 표본 데이터 수동 계산값(기댓값) vs 실제 처리 함수 출력 대조 실행
-python3 .probe-kit/scripts/sample_check_template.py
+### 1) 케이스별 표본 수동 대조 교차 검증 (Case-Specific Verification)
 
-# 실제 과제 모듈 및 함수 지정 대조 실행 시 (예: src.pipeline 모듈의 process_orders 함수)
+과제 유형(Case 1~7)에 맞춰 해당하는 표본 대조 검증 스크립트 또는 브라우저 조작을 실행합니다:
+
+#### [Case 1] 데이터 파이프라인 / 반도체 품질 판정
+```bash
+# 1) 내장 reference_impl 자체 데모 15건 기준 동작 확인:
+python3 .probe-kit/scripts/sample_check_template.py --demo
+
+# 2) [input_path] 실제 산출 파일 인자 전달 대조 실행 (예: cleaned_data.csv 또는 result.json):
+python3 .probe-kit/scripts/sample_check_template.py output/cleaned_data.csv
+
+# 3) 실제 구현 함수 직접 연동 대조 실행 (예: src.pipeline 모듈의 process_orders 함수):
 TARGET_MODULE="src.pipeline" TARGET_FUNC="process_orders" python3 .probe-kit/scripts/sample_check_template.py
 ```
-*(웹 과제인 경우: `0.0.0.0`으로 서버 기동을 유지하고, 내장 Browser에서 정상 폼 제출 및 예외 입력 시 에러 표출을 직접 클릭 조작하여 확인합니다.)*
+
+#### [Case 5] 수리·조합 최적화 및 CSP 스케줄링 (#8, #9, #10, #13-A, #7-A, #6-B, #15-B)
+```bash
+# 1) 최적화 표본 15건(정상/경계/하드제약 위반 탈락) 제약 검증 데모 실행:
+python3 .probe-kit/scripts/sample_check_opt.py --demo
+
+# 2) [input_path] 실제 생성된 해법(JSON) 파일 검증 실행:
+python3 .probe-kit/scripts/sample_check_opt.py output/solution.json
+
+# 3) 실제 구현 함수 직접 연동 대조 실행 (예: src.scheduler 모듈의 validate_and_schedule 함수):
+TARGET_MODULE="src.scheduler" TARGET_FUNC="validate_and_schedule" python3 .probe-kit/scripts/sample_check_opt.py
+```
+
+#### [Case 6] 반도체 원소재 CoA · SPC 통계 · 2D Overlay · 재무 정규화 (#7-B, #13-B, #6-A)
+```bash
+# 1) 반도체 도메인 표본 15건(CoA/Cpk/Nelson, Overlay 6-Param/ADI/AEI, 재무 CY보간/환율/DOI) 데모 검증:
+python3 .probe-kit/scripts/sample_check_spc.py --demo
+
+# 2) [input_path] 실제 계측 데이터 파일 인자 전달 검증 실행:
+python3 .probe-kit/scripts/sample_check_spc.py data/overlay_raw.csv
+
+# 3) 실제 구현 함수 직접 연동 대조 실행 (예: src.spc_pipeline 모듈의 evaluate_spc 함수):
+TARGET_MODULE="src.spc_pipeline" TARGET_FUNC="evaluate_spc" python3 .probe-kit/scripts/sample_check_spc.py
+```
+
+#### [Case 7 & Case 2] 밸류체인 수급 시뮬레이터 / FDE 대시보드 / 실무형 웹앱 (#14, #15, #14+#15)
+```bash
+# 1. 반드시 0.0.0.0 호스트로 서버 백그라운드 구동 (127.0.0.1 바인딩 금지)
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+# 또는 프레임워크 환경에 맞춤 구동: PORT=8000 HOST=0.0.0.0 npm start &
+
+# 2. curl로 핵심 엔드포인트 헬스체크 및 시뮬레이션 응답 검증
+curl -s -o /dev/null -w "%{http_code}\n" http://0.0.0.0:8000/api/health
+curl -s -X POST http://0.0.0.0:8000/api/simulate -H "Content-Type: application/json" -d '{"node_id":"OSAT_01","shock_ratio":0.3}'
+
+# 3. 플랫폼 우측 내장 Browser에서 접속 및 인터랙션 직접 점검:
+#    - [Role Switcher] 토글 클릭 (전략 분석가 ↔ 산업 교육자 전환)
+#    - What-If 슬라이더 조작 시 Top 3~4 KPI 요약 카드 수치 실시간 갱신 확인
+#    - 비정상/치명 입력 시 서버 500 크래시 없이 FAIL_INTERLOCK 경고 모달 정상 표출 확인
+#    *(내장 Browser의 마우스 클릭/입력 동작이 채점 로그에 자동 기록됨)*
+```
+
+#### [Case 3 & Case 4] 레거시 디버깅 및 규정 색인/RAG
+```bash
+# Case 3 & Case 4: 기존 베이스라인 테스트 및 6.5단계에서 온더플라이로 즉석 작성한 ad-hoc 테스트(tests/test_*.py) 일괄 무회귀(Zero Regression) 실행
+pytest || python3 -m unittest discover -s tests -v
+
+# (Case 4의 경우 6.5단계에서 즉석 작성한 규정 근거 조항 라인 대조 및 환각 거절 문구 ad-hoc 테스트가 tests/ 내에 존재하며 위 명령으로 함께 전수 검증됨)
+```
+
+#### [복합형: Case 9] 알고리즘/파이프라인 + 웹 대시보드 (2-Step 순차 검증)
+```bash
+# [Step A. 백엔드 데이터/최적화 정합성 표본 15건 검증 (최우선 배점)]
+# 앞단 데이터/최적화 엔진이 틀리면 뒷단 웹 화면이 아무리 화려해도 0점 처리되므로, 반드시 백엔드 표본 검증을 먼저 완결합니다:
+python3 .probe-kit/scripts/sample_check_template.py --demo
+# (최적화/CSP 기반인 경우: python3 .probe-kit/scripts/sample_check_opt.py --demo)
+# (반도체 SPC 기반인 경우: python3 .probe-kit/scripts/sample_check_spc.py --demo)
+
+# [Step B. 0.0.0.0 웹 서버 기동 및 엔드포인트/내장 브라우저 조작 검증]
+# 백엔드 정합성이 확보된 후, 서버를 0.0.0.0으로 띄우고 브라우저 핵심 동선을 검증합니다:
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+curl -s http://0.0.0.0:8000/api/health
+# 플랫폼 우측 내장 Browser를 열어 http://0.0.0.0:8000 접속 -> 데이터 조회/양식 제출 등 핵심 인터랙션 1회 이상 직접 클릭·조작!
+```
 
 ### 2) 무감점 사전 감사 스크립트 실행 (환경에 맞추어 선택)
 ```bash
@@ -510,13 +686,21 @@ bash .probe-kit/scripts/handoff.sh
 
 ### 🚀 과제 최종 제출 및 후속 서술형 안내 (What to do after)
 
-- ai 콜라보레이션과 뭐 어떻게 제안/ 무엇 받아들임 무엇을 안받아들임 왜?
-- 기본적으로 왜 그렇게 결정롱적 / llm 나눠서 설정함? 이유가 뭐임? 비용이 머임?
-- 상태 검증이랑 사용자가 데이터를 입력하면 데이터가 흐르는 과정을 설명 상태론적? 뭔적? 책임? 책임상태? 으로 설명
-- 만약에 오류가 발생한다면 어떻게 대처? 어느 부분이 제일 취약?
-- 어느 부분을 구현? 어느부분을 구현하지 않음? 그 이유는 무엇?
-- ai로 어떻게 검증? 결과를 어떻게 믿을 수 있다는거임? 데이터에 대한판단? 검증? 등을 어떻게 느낌?
-  
+#### 📝 후속 서술형 6대 출제 질문 유형 & 핵심 답변 포인트
+
+평가 시스템이 내 코드, 터미널 로그, git diff, 제출 보고서를 교차 분석하여 아래 6가지 유형의 질문을 생성합니다. 당황하지 말고 아래 핵심 포인트에 맞춰 답변을 구성하세요:
+
+| 출제 질문 유형 | 시스템 질문 의도 (출제자 관점) | 핵심 답변 포인트 (수험생 4문장 구성) |
+| :--- | :--- | :--- |
+| **유형 1. 설계 판단 및 아키텍처** | "왜 이 구조/패턴을 채택했는가? AI 제안 중 무엇을 받아들이고 무엇을 거절했는가?" | 실무자 DM 비즈니스 규칙(취소 제외 등) 충족 최우선, 복잡한 프레임워크/과도한 디자인 패턴 거절 및 표준 라이브러리 MVP 채택 명시 |
+| **유형 2. 검증 방법 및 정합성 보장** | "AI 결과를 어떻게 믿을 수 있는가? 데이터에 대한 판단과 검증을 어떻게 확신하는가?" | 베이스라인 회귀 테스트 + 정상/실패 경로 온더플라이 테스트 + 표본 15건 수동 계산 대조(`sample_check_*.py`)로 100% 일치 입증 |
+| **유형 3. 현재 구현의 한계 및 실패 조건** | "만약 오류가 발생한다면 어떻게 대처하는가? 시스템의 어느 부분이 제일 취약한가?" | 동기식/단일 프로세스 메모리 한계(초대용량 유입 시 OOM 리스크), 미정의 비정형 포맷 한계 솔직 인정 및 향후 배치/큐 보완 명시 |
+| **유형 4. AI 협업 및 오케스트레이션** | "왜 그렇게 메인(결정론적 아키텍트)과 서브(LLM 워커)로 분리 설정했는가? 비용(토큰)과 환각은 어떻게 통제했는가?" | Sol 6.1(코드 직접 작성 금지, 명세/검수 전담) × GPT 5.6-terra(구현·테스트 전담 후 즉시 `/clear`), 메인의 불필요 제안 즉각 기각 및 토큰 극소화 |
+| **유형 5. 대안 비교 및 구현 범위 선택** | "어느 부분을 구현하고 어느 부분을 구현하지 않았는가? 그 이유는 무엇인가?" | 제한 시간 내 핵심 사용자 동선(Vertical Slice MVP) 완결 집중, 불필요한 부가기능(회원가입, 과도한 캐싱) 배제 트레이드오프 명시 |
+| **유형 6. 데이터 흐름 및 상태 검증 책임** | "사용자가 데이터를 입력하면 데이터가 흐르는 과정과 상태 검증 책임은 어떻게 나뉘며, 실제 프로덕션 배포 시 보완할 점은?" | 순수 백엔드 연산(또는 데이터 파이프라인)과 프론트 UI의 관심사 분리, `0.0.0.0` 바인딩, 비정상 입력 시 400 Bad Request 방어 및 향후 JWT 인증/모니터링 고도화 |
+
+---
+
 #### 1) 12:55 플랫폼 과제 최종 제출
 1. 시험 플랫폼 우측 상단의 **`제출하고 문제풀기`** 버튼 클릭.
 2. 팝업창에서 **`제출물 확정하고 문제풀기`** 클릭.
@@ -525,6 +709,7 @@ bash .probe-kit/scripts/handoff.sh
 #### 2) 12:55 ~ 13:00 문제 생성 대기 (마인드셋 정돈)
 * 시스템이 내 제출 코드, 터미널 로그, git status, 제출 보고서를 교차 분석하여 개인화된 서술형 질문 6개를 출제합니다.
 * 대기 시간 동안 `NOTES_TEMP.md`와 `SUBMISSION_REPORT.md`의 **`[결정] - [근거] - [검증] - [한계]`** 내용을 머릿속으로 정리합니다.
+* 💡 **대기 시간 필독 권장:** 에디터에서 `.probe-kit/prompts/03_post_qna_formula.md`를 열어 6대 질문 유형별 4문장 구조와 내 코드의 함수명/수치를 눈으로 훑어두면, 13:00 시작 즉시 망설임 없이 타이핑할 수 있습니다!
 
 #### 3) 13:00 ~ 13:30 후속 서술형 6문항 직접 타이핑
 * **규칙:** 문항당 5분(300초), 이전 문항 되돌아가기 불가, **복사/붙여넣기(`Ctrl+C/V`) 불가**, AI 불가 ➔ **100% 손수 직접 타이핑!**
@@ -540,6 +725,36 @@ bash .probe-kit/scripts/handoff.sh
 > ```text
 > 질문에서는 [A 방식/외부 라이브러리 사용]을 전제로 하였으나, 실제 구현에서는 [B 제약/실무자 요구사항]을 충족하고 불필요한 복잡도를 방지하기 위해 [C 방식/표준 라이브러리 기반 단일 파이프라인]으로 구현했습니다.
 > ```
+
+---
+
+#### 📋 도메인별 실전 4문장 직접 타이핑 치트시트 (Ready-to-Type Cheat-Sheet)
+
+후속 서술형 창이 열리면 아래 3대 도메인 예시를 참고하여 본인의 실제 함수명과 수치로 변형하여 즉시 타이핑하세요:
+
+##### 🅰️ [Case 1 / Case 6] 데이터 파이프라인 · 반도체 CoA/SPC · 2D Overlay
+```text
+저는 실무자 DM에서 확정한 '취소 건 분모 제외, 중복 최신 유지 및 정량한계 미만(< DL) 보수적 대치' 규칙을 엄격히 준수하고 불필요한 외부 의존성을 배제하기 위해 파이썬 표준 라이브러리 기반의 단일 파이프라인(또는 OLS 보정 엔진) 구조를 선택하여 구현했습니다.
+구체적으로 src/pipeline.py의 clean_data(또는 evaluate_spc) 함수에서 원본 데이터를 읽어 결측치(-999, < DL)를 보수적으로 처리하고 핵심 판정 수식을 적용하여 정제된 JSON/CSV 결과를 반환하도록 구성했습니다.
+정합성을 보장하기 위해 기존 베이스라인 회귀 테스트와 15건의 표본 데이터 수동 계산 대조(sample_check_spc.py)를 터미널에서 실행하여 기댓값과 100% 일치함을 확인했습니다.
+다만 현재 구현은 단일 프로세스 메모리 내에서 실행되므로 수백만 건 이상의 초대용량 데이터 유입 시 메모리 한계(OOM)가 발생할 수 있어 향후 청크 단위 배치 파이프라인으로 보완할 수 있습니다.
+```
+
+##### 🅱️ [Case 5] 수리·조합 최적화 / CSP 스케줄링 / 배차·배치
+```text
+저는 실무자 DM에서 확정한 필수 하드 제약(입석 금지, 배정 규칙)을 100% 보장하고 30초 채점 타임아웃을 엄수하기 위해 하드 제약 검증기(is_valid)와 목적함수를 물리적으로 분리한 탐욕적 베이스라인 우선 최적화 구조를 선택하여 구현했습니다.
+구체적으로 src/scheduler.py의 generate_feasible_baseline 함수에서 실행 가능한 기본해를 5분 내 즉시 확보하고, 28초 타임 가드를 적용하여 시간 초과 리스크를 원천 차단하도록 구성했습니다.
+정합성을 보장하기 위해 15건의 제약 경계 표본 대조(sample_check_opt.py --demo)를 터미널에서 실행하여 모든 하드 제약 만족 및 페널티 계산이 정확함을 로그로 확인했습니다.
+다만 현재 구현은 제한 시간 내 안정성을 위해 엄밀한 전역 최적해(Global Optimum) 대신 실행가능 국소 최적해(Local Optimum)를 반환하므로 향후 휴리스틱 탐색(Simulated Annealing)을 보강할 수 있습니다.
+```
+
+##### 🅲️ [Case 2 / Case 7] 실무형 웹 서비스 / 밸류체인 DAG / AI 튜터 웹앱
+```text
+저는 실무자가 요구한 핵심 유저 동선의 안정성을 보장하고 복잡한 프레임워크로 인한 오버엔지니어링을 방지하기 위해 순수 Python 연산 엔진과 경량 FastAPI(0.0.0.0 바인딩)를 분리한 단일 MVP 웹앱 구조를 선택하여 구현했습니다.
+구체적으로 백엔드 main.py에서 밸류체인 DAG 연산(또는 업무 CRUD)을 처리하고, 비정상 입력 시 500 크래시 대신 400 Bad Request 및 화면 경고 모달을 띄우도록 예외 처리를 구성했습니다.
+플랫폼 우측 내장 브라우저를 통해 http://0.0.0.0:8000에 접속하여 직접 버튼 클릭, 슬라이더 조작, 정상/예외 입력 전송을 수행하고 UI 상태와 백엔드 응답이 실시간 동기화됨을 확인했습니다.
+다만 현재 구현은 단일 세션 인메모리 기반으로 동작하므로 다중 사용자 동시 접속 시 동시성 경합이 발생할 수 있어 향후 JWT 세션 인증 및 분산 영속성 DB를 도입하여 보완할 수 있습니다.
+```
 
 ---
 
@@ -571,6 +786,7 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 - **서브가 `TASK_SPEC.md`를 못 찾음:** 메인에게 `.probe-kit/runtime/TASK_SPEC.md` 저장 경로를 `cat`으로 확인시키기
 - **`[SUB] TASK_SPEC 실행해`를 못 알아들음:** `TASK_SPEC.md` 내용을 서브 창에 직접 붙여넣고 `SUB_AGENTS.md` 규칙대로 실행
 - **`SUB_RESULT.md`가 안 생김:** 서브에게 `.probe-kit/runtime/SUB_RESULT.md`에 쓰도록 재지시, 안 되면 서브 요약 출력을 메인 창에 붙여넣어 검수
+- **서브가 `[차단(블로커)]` 보고 후 멈춤:** `.probe-kit/runtime/SUB_RESULT.md` 확인 후 메인에게 7단계 `[차단 대응 메인 프롬프트]`를 입력하여 범위 확장 또는 DM 질의를 통해 명세 재발행
 - **서브 자체가 안 뜸:** 메인이 직접 구현하는 것은 최후수단 (역할 분리 규칙 위반으로 평가 영향 가능, 불가피한 경우 그 이유를 `NOTES_TEMP.md`에 기록)
 
 ---
@@ -587,7 +803,8 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 | **`git clone` 자체가 멈춤** | 외부 GitHub 네트워크 지연/제한 | 에러 메시지 확인, 네트워크 문제면 시험 운영진에 문의 (재현된 적 없음). 워크스페이스에 이미 다운로드된 `probe-kit`이 있다면 `bash probe-kit/init.sh` (또는 `bash .probe-kit/init.sh`) 로컬 실행 |
 | **스크립트 실행 오류 / 환경 제약** | 줄바꿈(CRLF) 또는 셸 권한 문제 | 셸 스크립트 대신 `python3 .probe-kit/scripts/pre_submit_audit.py`를 직접 실행하거나, Bash 터미널 탭을 열어서 실행 |
 | **웹 서버 기동 시 포트 충돌 (`Address already in use`)** | 이전 프로세스가 해당 포트 점유 중 | 터미널에서 `lsof -i :<port>` (또는 `netstat -ano \| findstr <port>`)로 PID 확인 후 `kill -9 <PID>` 종료, 종료가 불가능하면 실무자 DM에 다른 포트 사용 가능 여부 확인 |
-| **Codex 세션 응답 지연 또는 토큰 한계** | 컨텍스트 누적 또는 일시적 API 지연 | 서브 터미널은 즉시 `/clear` 실행. 메인 터미널은 `bash .probe-kit/scripts/handoff.sh` 실행 후 새 탭에서 새 터미널을 열어 `[메인 프롬프트 6]`(Handoff 인수, .probe-kit/prompts/02_codex_prompts.md 참조)으로 무손실 세션 전환 |
+| **서브 에이전트 `[차단(블로커)]` 보고 및 구현 중단** | 허용 범위 밖 수정 필요, 스키마/요구사항 모호성, 또는 베이스라인 실패로 멈춤 조건 발동 | `.probe-kit/runtime/SUB_RESULT.md` 차단 사유 확인 ➔ 터미널 1(메인)에 7단계 `[차단 대응 메인 프롬프트]` 입력하여 명세 재정비 ➔ 필요 시 우측 DM 질의 후 재발행된 `TASK_SPEC.md`로 터미널 2 `/clear` 후 재착수 |
+| **Codex 세션 응답 지연 또는 토큰 한계** | 컨텍스트 누적 또는 일시적 API 지연 | 서브 터미널은 즉시 `/clear` 실행. 메인 터미널은 7단계 '세션 교체 (Handoff) 원클릭 SOP'의 `[메인 프롬프트 5 → 6]`을 순차 실행하여 무손실 세션 전환 |
 | **시험 중 실수로 `git add`나 `git commit`을 실행함** | 무의식적 습관으로 인한 명령어 입력 | 절대 당황하여 `git reset --hard`나 `git clean -fd`를 치지 마세요 (작업 코드 영구 소실 위험!). 침착하게 작업 코드가 완성되었는지 확인하고, 추가 커밋 없이 그대로 다음 단계를 진행 |
 
 ---
@@ -597,7 +814,7 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 ```text
 .probe-kit/
 ├── foruser.md                       # 👑 [수험생 전용] 지금 읽고 있는 실전 라이브 런북
-├── dm_question.md                   # 💬 [수험생 전용] Case 1~4 실무자 DM 맞춤형 질문 뱅크 & 비상 가이드
+├── dm_question.md                   # 💬 [수험생 전용] Case 1~7 및 #6~#15 실무자 DM 맞춤형 질문 뱅크 & 비상 가이드
 ├── init.sh                          # [원클릭 장착] 하네스 설치 + Git 보호 + 무토큰 EDA 스캔
 ├── AGENTS.md                        # [메인 헌법] Sol 6.1에게 코드 작성 금지 & 설계·지시 강제
 ├── SUB_AGENTS.md                    # [서브 헌법] GPT 5.6-terra medium에게 지시서 엄수 & 온더플라이 테스트·구현 전담 강제
@@ -606,7 +823,7 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 │   ├── TASK_SPEC.md                 # 메인(Sol)이 작성하는 단일 모듈 작업 지시서
 │   ├── SUB_RESULT.md                # 서브(GPT 5.6-terra)가 실행 후 기록하는 요약 결과 보고서
 │   ├── HANDOFF.md                   # 세션 간 무손실 인수인계서 (init.sh가 초기 복사 후 실시간 누적)
-│   └── EDA_SUMMARY.txt              # init.sh 실행 시 무토큰 자동 생성되는 데이터/코드 요약문
+│   └── EDA_SUMMARY.txt              # init.sh 실행 시 무토큰 자동 생성되는 데이터/코드 요약문 ([CASE_SIGNAL] 포함)
 │
 ├── prompts/                         # [복붙 치트시트] 에디터 우측에 띄워두고 쓰는 프롬프트 팩
 │   ├── 02_codex_prompts.md          # 메인/서브 단계별 통제 프롬프트 6종
@@ -617,6 +834,9 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 │   ├── case2_web_service.md         # Case 2: 0.0.0.0 바인딩·핵심 동선 수직 완성 지침
 │   ├── case3_legacy_debug.md        # Case 3: 베이스라인 테스트·인터페이스 불변 디버깅 지침
 │   ├── case4_policy_rag_doc.md      # Case 4: 규정 색인·수동 검토 플래그·환각 통제 지침
+│   ├── case5_optimization_csp.md    # Case 5: 수리·조합 최적화 / CSP 스케줄링 / 배차·배치 지침
+│   ├── case6_semicon_data_spc.md    # Case 6: 반도체 CoA/SPC 통계·2D 웨이퍼 Overlay·재무 정규화 지침
+│   ├── case7_fde_valuechain_app.md  # Case 7: 반도체 밸류체인 시뮬레이터 & 교육 코칭 웹앱 지침
 │   └── handoff.md                   # Handoff 4대 골든 타이밍 및 표준 프로토콜 지침
 │
 ├── templates/                       # [문서 템플릿]
@@ -629,7 +849,9 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
     ├── handoff.py                   # OS 독립형 Python 3 버전 단계별 로그(log 서브커맨드) 갱신기
     ├── subagent.sh                  # 서브 에이전트 자동 호출 래퍼 스크립트
     ├── eda_scan.py                  # 토큰 0원으로 CSV/JSON/테스트 파일 구조 분석 스캐너
-    ├── sample_check_template.py     # 15건 표본 수동 기댓값 vs 스크립트 출력 교차 검증 도구
+    ├── sample_check_template.py     # Case 1 표본 15건 수동 기댓값 vs 스크립트 출력 교차 검증 도구
+    ├── sample_check_opt.py          # Case 5 최적화/CSP 표본 15건 제약/목적함수 수동 대조 검증 도구
+    ├── sample_check_spc.py          # Case 6 반도체 CoA/SPC·웨이퍼 Overlay·재무 정규화 표본 15건 검증 도구
     ├── pre_submit_audit.sh          # Linux/WSL/Git Bash용 종합 무감점 사전 감사 도구
     └── pre_submit_audit.py          # 범용 Python 3 버전 사전 감사 도구
 ```

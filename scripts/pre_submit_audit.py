@@ -8,6 +8,7 @@ scripts/pre_submit_audit.py: 제출 직전(12:40) 종합 무감점 사전 점검
 - [4] 시스템 메모리 상태 점검
 - [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검
 - [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
+- [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)
 """
 
 import os
@@ -46,6 +47,18 @@ def find_workspace_root() -> Path:
         pass
     return Path.cwd().resolve()
 
+
+if any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print("사용법: python pre_submit_audit.py [WORKSPACE_ROOT]")
+    print("제출 직전(12:40) 종합 무감점 사전 점검 스크립트 (Windows/Linux 범용)")
+    print("  [1] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)")
+    print("  [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔")
+    print("  [3] 웹 서버 네트워크 바인딩 점검 (localhost vs 0.0.0.0)")
+    print("  [4] 시스템 메모리 상태 점검")
+    print("  [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검 (.git/info/exclude)")
+    print("  [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)")
+    print("  [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)")
+    sys.exit(0)
 
 WORKSPACE_ROOT = (
     Path(sys.argv[1]).resolve()
@@ -374,13 +387,116 @@ def main() -> None:
     ):
         harness_preserved = True
 
+    # case5~7 고급 도메인 스킬 파일 존재 여부 점검 (구버전 워크스페이스 호환성 유지)
+    skill_dirs = [
+        WORKSPACE_ROOT / ".probe-kit" / "skills",
+        WORKSPACE_ROOT / "probe-kit" / "skills",
+        WORKSPACE_ROOT / "skills",
+    ]
+    detected_skills = []
+    for sdir in skill_dirs:
+        if sdir.is_dir():
+            for case_num in (5, 6, 7):
+                for m in sdir.glob(f"case{case_num}*.md"):
+                    if m.name not in detected_skills:
+                        detected_skills.append(m.name)
+
+    if detected_skills:
+        print(f"ℹ️ [스킬 팩 감지] case5~7 고급 도메인 스킬 발견: {', '.join(sorted(detected_skills))}")
+
     if harness_preserved:
         record_pass("하네스 영구 보존 확인됨 (의도/인지 가점 확보)")
     else:
         record_warn("하네스(.probe-kit) 또는 HANDOFF.md를 찾을 수 없습니다. 평가 가점을 위해 디스크에 보존하는 것을 권장합니다.")
 
     # --------------------------------------------------------------------------
-    # [7] 제출 직전 확인 지침
+    # [7] 도메인 산출물 센티널 잔존 및 무결성 점검
+    # --------------------------------------------------------------------------
+    print("\n📌 [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)")
+    output_dir_names = [
+        "output", "outputs", "dist", "result", "results",
+        "submission", "submissions", "artifacts"
+    ]
+    exclude_dirs_check7 = {
+        ".git", "node_modules", "__pycache__", ".venv", "venv",
+        ".probe-kit", "probe-kit", "tests", "test", "data", "dataset", "datasets",
+        "uploads", "upload", "templates", "prompts", "skills", "runtime", "scripts"
+    }
+    exclude_root_files = {
+        "package.json", "package-lock.json", "tsconfig.json", "jsconfig.json",
+        "settings.json", "composer.json", "manifest.json", "config.json"
+    }
+
+    target_output_files = []
+    # 1) 후보 산출물 디렉토리 스캔
+    for od in output_dir_names:
+        cand_dir = WORKSPACE_ROOT / od
+        if cand_dir.is_dir():
+            for root, dirs, files in os.walk(str(cand_dir)):
+                dirs[:] = [d for d in dirs if d not in exclude_dirs_check7 and not d.startswith(".")]
+                for file in files:
+                    if file.startswith("."):
+                        continue
+                    fp = Path(root) / file
+                    if fp.is_file() and not is_binary_file(fp):
+                        target_output_files.append(fp)
+
+    # 2) 루트 레벨 산출물 파일 스캔 (*.csv, *.tsv, *.json 및 submission*/result* 파일)
+    try:
+        for entry in WORKSPACE_ROOT.iterdir():
+            if entry.is_file() and not entry.name.startswith("."):
+                lname = entry.name.lower()
+                ext = entry.suffix.lower()
+                if ext in {".csv", ".tsv", ".json"}:
+                    if entry.name not in exclude_root_files and not lname.startswith("package"):
+                        if not is_binary_file(entry) and entry not in target_output_files:
+                            target_output_files.append(entry)
+                elif any(lname.startswith(p) for p in ("submission", "result", "prediction", "output")):
+                    if ext not in {".py", ".sh", ".md", ".toml", ".yml", ".yaml"}:
+                        if not is_binary_file(entry) and entry not in target_output_files:
+                            target_output_files.append(entry)
+    except Exception:
+        pass
+
+    sentinel_pattern = re.compile(
+        r'(?:(?<![0-9])(?:-9999|-999(?:\.0+)?)(?![0-9])|<\s*DL\b|\bNaN\b)',
+        re.IGNORECASE
+    )
+
+    sentinel_leaks = []
+    if target_output_files:
+        for fp in target_output_files:
+            try:
+                with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+                    for lineno, line in enumerate(f, 1):
+                        if sentinel_pattern.search(line):
+                            clean_line = line.strip()
+                            if len(clean_line) > 120:
+                                clean_line = clean_line[:117] + "..."
+                            try:
+                                rel_path = fp.relative_to(WORKSPACE_ROOT)
+                            except Exception:
+                                rel_path = fp
+                            sentinel_leaks.append(f"{rel_path}:{lineno}:{clean_line}")
+                            if len(sentinel_leaks) >= 50:
+                                break
+            except Exception:
+                continue
+
+    if sentinel_leaks:
+        print("⚠️ [주의] 아래 산출물에서 처리되지 않은 결측/센티널(-999, < DL, NaN 등)이 발견되었습니다:")
+        for item in sentinel_leaks[:10]:
+            print(f"   {item}")
+        if len(sentinel_leaks) > 10:
+            print(f"   ... (총 {len(sentinel_leaks)}건 이상 감지)")
+        record_warn("산출물에 센티널(-999, < DL, NaN 등)이 남아있습니다. 도메인 전처리/대체(Imputation)를 확인하세요.")
+    elif target_output_files:
+        record_pass(f"도메인 산출물 센티널 점검 통과 ({len(target_output_files)}개 파일 검사 완료, 결측/센티널 잔존 없음)")
+    else:
+        record_pass("산출물 파일 없음 또는 생성 전 (산출물 센티널 누수 없음)")
+
+    # --------------------------------------------------------------------------
+    # [8] 제출 직전 확인 지침
     # --------------------------------------------------------------------------
     print("\n==========================================================")
     print("🧹 [제출 직전(12:40) 필수 확인 지침]")
@@ -394,7 +510,7 @@ def main() -> None:
     print("==========================================================")
 
     # --------------------------------------------------------------------------
-    # [8] 감사 결과 요약 및 종료 코드 반환
+    # [9] 감사 결과 요약 및 종료 코드 반환
     # --------------------------------------------------------------------------
     print("")
     print("==========================================================")

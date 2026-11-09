@@ -3,6 +3,7 @@
 ## 1. 언제 이 스킬을 쓰는가
 - **적용 상황:** 지시서에 "~관리 시스템을 만들어주세요", "~현황 대시보드를 개발해주세요", "~조회 및 등록 웹 서비스를 구현해주세요"와 같이 몇 줄의 러프한 요구사항만 주어지고, 빈 저장소(또는 최소한의 초기 뼈대 템플릿)가 제공되는 웹 개발 과제.
 - **평가 포인트:** 화려한 CSS나 불필요한 회원가입/권한 관리 등 오버엔지니어링에 시간을 낭비하지 않고, 현업 실무자가 가장 필요로 하는 **단일 핵심 유저 동선(입력 -> 처리 -> 화면 반영)을 완전하게 수직 완성(MVP)**하고, 시험 플랫폼 내장 브라우저(`0.0.0.0`)에서 직접 동작하는 모습을 평가관에게 증명해야 한다.
+- **연계 스킬 교차 참조:** 반도체 밸류체인 DAG 수급 충격·후공정 병목 What-If 시뮬레이터(#14), 직무별 Level-Adaptive AI 튜터(#15), 멀티 페르소나 Dual-Mode 통합 플랫폼 과제는 [.probe-kit/skills/case7_fde_valuechain_app.md](case7_fde_valuechain_app.md)를 우선 적용하며, 식단 최적화 및 개인 맞춤 추천 변형(#12)은 Case 5 / Case 7 스킬을 참조한다.
 
 ---
 
@@ -211,31 +212,107 @@ curl -s http://0.0.0.0:8000/api/v1/logs | jq '.[0:3]'
 
 ## 9. 서브 에이전트(`GPT 5.6-terra medium`)에게 넘길 TASK_SPEC 예시
 
+메인 에이전트(`Sol 6.1 xhigh`)는 아래 [시작 · 정의 · 기준 · 종료] 4대 핵심 축 기반 7대 표준 규격의 명세서를 작성하여 서브 에이전트에게 구현을 위임한다.
+
 ```markdown
-# TASK_SPEC: 공정 이상 모니터링 및 조치 웹앱 구현
+# [TASK_SPEC] 공정 이상 모니터링 및 조치 웹앱 수직 완성 (MVP)
 
-## 1. 작업 개요
-- 프레임워크: FastAPI (백엔드) + 단일 HTML/JS (프론트엔드 static)
-- 바인딩 주소: `0.0.0.0:8000`
-- 담당 역할: 서브 에이전트 (GPT 5.6-terra medium)
+> **작성자:** 메인 아키텍트 (`Sol 6.1 xhigh`)  
+> **수신자:** 서브 워커 (`GPT 5.6-terra medium`)  
+> **핵심 원칙:** [시작 · 정의 · 기준 · 종료] 4대 축 기반 명세 준수 및 지정 범위 외 임의 수정 절대 금지. 완료 후 `.probe-kit/runtime/SUB_RESULT.md`에 핵심 결과와 변경 사항 위주의 명확한 요약 보고를 남길 것 (불필요한 줄 수 제한 없음).
 
-## 2. 세부 구현 요구사항
-1. 백엔드 API (`app/main.py`):
-   - `GET /health`: 상태 점검 `{"status": "ok"}`
-   - `GET /api/alerts`: 이상 장비 목록 조회 (위험 등급 높은 순 정렬)
-   - `POST /api/alerts`: 신규 조치 기록 등록. 빈 입력, 음수 수치, 누락 필드 시 HTTP 400 반환.
-2. 프론트엔드 UI (`static/index.html`):
-   - 최상단: [총 경보 건수 배지], [긴급(Critical) 건수 배지], [최종 갱신 시각] 고정.
-   - 중앙: 핵심 유저 동선용 신규 조치 등록 폼 (필수값 누락 시 브라우저 내 경고 및 submit 버튼 비활성화).
-   - 하단: 실시간 조치 현황 테이블 (위험도별 색상 태그 표시).
-3. 서버 실행 스크립트:
-   - `uvicorn app.main:app --host 0.0.0.0 --port 8000` 형태로 구동 가능할 것.
+---
 
-## 3. 검증 기준
-- 태스크 DM 맞춤 온더플라이 테스트(tests/test_*.py) 작성 및 실행 100% 통과 (git commit 금지, untracked 유지).
-- `curl -s http://0.0.0.0:8000/health` 호출 시 HTTP 200 반환.
-- 빈 페이로드 전송 시 500 에러 없이 400 응답 반환.
-- 정상 페이로드 전송 후 GET 조회 시 화면 테이블에 1건 추가 반영 확인.
+### 1. [시작 / Start] 단일 목표 및 진입 조건 (Entry Conditions)
+- **단일 목표 (Single Goal):** 공정 이상 모니터링 대시보드에서 실무자가 1일 최다 빈도로 수행하는 '이상 경보 목록 조회 → 조치 내용 등록 → 화면 즉시 반영' 단일 핵심 유저 동선 1개 수직 완성 (MVP)
+- **선행 완료 상태 (Pre-conditions):**
+  - 백엔드(FastAPI) 및 프론트엔드 static 디렉토리 구조 생성 확인
+  - `0.0.0.0:8000` 바인딩 포트 충돌 여부 및 가용 상태 확인
+  - Git 작업 트리가 깨끗한 상태(uncommitted 변경 사항 없음)인지 확인
+- **사전 베이스라인 체크 (Baseline Pre-check):**
+  - 기존 웹 서버 구동 상태 또는 헬스체크 테스트 PASS 확인 (`curl -s http://0.0.0.0:8000/health` 또는 `pytest tests/test_api_endpoints.py`)
+  - 사전 베이스라인 실패 시 코드 작성 시작을 금지하고 즉시 원인 보고
+
+### 2. [통제 / Scope] 대상 파일 범위 및 금지 사항 (Hard Constraints)
+- **수정 허용 파일:**
+  - `app/main.py` (FastAPI 엔드포인트 및 입력 유효성 검증 로직)
+  - `static/index.html` (도메인 정보 상단 배치 및 등록 폼/목록 테이블 단일 UI)
+  - `tests/test_api_endpoints.py` (신규 엔드포인트 유효성 검증 온더플라이 테스트)
+- **수정 절대 금지 파일:**
+  - 복잡한 사용자 테이블, 세션 관리 등 불필요한 인증 관련 신규 모듈 생성 금지
+  - 글로벌 시스템 환경설정 및 DB 엔진 파일
+  - `.gitignore` (Git 트래킹 제외 목록 수정 금지 - 임시 파일은 `.git/info/exclude`로 통제)
+- **5대 금지사항 (Hard Constraints):**
+  - 회원가입, JWT, 복잡한 권한 관리 등 요구사항에 없는 오버엔지니어링 전면 금지 (단일 공용 세션 원칙)
+  - 서버 실행 시 `localhost` / `127.0.0.1` 바인딩 절대 금지 (반드시 `0.0.0.0` 바인딩 준수)
+  - 시크릿, 패스워드, 개인 식별 정보, API 키 코드 내 하드코딩 절대 금지
+  - `.gitignore` 파일 수정 금지 (임시 파일은 `.git/info/exclude`로 통제)
+  - 시험 중 `git add` / `git commit` / `git reset` / `git clean` 실행 전면 금지 (테스트 코드는 커밋하지 않으며 test 파일은 untracked 상태 유지)
+
+### 3. [정의 / Definition] 도메인 용어·상태 및 입출력 스키마
+- **도메인 핵심 엔터티 및 용어 정의:**
+  - `Alert (이상 경보 건)`: 공정 장비의 센서 이상 임계값 초과로 발생한 경보 엔터티 (식별자: `alert_id`)
+  - `ActionLog (조치 기록)`: 현장 작업자가 특정 경보에 대해 수행한 유지보수 작업 기록 (식별자: `action_id`)
+- **경보 상태 코드(Alert Status) 정의:**
+  - `PENDING`: 현장 조치 대기 상태 (화면 상 빨간색 태그)
+  - `IN_PROGRESS`: 점검 및 조치 진행 중 상태 (주황색 태그)
+  - `RESOLVED`: 조치 완료 및 정상화 상태 (초록색 태그)
+- **API 요청/응답 JSON 스키마 및 HTTP 상태 코드 계약:**
+  - **1) 헬스체크 (`GET /health`):**
+    - 응답: HTTP 200 OK `{"status": "ok"}`
+  - **2) 이상 목록 조회 (`GET /api/alerts`):**
+    - 응답: HTTP 200 OK `[{"alert_id": "ALT-001", "equipment_id": "EQP-01", "severity": "CRITICAL", "status": "PENDING", "created_at": "..."}]`
+    - 정렬: `severity` 우선순위(`CRITICAL` -> `WARNING`), 동일 등급 내 `created_at` 최신순
+  - **3) 조치 등록 (`POST /api/alerts/{alert_id}/actions`):**
+    - 요청 Body: `{"action_type": string (필수, 1자 이상), "operator_name": string (필수, 2자 이상), "comment": string (선택)}`
+    - 성공 응답: HTTP 201 Created `{"status": "SUCCESS", "data": {"action_id": "ACT-1001", "alert_id": "ALT-001", "operator_name": "홍길동", "action_type": "부품교체", "created_at": "..."}}`
+    - 유효성 검증 실패 (빈 문자열, 누락 필드, 음수): HTTP 400 Bad Request `{"status": "ERROR", "message": "필수 입력값 누락 또는 유효하지 않은 입력", "invalid_fields": ["operator_name"]}`
+    - 미존재 경보 ID: HTTP 404 Not Found `{"status": "ERROR", "message": "해당 alert_id를 찾을 수 없습니다."}`
+
+### 4. [기준 / Criteria] 비즈니스 판정 기준 및 경계값 (Acceptance & Boundary Criteria)
+- **실무자 DM 확인 비즈니스 규칙:**
+  - 화면 최상단에 3대 도메인 정보([총 경보 건수 배지], [긴급(Critical) 건수 배지], [최종 동기화 시각])를 고정 배치
+  - 조치 등록 즉시 목록 테이블의 상태가 갱신되어 새로고침 없이 확인 가능할 것
+- **수치 경계값 및 유효성 검증 기준:**
+  - `operator_name`: 최소 2자 이상 (공백 제외), 공백 문자열(`"   "`) 입력 시 400 에러 처리
+  - `action_type`: 허용 문자열 길이 1자 이상 50자 이하
+- **결측/예외 처리 기준 (이중 방어막):**
+  - 프론트엔드: 필수 필드 미입력 시 `submit` 버튼 비활성화 및 빨간색 에러 텍스트 표시
+  - 백엔드: 전역 예외 처리기를 등록하여 어떤 비정상 페이로드가 유입되어도 HTTP 500이 아닌 **HTTP 400/422**와 원인 JSON 반환
+- **충돌 시 우선순위:**
+  - 화려한 스타일링이나 불필요한 부가기능보다 **단일 핵심 유저 동선의 수직 완성 및 500 에러 방어(안정성)** 최우선
+
+### 5. [검증 / Verification] 실행할 검증 명령어
+- **1) 헬스체크 및 베이스라인 검증:**
+  - `curl -s -o /dev/null -w "%{http_code}\n" http://0.0.0.0:8000/health` (HTTP 200 확인)
+- **2) 태스크 맞춤 온더플라이(On-the-fly) ad-hoc 테스트 (필수):**
+  - 실무자 DM 요구사항에 맞춘 온더플라이 API 테스트(`tests/test_api_endpoints.py`) 작성 및 실행
+  - `pytest tests/test_api_endpoints.py -v` (통과 확인, *git commit 없이 untracked 유지*)
+- **3) 정상·예외·경계값 스모크 curl 검증:**
+  - 정상 등록 (201 Created):
+    `curl -s -X POST http://0.0.0.0:8000/api/alerts/ALT-001/actions -H "Content-Type: application/json" -d '{"action_type": "점검", "operator_name": "홍길동"}' | jq .`
+  - 빈 문자열 방어 (400 Bad Request):
+    `curl -s -X POST http://0.0.0.0:8000/api/alerts/ALT-001/actions -H "Content-Type: application/json" -d '{"action_type": "", "operator_name": "  "}' | jq .`
+- **4) 내장 브라우저 수동 검증:**
+  - 플랫폼 내장 Browser 창에서 `http://0.0.0.0:8000` 접속 후 직접 조치 등록 클릭 및 상단 배지/테이블 변경 육안 확인
+
+### 6. [정의 & 기준 / DoD] 완료 정의 (Definition of Done)
+- [ ] 서버가 `0.0.0.0:8000`에 바인딩되어 백그라운드에서 정상 구동 중일 것
+- [ ] 내장 브라우저에서 조치 등록 폼 제출 시 테이블에 즉시 반영되는 단일 동선이 수직 완성될 것
+- [ ] 비정상/빈 페이로드 전송 시 500 에러 없이 HTTP 400/422 응답이 반환될 것
+- [ ] 온더플라이 단위 테스트(`tests/test_api_endpoints.py`)가 100% PASS할 것 (git commit 금지, untracked 유지)
+- [ ] `git diff --stat` 확인 시 지정된 수정 허용 파일 외 변경이 없을 것
+
+### 7. [종료 / End] 종료 조건, 멈춤 조건 및 완료 후 조치 (Exit & Stop Protocol)
+- **멈춤 조건 (Stop / Abort Condition) - 발견 즉시 구현 중단 및 대기:**
+  - `0.0.0.0:8000` 포트 점유 충돌로 자체 해결이 불가할 때
+  - 백엔드와 프론트엔드 간 API 계약(요청/응답 스키마)의 모호성이 발생했을 때
+  - 사전 베이스라인 테스트 실패 원인이 불명확할 때
+  - *위 상황 발생 시 즉시 구현을 멈추고 `SUB_RESULT.md`에 [차단(블로커)] 사유 기록 후 메인 보고*
+- **완료 후 필수 조치 (Post-Completion Actions):**
+  1. `.probe-kit/runtime/SUB_RESULT.md` 요약 보고서 작성 (필수 항목 표준 양식 준수, 불필요한 줄 수 제한 없음)
+  2. `bash .probe-kit/scripts/handoff.sh log "sub done: web service MVP complete"` 실행 (실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "web service MVP complete"`, 여의치 않을 시 `runtime/HANDOFF.md` 표에 직접 추가)
+  3. 메인 에이전트에게 완료 보고 후 **서브 터미널에서 즉시 `/clear` 실행** (누적 토큰 리셋)
 ```
 
 ---
