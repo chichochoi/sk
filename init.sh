@@ -64,7 +64,7 @@ if [ -d "$WORKSPACE_DIR/.git" ]; then
   mkdir -p "$WORKSPACE_DIR/.git/info"
   EXCLUDE_FILE="$WORKSPACE_DIR/.git/info/exclude"
   touch "$EXCLUDE_FILE"
-  for item in "/.probe-kit" "/.probe-kit/" "/runtime/" "/NOTES_TEMP.md" "/TASK_SPEC.md" "/SUB_RESULT.md" "/EDA_SUMMARY.txt" "/HANDOFF.md"; do
+  for item in "/.probe-kit" "/.probe-kit/" "/runtime/" "/ml_track/" "/NOTES_TEMP.md" "/TASK_SPEC.md" "/SUB_RESULT.md" "/EDA_SUMMARY.txt" "/HANDOFF.md"; do
     if ! grep -qxF "$item" "$EXCLUDE_FILE" 2>/dev/null; then
       echo "$item" >> "$EXCLUDE_FILE"
     fi
@@ -76,6 +76,7 @@ fi
 
 echo "=== [4/6] 런타임 버퍼 보장 및 실시간 메모장/인수인계서 준비 ==="
 mkdir -p "$TARGET_KIT/runtime"
+mkdir -p "$TARGET_KIT/ml_track"
 if [ -f "$TARGET_KIT/templates/NOTES.md" ]; then
   if [ ! -f "$WORKSPACE_DIR/NOTES_TEMP.md" ]; then
     cp "$TARGET_KIT/templates/NOTES.md" "$WORKSPACE_DIR/NOTES_TEMP.md"

@@ -187,3 +187,68 @@ bash .probe-kit/scripts/subagent.sh status
    - AI가 합의 범위 밖의 파일을 마음대로 고쳤는지, API 키·개인정보가 노출되었는지 `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 `python3 .probe-kit/scripts/pre_submit_audit.py`)로 직접 확인합니다 (`git diff` 실행 자체가 평가 로그이며, 시험 중 `git add`/`commit`/`reset`/`clean`은 엄격히 금지됩니다).
 6. **리소스(OOM) 및 전 파일 저장 상태(`저장됨`) 확인:**
    - 우측 상단 CPU/RAM 사용량을 점검하고, 제출 전 모든 파일에 `Ctrl+S`를 눌러 `저장됨` 상태를 확정합니다.
+
+---
+
+## 6. 백그라운드 Sol 6.1 AutoML 트랙 & Champion Selection 프롬프트 팩
+
+이 섹션은 머신러닝 적용 가능성 판정(`ml_feasibility_check.py`) 결과가 `GO — DIRECT_ML` 또는 `GO — HYBRID_ML`일 때, 메인 트랙(터미널 1~3)과 완전히 독립된 **터미널 4 (`Sol 6.1 xhigh`)**에서 5시간 무인 자율 학습을 수행하고, 최종적으로 메인 아키텍트가 최고 모델을 안전하게 채택/결합하기 위한 전용 프롬프트 팩입니다.
+
+---
+
+### 📋 [AutoML 프롬프트 1 — 터미널 4 (Sol 6.1 xhigh 백그라운드 자율 학습)] 5시간 무인 경량화·학습·평가 지시
+> **용도:** 시험 시작 직후(09:40~10:00) 또는 ML Feasibility `GO` 확인 직후, 독립된 터미널 4 탭을 열고 `codex` 기동 후 주입하여 5시간 무인 자율 파이프라인을 가동합니다.
+
+```text
+[AUTOML_SHADOW_TRACK]
+너는 메인 트랙과 완전히 격리된 독립 백그라운드 머신러닝 학습 에이전트(Sol 6.1 xhigh)야.
+인간 사용자의 추가 개입 없이 최대 5시간 동안 자율적으로 데이터 경량화, 피처 엔지니어링, 경량 모델 학습/튜닝, 앙상블 블렌딩, 하드 제약 후처리, 최종 패키징을 완수해야 해.
+
+먼저 다음 파일들을 정독해:
+1. .probe-kit/skills/case8_lightweight_automl_track.md (절대 헌법 및 4-Phase 자율 루프)
+2. .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt (ML 타당성 진단 요약 및 타깃/피처 신호)
+3. 워크스페이스 루트의 README.md (과제 목표 및 채점 지표)
+
+반드시 다음 [절대 격리 & 리소스 보호 헌법]을 준수해:
+- [Strict Read-Only]: 워크스페이스 루트의 기존 파일(src/, main.py, app/, tests/, README.md, TASK_SPEC.md 등)과 원본 데이터셋은 절대 수정/삭제하지 마.
+- [완전 격리 샌드박스]: 모든 중간 전처리 데이터, 실험 코드, 모델 체크포인트, 최종 산출물은 반드시 .probe-kit/ml_track/ 내부에만 생성해.
+- [CPU/RAM Throttling]: 메인 터미널의 응답성을 위해 모든 파이썬 스크립트 최상단에 OMP_NUM_THREADS="2", MKL_NUM_THREADS="2"를 강제 설정하고, 모든 모델 파라미터에 n_jobs=2를 고정해. 쉘 명령 실행 시 nice -n 10을 붙여 실행해.
+
+[5시간 4-Phase 자율 수행 시퀀스]:
+1. Phase 1 (0~20분): .probe-kit/ml_track/data_compact/ 경량 데이터 또는 자체 다운캐스팅/센티널 분리를 적용하고, 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
+2. Phase 2 (20~120분): N > 30,000일 경우 20% Coreset을 활용하여 비율/차이/그룹통계량/Lag/OOF Target Encoding 피처를 자동 생성하고, CV 점수가 상승한 피처만 영구 채택(Forward Selection)해.
+3. Phase 3 (120~240분): HistGradientBoosting, RandomForest, Ridge 등 서로 다른 3종 모델을 튜닝하고, Out-of-Fold(OOF) 예측값을 결합하는 최적 가중치 블렌딩 앙상블을 구축해 단일 모델 대비 성능 개선을 확인해. (20% Coreset으로 최적화한 상위 모델은 100% Full 데이터셋으로 최종 재학습)
+4. Phase 4 (240~300분):
+   - 예측값이 문제의 물리적/비즈니스 제약(비음수, 상하한 규격, 정수 제약)을 100% 만족하도록 post_process_constraints() 후처리를 강제 적용해.
+   - 전체 테스트셋 추론 시간 < 3초 및 아티팩트 용량 < 10MB를 확인해.
+   - 최종 4대 산출물을 .probe-kit/ml_track/ 에 생성하고 대기 상태로 들어가:
+     1) ml_submission_ready.<csv|json> (즉시 제출 가능한 최종 예측 결과)
+     2) ml_solution.py (메인 파이프라인 1분 교체용 predict_solution(df) 함수 모듈)
+     3) leaderboard.json (전체 실험 히스토리 및 CV 점수 변천사)
+     4) CHAMPION_REPORT.md (베이스라인 대비 오차 감소율, 상위 피처 Top 5, 하드 제약 통과 여부, 1줄 채택 쉘 명령어, 사후 질의용 [결정]-[근거]-[검증]-[한계] 4문장 요약)
+
+지금 즉시 Phase 1에 착수해.
+```
+
+---
+
+### 📋 [메인 프롬프트 7 — 터미널 1 (Sol 6.1 xhigh)] 알고리즘 vs 백그라운드 ML 챔피언 비교 및 최종 채택/결합 지시
+> **용도:** 시험 후반(12:30~13:00 사이), 메인 아키텍트가 터미널 4의 백그라운드 학습 성과를 검토하고, 메인 알고리즘 단독 유지 / ML 교체 / 하이브리드 결합 여부를 최종 의사결정할 때 사용합니다.
+
+```text
+[MAIN]
+우리는 메인 파이프라인의 완성도를 점검하고, 백그라운드(터미널 4)에서 자율 학습된 ML 챔피언 솔루션을 최종 채택하거나 결합할지 결정해야 해.
+
+먼저 다음 파일들을 확인해:
+1. bash 터미널에서 python3 .probe-kit/scripts/ml_feasibility_check.py --compare 실행 결과 (메인 휴리스틱 vs 백그라운드 ML 챔피언의 점수 및 추론 속도 비교 출력)
+2. .probe-kit/ml_track/CHAMPION_REPORT.md (ML 챔피언 성능 향상폭, 상위 피처, 하드 제약 통과 여부)
+3. 메인 트랙의 현재 검증 점수 및 안정성
+
+위 3가지 근거를 바탕으로 아래 3가지 경로 중 가장 점수가 높고 안전한 최적의 경로를 1개 선택하여 브리핑해줘:
+- [경로 1: 메인 알고리즘 단독 유지]: ML 챔피언이 하드 제약을 불안정하게 만족하거나 점수 향상이 미미한 경우, 현재의 안정적인 규칙/최적화 알고리즘을 100% 유지하고, 보고서에 "ML 탐색 대비 규칙 기반 알고리즘의 우위 및 안정성"을 비교 검증 근거로 서술.
+- [경로 2: 백그라운드 ML 솔루션으로 전격 교체]: ML 챔피언이 하드 제약을 100% 통과하면서 예측 오차를 대폭 줄인 경우, cp .probe-kit/ml_track/ml_submission_ready.* 제출 파일로 1분 만에 교체하거나 main.py에서 ml_solution.py를 호출하도록 서브 에이전트(터미널 2)용 TASK_SPEC.md 발행.
+- [경로 3: 알고리즘 + ML 하이브리드 결합]: 메인 알고리즘으로 하드 제약과 기본 배치를 먼저 잡고, 세부 수치/잔차/스코어링 우선순위에 ML 모델 예측값을 피처로 주입하는 하이브리드 결합 TASK_SPEC.md 발행.
+
+의사결정 완료 후, 선택한 결정과 근거를 NOTES_TEMP.md 및 제출용 SUBMISSION_REPORT.md에 [결정]-[근거]-[검증]-[한계] 형식으로 반영해줘.
+```
+

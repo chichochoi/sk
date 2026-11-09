@@ -371,6 +371,7 @@ def print_case_signal_banner(case_info: dict):
     print(f"- 추천 DM 질문: {case_info['dm_section']}")
     print(f"- 추정 페르소나: {case_info['personas']}")
     print(f"- 보조 점검: {case_info['audit_script']}")
+    print("- ML 트랙 판별: python3 .probe-kit/scripts/ml_feasibility_check.py --compact")
     print("=" * 65)
 
 # ==============================================================================

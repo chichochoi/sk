@@ -41,6 +41,7 @@ python3 .probe-kit/scripts/pre_submit_audit.py
 | `skills/case5_optimization_csp.md` | 온디맨드 스킬 | Case 5: 수리·조합 최적화(Optimization) & 제약 만족(CSP) 하드제약 분리 지침 |
 | `skills/case6_semicon_data_spc.md` | 온디맨드 스킬 | Case 6: 반도체 CoA 검증·SPC 통계 공정 제어·웨이퍼 오버레이·재무 정규화 지침 |
 | `skills/case7_fde_valuechain_app.md` | 온디맨드 스킬 | Case 7: FDE 밸류체인 수급 시뮬레이터 & 멀티 페르소나 인터랙티브 웹앱 구축 지침 |
+| `skills/case8_lightweight_automl_track.md` | 온디맨드 스킬 | Case 8: 경량화 자율 머신러닝 트랙 (Shadow AutoML) & 챔피언 솔루션 패키징 지침 (터미널 4 전용) |
 | `skills/handoff.md` | 온디맨드 스킬 | Handoff 4대 골든 타이밍, 단계별 실시간 로그 및 3단계 표준 프로토콜 지침 |
 | `prompts/02_codex_prompts.md` | 프롬프트 치트시트 | 메인/서브 단계별 통제 프롬프트 6종 (초기 진단 / TASK_SPEC / 서브 실행 / 검수 / Handoff) |
 | `prompts/03_post_qna_formula.md` | 프롬프트 치트시트 | 마지막 30분 후속 서술형(6문항×5분) 4문장 타이핑 공식 & 전제 불일치 방어문 |
@@ -52,6 +53,7 @@ python3 .probe-kit/scripts/pre_submit_audit.py
 | `scripts/handoff.py` | 자동화 도구 | OS 독립형 Python 3 버전 단계별 로그(`log` 서브커맨드) 실시간 갱신기 |
 | `scripts/subagent.sh` | 자동화 도구 | `GPT 5.6-terra medium`로 `TASK_SPEC.md`를 실행하고 결과만 요약 반환하는 서브 호출기 |
 | `scripts/eda_scan.py` | 자동화 도구 | CSV/JSON/테스트 파일 구조 분석 및 `[CASE_SIGNAL]` 자동 감지 무토큰 EDA 스캐너 |
+| `scripts/ml_feasibility_check.py` | 진단 도구 | 8대 Gatekeeper 기반 ML 적용 타당성 자동 판정(`--compact`, `--compare` 지원) 및 리포트 생성기 |
 | `scripts/sample_check_template.py` | 검증 도구 | 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 교차 검증 템플릿 (Case 1) |
 | `scripts/sample_check_opt.py` | 검증 도구 | 최적화/CSP 하드제약 및 목적함수 15건 표본 수동 대조 검증 스크립트 (Case 5) |
 | `scripts/sample_check_spc.py` | 검증 도구 | 반도체 CoA/SPC 통계/웨이퍼 오버레이/재무 정규화 15건 표본 수동 대조 검증 스크립트 (Case 6) |
@@ -124,7 +126,8 @@ probe-kit/
 │   ├── case4_policy_rag_doc.md   # Case 4, 8: 규정 조항 색인화·수동 검토 플래그·환각 통제·대안 비교
 │   ├── case5_optimization_csp.md # Case 5: 수리·조합 최적화(Optimization) & 제약 만족(CSP) 하드제약 분리
 │   ├── case6_semicon_data_spc.md # Case 6: 반도체 CoA 검증·SPC 통계 공정 제어·웨이퍼 오버레이·재무 정규화
-│   └── case7_fde_valuechain_app.md # Case 7: FDE 밸류체인 수급 시뮬레이터 & 멀티 페르소나 인터랙티브 웹앱
+│   ├── case7_fde_valuechain_app.md # Case 7: FDE 밸류체인 수급 시뮬레이터 & 멀티 페르소나 인터랙티브 웹앱
+│   └── case8_lightweight_automl_track.md # Case 8: 경량화 자율 머신러닝(AutoML) 트랙 & 챔피언 패키징 (터미널 4)
 │
 ├── prompts/                      # [복붙 치트시트] 에디터 우측에 띄워두고 쓰는 인간용 무기
 │   ├── 02_codex_prompts.md       # 메인/서브 단계별 통제 프롬프트 6종 (초기 진단 / TASK_SPEC 생성 / 서브 실행 / 검수 / Handoff)
@@ -141,6 +144,7 @@ probe-kit/
     ├── handoff.py                # [인수인계 도구] OS 독립형 Python 3 버전 단계별 로그(log 서브커맨드) 실시간 갱신기
     ├── subagent.sh               # [서브 호출기] GPT 5.6-terra medium로 TASK_SPEC.md를 실행하고 결과만 요약 반환
     ├── eda_scan.py               # [무토큰 EDA] CSV/JSON/테스트 파일 구조 분석 및 [CASE_SIGNAL] 자동 감지
+    ├── ml_feasibility_check.py   # [ML 타당성 진단] 8대 Gatekeeper 판정/데이터 경량화/챔피언 비교
     ├── sample_check_template.py  # [표본 대조] 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 검증 템플릿 (Case 1)
     ├── sample_check_opt.py       # [표본 대조] 최적화/CSP 하드 제약 및 목적함수 15건 표본 수동 대조 (Case 5)
     ├── sample_check_spc.py       # [표본 대조] 반도체 CoA/SPC 통계/웨이퍼 오버레이/재무 15건 표본 수동 대조 (Case 6)
@@ -250,6 +254,7 @@ model_reasoning_effort = "medium"
        - **Case 5 (수리·조합 최적화/CSP/배차·스케줄링):** `.probe-kit/skills/case5_optimization_csp.md`
        - **Case 6 (반도체 CoA·SPC 통계/웨이퍼 오버레이/재무 정규화):** `.probe-kit/skills/case6_semicon_data_spc.md`
        - **Case 7 (FDE/풀스택 밸류체인 시뮬레이터 & 교육 AI 웹앱):** `.probe-kit/skills/case7_fde_valuechain_app.md`
+       - **Case 8 (경량화 자율 머신러닝 트랙 / Shadow AutoML — 백그라운드 터미널 4 전용):** `.probe-kit/skills/case8_lightweight_automl_track.md` *(※ 주의: 터미널 4 전용 스킬. 메인 에이전트는 시험 후반 챔피언 비교·채택 전까지 `.probe-kit/ml_track/` 디렉토리를 일절 건드리거나 수정하지 말고 완전히 독립된 자율 학습에 맡깁니다.)*
 2. **작업 명세서(`.probe-kit/runtime/TASK_SPEC.md`) 작성으로 위임 — [시작 · 정의 · 기준 · 종료] 4대 축 체계화:**
    - 사용자가 모듈 구현이나 수정을 요청하면, 직접 비즈니스 코드를 고치는 대신 **서브 에이전트(`GPT 5.6-terra medium`)가 읽고 즉시 실행할 수 있는 `.probe-kit/runtime/TASK_SPEC.md`** 파일만 작성(또는 갱신)하세요.
    - `TASK_SPEC.md`에는 반드시 **[시작 · 정의 · 기준 · 종료]** 4대 핵심 개념을 중심으로 다음 7대 표준 섹션을 체계적으로 명시합니다:
@@ -495,7 +500,7 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
 5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
 6. [DoD]: 완료 정의 체크리스트 (베이스라인 100% 통과, 스키마 계약 일치, 비즈니스 규칙 및 경계값 검증 통과, git diff 범위 준수)
 7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" -> 서브 터미널 /clear 실행 대기)
-- 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
+- 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case8_lightweight_automl_track.md 중 매칭 파일 1~2개]
 ```
 
 #### 📋 [서브 프롬프트 3 — `GPT 5.6-terra medium`] 작업 지시서 실행 및 검증 보고 (구현·실행 전담)
@@ -621,7 +626,7 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
 
 ### 🌐 Case 7 (FDE / Full-Stack). 반도체 밸류체인 수급 시뮬레이터 & 교육 AI 인터랙티브 웹앱 미션 (출제 확률: 최상)
 * **연동 스킬:** `.probe-kit/skills/case7_fde_valuechain_app.md` (보조: `.probe-kit/skills/case2_web_service.md`, `.probe-kit/skills/case4_policy_rag_doc.md`)
-* **판별:** 반도체 밸류체인(IP $ightarrow$ Fabless $ightarrow$ Foundry $ightarrow$ OSAT $ightarrow$ CSP) 공급망 수급 충격 전파 시뮬레이터 대시보드, 또는 사내 교육용 지식 그래프 기반 Level-Adaptive 오개념 진단 튜터 웹앱 구축 요구 (`skhynix-value-chain-*`).
+* **판별:** 반도체 밸류체인(IP $\rightarrow$ Fabless $\rightarrow$ Foundry $\rightarrow$ OSAT $\rightarrow$ CSP) 공급망 수급 충격 전파 시뮬레이터 대시보드, 또는 사내 교육용 지식 그래프 기반 Level-Adaptive 오개념 진단 튜터 웹앱 구축 요구 (`skhynix-value-chain-*`).
 * **전용 필수 질문:**
   * *"주요 타깃 사용자가 공급망 충격을 시뮬레이션하는 경영전략 분석가인가요, 사내 밸류체인 직무 교육생인가요? (Dual-Mode Role Switcher 필요 여부)"*
   * *"공급망 충격 전파 시 감쇠 계수($\gamma$)와 CoWoS/HBM 후공정 병목 클리핑 기준은 어떻게 정의되나요?"*

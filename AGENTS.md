@@ -19,6 +19,7 @@
        - **Case 5 (수리·조합 최적화/CSP/배차·스케줄링):** `.probe-kit/skills/case5_optimization_csp.md`
        - **Case 6 (반도체 CoA·SPC 통계/웨이퍼 오버레이/재무 정규화):** `.probe-kit/skills/case6_semicon_data_spc.md`
        - **Case 7 (FDE/풀스택 밸류체인 시뮬레이터 & 교육 AI 웹앱):** `.probe-kit/skills/case7_fde_valuechain_app.md`
+       - **Case 8 (경량화 자율 머신러닝 트랙 / Shadow AutoML — 백그라운드 터미널 4 전용):** `.probe-kit/skills/case8_lightweight_automl_track.md` *(※ 주의: 터미널 4 전용 스킬. 메인 에이전트는 시험 후반 챔피언 비교·채택 전까지 `.probe-kit/ml_track/` 디렉토리를 일절 건드리거나 수정하지 말고 완전히 독립된 자율 학습에 맡깁니다.)*
 2. **작업 명세서(`.probe-kit/runtime/TASK_SPEC.md`) 작성으로 위임 — [시작 · 정의 · 기준 · 종료] 4대 축 체계화:**
    - 사용자가 모듈 구현이나 수정을 요청하면, 직접 비즈니스 코드를 고치는 대신 **서브 에이전트(`GPT 5.6-terra medium`)가 읽고 즉시 실행할 수 있는 `.probe-kit/runtime/TASK_SPEC.md`** 파일만 작성(또는 갱신)하세요.
    - `TASK_SPEC.md`에는 반드시 **[시작 · 정의 · 기준 · 종료]** 4대 핵심 개념을 중심으로 다음 7대 표준 섹션을 체계적으로 명시합니다:
