@@ -8,12 +8,13 @@ scripts/ml_feasibility_check.py
 scikit-learn, lightgbm, xgboost, catboost, scipy를 자동 감지하여 가속합니다.
 
 4가지 실행 모드:
-1. [기본 진단] python3 .probe-kit/scripts/ml_feasibility_check.py [workspace_dir]
-   - 워크스페이스 내 README.md 및 데이터셋을 초고속 스캔하여 8대 조건(Gatekeeper Conditions) 판정
-   - 🟢 DIRECT_ML / 🟡 HYBRID_ML / 🔴 ALGORITHM_ONLY 최종 배너 출력
-   - FEASIBILITY_SUMMARY.txt, feasibility_report.json 저장
-2. [데이터 경량화] python3 .probe-kit/scripts/ml_feasibility_check.py --compact [workspace_dir]
-   - 원본 불변(Read-Only), 상수/고결측 컬럼 제거, 센티널 정제
+1. [기본 진단 (100% Read-Only)] python3 .probe-kit/scripts/ml_feasibility_check.py [workspace_dir]
+   - 원본/복사본 일체 수정 없는 안전한 진단 (3중 try-except 에러 방어)
+   - 8대 Gatekeeper Conditions 판정 및 FEASIBILITY_SUMMARY.txt, feasibility_report.json 저장
+   - 데이터 파일별 컬럼 상세 프로파일 표 (컬럼명, 추정 타입, 결측률%, 고유값 수, 센티널 감지 여부, 실제 샘플 값 3~5개) 풍부하게 출력
+   - 터미널 4의 Sol 6.1 LLM이 README.md와 FEASIBILITY_SUMMARY.txt를 읽고 도메인 중요도를 직접 판단해 맞춤형 경량화(Semantic Compaction)를 수행하도록 가이드 제공
+2. [보조 데이터 경량화] python3 .probe-kit/scripts/ml_feasibility_check.py --compact [workspace_dir]
+   - 원본 불변(Read-Only), 3중 try-except 방어로 상수/고결측 컬럼 제거, 센티널 정제 보조 모드
    - 3만행 초과 시 20% 코어셋 및 경량 CSV/PKL 생성, compact_manifest.json 저장
 3. [챔피언 비교] python3 .probe-kit/scripts/ml_feasibility_check.py --compare <algo_file> <ml_file>
    - 행수/헤더 일치, 결측/센티널 누출 0건 검증, 기초 통계, 상관계수, MAE 비교
@@ -387,52 +388,122 @@ def evaluate_feasibility(ws_dir: Path, ml_track_dir: Path):
     categorical_col_count = 0
     total_cells = 0
     missing_or_sentinel_cells = 0
+    dataset_profiles = []
 
     for df in data_files:
-        info = peek_csv_info(df)
-        if not info:
-            total_bytes += df.stat().st_size
-            continue
-        parsed_datasets.append(info)
-        total_bytes += info['file_size_bytes']
-        total_rows += info['total_rows']
-        headers = info['headers']
-        all_headers.extend(headers)
+        try:
+            info = peek_csv_info(df)
+            if not info:
+                total_bytes += df.stat().st_size
+                continue
+            parsed_datasets.append(info)
+            total_bytes += info['file_size_bytes']
+            total_rows += info['total_rows']
+            headers = info['headers']
+            all_headers.extend(headers)
 
-        # 타깃 컬럼 감지
-        for col in headers:
-            col_l = col.lower()
-            if any(k == col_l or f'_{k}' in col_l or f'{k}_' in col_l for k in TARGET_KEYWORDS):
-                target_candidates.add(col)
+            # 타깃 컬럼 감지
+            for col in headers:
+                col_l = col.lower()
+                if any(k == col_l or f'_{k}' in col_l or f'{k}_' in col_l for k in TARGET_KEYWORDS):
+                    target_candidates.add(col)
 
-        # 컬럼별 결측/센티널 및 상수성 검사
-        samples = info['sample_rows']
-        n_samples = len(samples)
-        if n_samples > 0:
-            for c_idx, col in enumerate(headers):
-                vals = [r[c_idx] for r in samples if c_idx < len(r)]
-                num_vals = [clean_numeric_val(v) for v in vals]
-                valid_nums = [n for n in num_vals if n is not None]
-                if len(valid_nums) >= len(vals) * 0.5:
-                    numeric_col_count += 1
-                else:
-                    categorical_col_count += 1
+            # 컬럼별 결측/센티널 및 상수성 검사
+            samples = info['sample_rows']
+            n_samples = len(samples)
+            col_profs = []
+            if n_samples > 0:
+                for c_idx, col in enumerate(headers):
+                    vals = [r[c_idx] for r in samples if c_idx < len(r)]
+                    num_vals = [clean_numeric_val(v) for v in vals]
+                    valid_nums = [n for n in num_vals if n is not None]
+                    if len(valid_nums) >= len(vals) * 0.5:
+                        numeric_col_count += 1
+                    else:
+                        categorical_col_count += 1
 
-                sentinel_cnt = sum(1 for v in vals if is_sentinel_or_missing(v))
-                total_cells += len(vals)
-                missing_or_sentinel_cells += sentinel_cnt
+                    sentinel_cnt = sum(1 for v in vals if is_sentinel_or_missing(v))
+                    total_cells += len(vals)
+                    missing_or_sentinel_cells += sentinel_cnt
 
-                if sentinel_cnt > 0:
-                    sentinel_cols_found.append((info['path'].name, col))
+                    sentinels_detected = []
+                    for v in vals:
+                        if is_sentinel_or_missing(v):
+                            s_v = str(v).strip()
+                            if s_v and s_v.lower() not in {'nan', 'null', 'none', 'na', 'n/a', ''}:
+                                if s_v not in sentinels_detected and len(sentinels_detected) < 3:
+                                    sentinels_detected.append(s_v)
 
-                # 상수 컬럼 (고유값 1개 이하)
-                unique_vals = set(vals)
-                if len(unique_vals) <= 1:
-                    constant_cols_found.append((info['path'].name, col))
+                    if sentinel_cnt > 0:
+                        sentinel_cols_found.append((info['path'].name, col))
 
-                # 95% 이상 결측/센티널
-                if sentinel_cnt >= len(vals) * 0.95:
-                    high_missing_cols_found.append((info['path'].name, col))
+                    # 상수 컬럼 (고유값 1개 이하)
+                    unique_vals = set(vals)
+                    if len(unique_vals) <= 1:
+                        constant_cols_found.append((info['path'].name, col))
+
+                    # 95% 이상 결측/센티널
+                    if sentinel_cnt >= len(vals) * 0.95:
+                        high_missing_cols_found.append((info['path'].name, col))
+
+                    # 컬럼 상세 프로파일링 (Sol 6.1 LLM의 Semantic Compaction 판단 근거)
+                    missing_pct = round((sentinel_cnt / max(len(vals), 1)) * 100, 1)
+                    nunique = len(unique_vals)
+                    col_l = col.lower()
+                    is_target_col = any(k == col_l or f'_{k}' in col_l or f'{k}_' in col_l for k in TARGET_KEYWORDS)
+                    is_id = any(k in col_l for k in ['id', 'lot', 'wafer', 'key', 'index', 'code']) and (nunique > len(vals) * 0.7 or nunique == len(vals))
+
+                    if is_target_col:
+                        est_type = "타깃(Target)"
+                    elif is_id:
+                        est_type = "식별자(ID)"
+                    elif nunique <= 1:
+                        est_type = "상수(Constant)"
+                    elif missing_pct >= 95.0:
+                        est_type = "고결측(Sparse)"
+                    elif len(valid_nums) >= len(vals) * 0.5:
+                        if len(sentinels_detected) > 0:
+                            est_type = "수치형+센티널"
+                        else:
+                            has_float = any(not n.is_integer() for n in valid_nums[:100])
+                            est_type = "수치형(Float)" if has_float else "수치형(Int)"
+                    elif nunique <= 25:
+                        est_type = "범주형(Category)"
+                    else:
+                        est_type = "문자열(Text)"
+
+                    sentinel_desc = ", ".join(sentinels_detected) if sentinels_detected else ("결측(NaN)" if sentinel_cnt > 0 else "-")
+
+                    # 샘플 값 3~4개
+                    seen_samples = set()
+                    sample_vals = []
+                    for v in vals:
+                        sv = str(v).strip()
+                        if sv and sv not in seen_samples:
+                            seen_samples.add(sv)
+                            sample_vals.append(sv)
+                            if len(sample_vals) >= 4:
+                                break
+                    if not sample_vals:
+                        sample_vals = ["(empty)"]
+
+                    col_profs.append({
+                        'col': col,
+                        'type': est_type,
+                        'missing_pct': missing_pct,
+                        'nunique': nunique,
+                        'sentinel': sentinel_desc,
+                        'samples': sample_vals
+                    })
+
+                dataset_profiles.append({
+                    'file': info['path'].name,
+                    'total_rows': info['total_rows'],
+                    'total_cols': len(headers),
+                    'columns': col_profs
+                })
+        except Exception as e_df:
+            print(f"[경고] {df.name} 프로파일링 중 예외 발생 (건너뜀): {e_df}")
 
     total_data_mb = round(total_bytes / (1024 * 1024), 2)
 
@@ -591,6 +662,7 @@ def evaluate_feasibility(ws_dir: Path, ml_track_dir: Path):
         'verdict': verdict,
         'verdict_banner': verdict_banner,
         'verdict_reason': verdict_reason,
+        'dataset_profiles': dataset_profiles,
         'conditions': {
             'c1_simple_model_solvability': {'pass': c1_pass, 'detail': c1_detail},
             'c2_training_time_budget': {'pass': c2_pass, 'detail': c2_detail},
@@ -608,6 +680,9 @@ def evaluate_feasibility(ws_dir: Path, ml_track_dir: Path):
     summary_lines.append("=" * 70)
     summary_lines.append(f"  {verdict_banner}")
     summary_lines.append(f"  판정 이유: {verdict_reason}")
+    summary_lines.append("  💡 [데이터 경량화 가이드] 기계적 코드가 아닌 터미널 4의 Sol 6.1 LLM이")
+    summary_lines.append("     README.md와 FEASIBILITY_SUMMARY.txt의 컬럼 프로파일을 읽고 도메인")
+    summary_lines.append("     중요도를 직접 판단해 맞춤형 경량화(Semantic Compaction)를 수행합니다.")
     summary_lines.append("=" * 70)
     summary_lines.append(f"■ 워크스페이스: {ws_dir}")
     summary_lines.append(f"■ 발견된 데이터 파일: {len(data_files)}개 | 총 용량: {total_data_mb} MB | 총 행 수: {total_rows:,}행")
@@ -625,6 +700,22 @@ def evaluate_feasibility(ws_dir: Path, ml_track_dir: Path):
     summary_lines.append(f" 6. 하드 제약 후처리: {c6_detail['recommendation']}")
     summary_lines.append(f" 7. 작업공간/스레드 격리: {'[PASS]' if c7_pass else '[FAIL]'} (경로: {ml_track_dir})")
     summary_lines.append(f" 8. 챔피언 비교 준비도: [PASS] (--compare 모드 완비)")
+
+    if dataset_profiles:
+        summary_lines.append("-" * 70)
+        summary_lines.append("【 데이터 파일별 컬럼 상세 프로파일 (Semantic Compaction 가이드) 】")
+        summary_lines.append("💡 터미널 4의 Sol 6.1 LLM은 아래 프로파일을 기반으로")
+        summary_lines.append("   ① 예측 타깃(y), ② 조인/그룹 키(Key), ③ 희소 도메인 변수(Keep), ④ 노이즈/누수 변수(Drop)를 판단하세요.")
+        for ds in dataset_profiles:
+            summary_lines.append(f"\n▶ 데이터 파일: {ds['file']} (총 {ds['total_rows']:,}행, {ds['total_cols']}개 컬럼)")
+            summary_lines.append(f"  | {'컬럼명':<20} | {'추정 타입':<16} | {'결측률':<8} | {'고유값':<8} | {'센티널 감지':<16} | {'실제 샘플 값 (3~4개)'}")
+            summary_lines.append(f"  | {'-'*20} | {'-'*16} | {'-'*8} | {'-'*8} | {'-'*16} | {'-'*30}")
+            for cp in ds['columns']:
+                s_vals = ", ".join(cp['samples'])
+                if len(s_vals) > 40:
+                    s_vals = s_vals[:37] + "..."
+                summary_lines.append(f"  | {cp['col']:<20} | {cp['type']:<16} | {str(cp['missing_pct'])+'%':<8} | {str(cp['nunique']):<8} | {cp['sentinel']:<16} | {s_vals}")
+
     summary_lines.append("=" * 70)
 
     summary_text = "\n".join(summary_lines)
@@ -651,18 +742,27 @@ def evaluate_feasibility(ws_dir: Path, ml_track_dir: Path):
 def execute_compaction(ws_dir: Path, ml_track_dir: Path):
     """
     원본 데이터는 절대 수정하지 않고(Read-Only),
-    .probe-kit/ml_track/data_compact/ 내부에 상수/고결측 컬럼 제거 및 센티널 정제,
-    3만행 초과 시 20% 코어셋 샘플링 데이터 생성
+    3중 try-except 에러 방어로 비정형/인코딩 에러를 안전하게 격리하며,
+    .probe-kit/ml_track/data_compact/ 내부에 보조 경량화 파일 생성
     """
     print("\n" + "=" * 70)
     print("  [DATA COMPACTION] 데이터셋 자체 경량화 실행 모드 (--compact)")
+    print("  💡 [안내] 기계적 코드가 아닌 터미널 4의 Sol 6.1 LLM이 README.md와 FEASIBILITY_SUMMARY.txt의")
+    print("     컬럼 프로파일을 읽고 도메인 중요도를 직접 판단해 맞춤형 경량화를 수행합니다.")
     print("=" * 70)
 
     # 1단계: 기본 진단 수행
-    feasibility_res = evaluate_feasibility(ws_dir, ml_track_dir)
+    try:
+        feasibility_res = evaluate_feasibility(ws_dir, ml_track_dir)
+    except Exception as e_feas:
+        print(f"[경고] 사전 진단 중 예외 발생 (경량화 계속 진행): {e_feas}")
 
-    compact_dir = ml_track_dir / "data_compact"
-    compact_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        compact_dir = ml_track_dir / "data_compact"
+        compact_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e_dir:
+        print(f"[오류] 경량화 디렉토리 생성 실패: {e_dir}")
+        return
 
     data_files, _, _, _ = scan_workspace_files(ws_dir)
     if not data_files:
@@ -672,155 +772,173 @@ def execute_compaction(ws_dir: Path, ml_track_dir: Path):
     manifest_files = []
 
     for df in data_files:
-        ext = df.suffix.lower()
-        if ext not in ('.csv', '.tsv'):
-            continue
-
-        info = peek_csv_info(df, max_rows=10000)
-        if not info:
-            continue
-
-        orig_size = df.stat().st_size
-        total_rows = info['total_rows']
-        headers = info['headers']
-        delim = info['delimiter']
-
-        # 전체 또는 샘플 데이터 로드
-        fp, enc = open_with_encoding(df)
-        all_rows = []
-        with fp:
-            reader = csv.reader(fp, delimiter=delim)
-            next(reader, None)
-            for row in reader:
-                all_rows.append(row)
-                if len(all_rows) >= 200000:
-                    break
-
-        actual_rows_count = len(all_rows)
-        if actual_rows_count == 0:
-            continue
-
-        # 컬럼 속성 판별
-        dropped_const_cols = []
-        dropped_missing_cols = []
-        cleaned_sentinel_cols = []
-        keep_indices = []
-
-        for idx, col in enumerate(headers):
-            col_vals = [r[idx] for r in all_rows if idx < len(r)]
-            uniq_vals = set(col_vals)
-            # 상수 컬럼 판정
-            if len(uniq_vals) <= 1:
-                dropped_const_cols.append(col)
+        try:
+            ext = df.suffix.lower()
+            if ext not in ('.csv', '.tsv'):
                 continue
 
-            # 98% 이상 결측/센티널 판정
-            sentinel_cnt = sum(1 for v in col_vals if is_sentinel_or_missing(v))
-            if sentinel_cnt >= len(col_vals) * 0.98:
-                dropped_missing_cols.append(col)
+            info = peek_csv_info(df, max_rows=10000)
+            if not info:
                 continue
 
-            if sentinel_cnt > 0:
-                cleaned_sentinel_cols.append(col)
+            orig_size = df.stat().st_size
+            total_rows = info['total_rows']
+            headers = info['headers']
+            delim = info['delimiter']
 
-            keep_indices.append(idx)
-
-        compact_headers = [headers[i] for i in keep_indices]
-
-        # 데이터 정제 (센티널 빈 문자열 변환 및 단위 접미사 정제)
-        compact_rows = []
-        for r in all_rows:
-            new_r = []
-            for i in keep_indices:
-                val = r[i] if i < len(r) else ""
-                if is_sentinel_or_missing(val):
-                    new_r.append("")
-                else:
-                    # 단위 접미사 정제 (ppm, ppb 등)
-                    cleaned = re.sub(r'(?i)\s*(ppm|ppb|ppt|nm|%|℃|celsius)$', '', str(val).strip()).strip()
-                    new_r.append(cleaned)
-            compact_rows.append(new_r)
-
-        # 1. Compact CSV 저장
-        compact_csv_name = f"{df.stem}_compact.csv"
-        compact_csv_path = compact_dir / compact_csv_name
-        with open(compact_csv_path, 'w', encoding='utf-8', newline='') as f_out:
-            writer = csv.writer(f_out)
-            writer.writerow(compact_headers)
-            writer.writerows(compact_rows)
-
-        compact_size = compact_csv_path.stat().st_size
-        reduction_pct = round(((orig_size - compact_size) / max(orig_size, 1)) * 100, 2)
-
-        # 2. Pandas PKL (설치된 경우 초고속 바이너리 생성)
-        pkl_path_str = None
-        if PACKAGES['pandas']:
+            # 전체 또는 샘플 데이터 로드 (Tier 2 Read Guard)
+            all_rows = []
             try:
-                import pandas as pd
-                df_compact = pd.read_csv(compact_csv_path)
-                # Downcasting
-                for c in df_compact.select_dtypes(include=['float64']).columns:
-                    df_compact[c] = pd.to_numeric(df_compact[c], downcast='float')
-                for c in df_compact.select_dtypes(include=['int64']).columns:
-                    df_compact[c] = pd.to_numeric(df_compact[c], downcast='integer')
-                pkl_name = f"{df.stem}_compact.pkl"
-                pkl_path = compact_dir / pkl_name
-                df_compact.to_pickle(pkl_path)
-                pkl_path_str = str(pkl_path)
-            except Exception:
-                pass
+                fp, enc = open_with_encoding(df)
+                with fp:
+                    reader = csv.reader(fp, delimiter=delim)
+                    next(reader, None)
+                    for row in reader:
+                        all_rows.append(row)
+                        if len(all_rows) >= 200000:
+                            break
+            except Exception as e_read:
+                print(f"[경고] {df.name} 파일 로드 중 부분 오류 (복구 진행): {e_read}")
 
-        # 3. Coreset 샘플링 (3만행 초과 시 20% 코어셋)
-        coreset_path_str = None
-        coreset_rows_count = 0
-        if actual_rows_count > 30000:
-            coreset_name = f"{df.stem}_coreset.csv"
-            coreset_path = compact_dir / coreset_name
-            # 균등 20% 추출 (step = 5)
-            coreset_rows = [compact_rows[i] for i in range(0, actual_rows_count, 5)]
-            with open(coreset_path, 'w', encoding='utf-8', newline='') as f_c:
-                c_writer = csv.writer(f_c)
-                c_writer.writerow(compact_headers)
-                c_writer.writerows(coreset_rows)
-            coreset_path_str = str(coreset_path)
-            coreset_rows_count = len(coreset_rows)
+            actual_rows_count = len(all_rows)
+            if actual_rows_count == 0:
+                continue
 
-        manifest_files.append({
-            'original_file': str(df),
-            'original_size_bytes': orig_size,
-            'original_rows': actual_rows_count,
-            'original_cols': len(headers),
-            'compact_file': str(compact_csv_path),
-            'compact_size_bytes': compact_size,
-            'compact_rows': actual_rows_count,
-            'compact_cols': len(compact_headers),
-            'size_reduction_pct': reduction_pct,
-            'dropped_constant_cols': dropped_const_cols,
-            'dropped_high_missing_cols': dropped_missing_cols,
-            'cleaned_sentinel_cols': cleaned_sentinel_cols,
-            'coreset_file': coreset_path_str,
-            'coreset_rows': coreset_rows_count,
-            'pkl_file': pkl_path_str
-        })
+            # 컬럼 속성 판별
+            dropped_const_cols = []
+            dropped_missing_cols = []
+            cleaned_sentinel_cols = []
+            keep_indices = []
 
-        print(f"-> [COMPACT 완료] {df.name} => {compact_csv_name}")
-        print(f"   용량: {orig_size / 1024:.1f}KB -> {compact_size / 1024:.1f}KB ({reduction_pct}% 축소)")
-        print(f"   컬럼: {len(headers)}개 -> {len(compact_headers)}개 (상수 {len(dropped_const_cols)}개, 고결측 {len(dropped_missing_cols)}개 제거)")
-        if coreset_path_str:
-            print(f"   코어셋(20%): {coreset_rows_count:,}행 생성 ({Path(coreset_path_str).name})")
-        if pkl_path_str:
-            print(f"   바이너리 PKL 다운캐스팅 완료 ({Path(pkl_path_str).name})")
+            for idx, col in enumerate(headers):
+                col_vals = [r[idx] for r in all_rows if idx < len(r)]
+                uniq_vals = set(col_vals)
+                # 상수 컬럼 판정
+                if len(uniq_vals) <= 1:
+                    dropped_const_cols.append(col)
+                    continue
+
+                # 98% 이상 결측/센티널 판정
+                sentinel_cnt = sum(1 for v in col_vals if is_sentinel_or_missing(v))
+                if sentinel_cnt >= len(col_vals) * 0.98:
+                    dropped_missing_cols.append(col)
+                    continue
+
+                if sentinel_cnt > 0:
+                    cleaned_sentinel_cols.append(col)
+
+                keep_indices.append(idx)
+
+            compact_headers = [headers[i] for i in keep_indices]
+
+            # 데이터 정제 (센티널 빈 문자열 변환 및 단위 접미사 정제)
+            compact_rows = []
+            for r in all_rows:
+                new_r = []
+                for i in keep_indices:
+                    val = r[i] if i < len(r) else ""
+                    if is_sentinel_or_missing(val):
+                        new_r.append("")
+                    else:
+                        # 단위 접미사 정제 (ppm, ppb 등)
+                        cleaned = re.sub(r'(?i)\s*(ppm|ppb|ppt|nm|%|℃|celsius)$', '', str(val).strip()).strip()
+                        new_r.append(cleaned)
+                compact_rows.append(new_r)
+
+            # 1. Compact CSV 저장 (Tier 3 Write Guard)
+            compact_csv_name = f"{df.stem}_compact.csv"
+            compact_csv_path = compact_dir / compact_csv_name
+            try:
+                with open(compact_csv_path, 'w', encoding='utf-8', newline='') as f_out:
+                    writer = csv.writer(f_out)
+                    writer.writerow(compact_headers)
+                    writer.writerows(compact_rows)
+            except Exception as e_write:
+                print(f"[경고] {compact_csv_name} 저장 중 오류: {e_write}")
+                continue
+
+            compact_size = compact_csv_path.stat().st_size
+            reduction_pct = round(((orig_size - compact_size) / max(orig_size, 1)) * 100, 2)
+
+            # 2. Pandas PKL (설치된 경우 초고속 바이너리 생성)
+            pkl_path_str = None
+            if PACKAGES['pandas']:
+                try:
+                    import pandas as pd
+                    df_compact = pd.read_csv(compact_csv_path)
+                    # Downcasting
+                    for c in df_compact.select_dtypes(include=['float64']).columns:
+                        df_compact[c] = pd.to_numeric(df_compact[c], downcast='float')
+                    for c in df_compact.select_dtypes(include=['int64']).columns:
+                        df_compact[c] = pd.to_numeric(df_compact[c], downcast='integer')
+                    pkl_name = f"{df.stem}_compact.pkl"
+                    pkl_path = compact_dir / pkl_name
+                    df_compact.to_pickle(pkl_path)
+                    pkl_path_str = str(pkl_path)
+                except Exception:
+                    pass
+
+            # 3. Coreset 샘플링 (3만행 초과 시 20% 코어셋)
+            coreset_path_str = None
+            coreset_rows_count = 0
+            if actual_rows_count > 30000:
+                try:
+                    coreset_name = f"{df.stem}_coreset.csv"
+                    coreset_path = compact_dir / coreset_name
+                    # 균등 20% 추출 (step = 5)
+                    coreset_rows = [compact_rows[i] for i in range(0, actual_rows_count, 5)]
+                    with open(coreset_path, 'w', encoding='utf-8', newline='') as f_c:
+                        c_writer = csv.writer(f_c)
+                        c_writer.writerow(compact_headers)
+                        c_writer.writerows(coreset_rows)
+                    coreset_path_str = str(coreset_path)
+                    coreset_rows_count = len(coreset_rows)
+                except Exception as e_core:
+                    print(f"[경고] 코어셋 샘플링 저장 중 오류: {e_core}")
+
+            manifest_files.append({
+                'original_file': str(df),
+                'original_size_bytes': orig_size,
+                'original_rows': actual_rows_count,
+                'original_cols': len(headers),
+                'compact_file': str(compact_csv_path),
+                'compact_size_bytes': compact_size,
+                'compact_rows': actual_rows_count,
+                'compact_cols': len(compact_headers),
+                'size_reduction_pct': reduction_pct,
+                'dropped_constant_cols': dropped_const_cols,
+                'dropped_high_missing_cols': dropped_missing_cols,
+                'cleaned_sentinel_cols': cleaned_sentinel_cols,
+                'coreset_file': coreset_path_str,
+                'coreset_rows': coreset_rows_count,
+                'pkl_file': pkl_path_str
+            })
+
+            print(f"-> [COMPACT 완료] {df.name} => {compact_csv_name}")
+            print(f"   용량: {orig_size / 1024:.1f}KB -> {compact_size / 1024:.1f}KB ({reduction_pct}% 축소)")
+            print(f"   컬럼: {len(headers)}개 -> {len(compact_headers)}개 (상수 {len(dropped_const_cols)}개, 고결측 {len(dropped_missing_cols)}개 제거)")
+            if coreset_path_str:
+                print(f"   코어셋(20%): {coreset_rows_count:,}행 생성 ({Path(coreset_path_str).name})")
+            if pkl_path_str:
+                print(f"   바이너리 PKL 다운캐스팅 완료 ({Path(pkl_path_str).name})")
+
+        except Exception as e_outer:
+            print(f"[경고] {df.name} 경량화 처리 중 예외 발생 (건너뜀): {e_outer}")
+            continue
 
     # Manifest JSON 저장
-    manifest_data = {
-        'generated_at': time.strftime("%Y-%m-%d %H:%M:%S"),
-        'compact_dir': str(compact_dir),
-        'total_compacted_files': len(manifest_files),
-        'files': manifest_files
-    }
-    manifest_path = compact_dir / "compact_manifest.json"
-    manifest_path.write_text(json.dumps(manifest_data, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n-> 경량화 매니페스트 저장 완료: {manifest_path}")
+    try:
+        manifest_data = {
+            'generated_at': time.strftime("%Y-%m-%d %H:%M:%S"),
+            'compact_dir': str(compact_dir),
+            'total_compacted_files': len(manifest_files),
+            'files': manifest_files
+        }
+        manifest_path = compact_dir / "compact_manifest.json"
+        manifest_path.write_text(json.dumps(manifest_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\n-> 경량화 매니페스트 저장 완료: {manifest_path}")
+    except Exception as e_m:
+        print(f"[경고] 매니페스트 저장 중 오류: {e_m}")
 
 # ==============================================================================
 # [모드 3] 알고리즘 vs ML 챔피언 비교 모드 (Mode 3: Champion Arena Comparison)

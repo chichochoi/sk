@@ -87,16 +87,16 @@
 
 | 번호 / 페르소나 | 소속 / 핵심 키워드 | 세부 분기 및 아키타입 | 추천 연동 스킬 (`skills/`) | 추천 DM 질문 바로가기 |
 | :---: | :--- | :--- | :--- | :--- |
-| **#6 김현우 책임** | 시장전략팀<br>`ASP`, `bit_growth`, `WSPM`, `DOI`, `LTA`, `Micron`, `CY`, `GAAP/Non-GAAP`, `Waterfall` | • **6-A (유형 B)**: 경쟁사 실적 정규화<br>• **6-B (유형 A)**: Product Mix 최적화<br>• **6-C (유형 C)**: 어닝콜 What-If 시뮬 | • 6-A: [`case6_semicon_data_spc.md`](./skills/case6_semicon_data_spc.md)<br>• 6-B: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 6-C: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 6-3. 재무 정규화](#3-반도체-경쟁사-실적-캘린더-매핑--waterfall-요인-분해-6-a-김현우-책임)<br>[실전 카드 #6](#카드-6-김현우-책임매니저-시장전략팀--메모리-시장경쟁사-실적-분석) |
-| **#7 박서연 책임** | 소재품질팀<br>`CoA`, `ppm`, `ppb`, `ppt`, `< DL`, `Cpk`, `Nelson`, `PCN`, `vendor`, `MOQ`, `Dual-Sourcing` | • **7-B (유형 B)**: CoA/SPC & PCN 인터락<br>• **7-A (유형 A)**: 조달 쿼터 배분 LP<br>• **7-C (유형 C)**: PCN 심사 대시보드 | • 7-B: [`case6_semicon_data_spc.md`](./skills/case6_semicon_data_spc.md)<br>• 7-A: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 7-C: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 6-1. CoA/SPC](#1-원소재-coa-시험성적서-검증--pcn-인터락-7-b-박서연-책임)<br>[실전 카드 #7](#카드-7-박서연-책임매니저-소재품질팀--신규-소재공급사-변경-검토) |
-| **#8 윤서영 책임** | 이천 HR운영팀<br>통근버스 운영, 정류장, 버스 배차, 입석 금지, VRP, CSP, 노선 | • **유형 A (수리 최적화)**: 통근버스 정류장 배차 및 지연 최소화 | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. 윤서영](#-8-윤서영-책임-이천-hr운영팀--통근버스-배차-vrpcsp)<br>[실전 카드 #8](#카드-8-윤서영-책임-이천-hr운영팀--통근버스-노선-배차-및-정류장-최적화) |
-| **#9 이하린 영양사** | 이천캠퍼스 식단운영<br>월간 식단 편성, 영양소, 단가 상한, 3일 연속 동일 메뉴 금지, CSP, ILP | • **유형 A (수리 최적화)**: 제약조건 기반 월간 식단 편성 (ILP) | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. 이하린](#-9-이하린-영양사--12-sarah-collins-식단편성-cspilp)<br>[실전 카드 #9/#12](#카드-9--12-이하린-영양사--sarah-collins-이천-식단운영--dietitian) |
-| **#10 정유진 TL** | 안전 모니터링팀<br>CCTV 카메라 배치, 가시성 극대화, 2D 도면, 사각지대, Set Cover, 기하 최적화, 예산 | • **유형 A (기하 최적화)**: 2D 도면 기반 CCTV Coverage 극대화 | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. 정유진](#-10-정유진-tl--11-jordan-reyes-cctv-배치-set-cover)<br>[실전 카드 #10/#11](#카드-10--11-정유진-tl--jordan-reyes-안전-모니터링팀--safety-monitoring) |
-| **#11 Jordan Reyes** | Safety Monitoring<br>#10 영문 대칭, CCTV layout, visibility, budget | • **유형 A (영문 대칭)**: Set Cover CCTV 최적화 (`README.en.md`) | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. Jordan Reyes](#-10-정유진-tl--11-jordan-reyes-cctv-배치-set-cover)<br>[실전 카드 #10/#11](#카드-10--11-정유진-tl--jordan-reyes-안전-모니터링팀--safety-monitoring) |
-| **#12 Sarah Collins** | Dietitian<br>#9 영문 대칭 + "오늘의 메뉴 추천" 개인화 변형 | • **유형 A (월간 편성)**: ILP 식단<br>• **유형 C (맞춤 추천 웹)**: 개인 건강/혼잡도 | • 거시 편성: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 미시 추천: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 5-3. Sarah Collins](#-9-이하린-영양사--12-sarah-collins-식단편성-cspilp)<br>[Case 7-4. 맞춤 추천](#4-12-sarah-collins-개인화-변형-오늘의-메뉴-맞춤-추천)<br>[실전 카드 #9/#12](#카드-9--12-이하린-영양사--sarah-collins-이천-식단운영--dietitian) |
-| **#13 이도윤 TL** | 이천 포토기술팀<br>`dx`, `dy`, `chuck_id`, `reticle`, `scanner`, `ADI`, `AEI`, `residual`, Overlay, 트윈 척, PM, 6-param OLS, Edge Exclusion | • **13-A (유형 A)**: 노광기 Job Shop<br>• **13-B (유형 B)**: 2D Overlay OLS 보정<br>• **13-C (유형 C)**: Overlay 관제 대시보드 | • 13-A: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 13-B: [`case6_semicon_data_spc.md`](./skills/case6_semicon_data_spc.md)<br>• 13-C: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 5-3. 이도윤](#-13-a-이도윤-tl-포토기술팀--노광기-배정--pm-스케줄링)<br>[Case 6-2. 2D Overlay](#2-2d-웨이퍼-overlay-보정-apc--reworkscrap-판정-13-b-이도윤-tl)<br>[실전 카드 #13](#카드-13-이도윤-tl-이천-포토기술팀--overlay-품질장비-운영--팹-엔지니어링) |
-| **#14 한서진 TL** | 경영전략팀 시장분석<br>`skhynix-value-chain-business-persona`, DAG, 수급 충격 전파, Ripple Effect, Decay Factor, CoWoS, HBM 적층, SPOF | • **유형 A+C (그래프 시뮬레이터)**: 공급망 충격 전파 & CoWoS 병목 탐지 웹앱 | • [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 7-1. 한서진](#1-경영전략-밸류체인-수급-충격-시뮬레이터-14-한서진-tl)<br>[실전 카드 #14/#15](#카드-14--15-한서진-tl--윤지안-tl-skhynix-value-chain--) |
-| **#15 윤지안 TL** | 반도체 산업교육<br>`skhynix-value-chain-educator-persona`, AI 튜터, Level-Adaptive (3개 직무), 오개념 진단, FAIL_INTERLOCK, 선수과목 DAG | • **유형 C (AI 교육 플랫폼)**: 인터랙티브 튜터, 오개념 교정 & 비상 인터락 | • [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 7-2. 윤지안](#2-반도체-산업교육-ai-튜터--오개념-진단-15-윤지안-tl)<br>[실전 카드 #14/#15](#카드-14--15-한서진-tl--윤지안-tl-skhynix-value-chain--) |
+| **#6 시장전략팀 책임매니저** | 시장전략팀<br>`ASP`, `bit_growth`, `WSPM`, `DOI`, `LTA`, `Micron`, `CY`, `GAAP/Non-GAAP`, `Waterfall` | • **6-A (유형 B)**: 경쟁사 실적 정규화<br>• **6-B (유형 A)**: Product Mix 최적화<br>• **6-C (유형 C)**: 어닝콜 What-If 시뮬 | • 6-A: [`case6_semicon_data_spc.md`](./skills/case6_semicon_data_spc.md)<br>• 6-B: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 6-C: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 6-3. 재무 정규화](#3-반도체-경쟁사-실적-캘린더-매핑--waterfall-요인-분해-6-a-시장전략팀-책임매니저)<br>[실전 카드 #6](#카드-6-시장전략팀-책임매니저-메모리-시장경쟁사-실적-분석) |
+| **#7 소재품질팀 책임매니저** | 소재품질팀<br>`CoA`, `ppm`, `ppb`, `ppt`, `< DL`, `Cpk`, `Nelson`, `PCN`, `vendor`, `MOQ`, `Dual-Sourcing` | • **7-B (유형 B)**: CoA/SPC & PCN 인터락<br>• **7-A (유형 A)**: 조달 쿼터 배분 LP<br>• **7-C (유형 C)**: PCN 심사 대시보드 | • 7-B: [`case6_semicon_data_spc.md`](./skills/case6_semicon_data_spc.md)<br>• 7-A: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 7-C: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 6-1. CoA/SPC](#1-원소재-coa-시험성적서-검증--pcn-인터락-7-b-소재품질팀-책임매니저)<br>[실전 카드 #7](#카드-7-소재품질팀-책임매니저-신규-소재공급사-변경-검토) |
+| **#8 이천 HR운영팀 책임** | 이천 HR운영팀<br>통근버스 운영, 정류장, 버스 배차, 입석 금지, VRP, CSP, 노선 | • **유형 A (수리 최적화)**: 통근버스 정류장 배차 및 지연 최소화 | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. 통근버스 배차](#-8-이천-hr운영팀-책임-통근버스-배차-vrpcsp)<br>[실전 카드 #8](#카드-8-이천-hr운영팀-책임-통근버스-노선-배차-및-정류장-최적화) |
+| **#9 이천 식단운영 영양사** | 이천캠퍼스 식단운영<br>월간 식단 편성, 영양소, 단가 상한, 3일 연속 동일 메뉴 금지, CSP, ILP | • **유형 A (수리 최적화)**: 제약조건 기반 월간 식단 편성 (ILP) | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. 식단편성](#-9-이천-식단운영-영양사--12-dietitian-식단편성-cspilp)<br>[실전 카드 #9/#12](#카드-9--12-이천-식단운영-영양사--dietitian-월간-식단-편성--오늘의-메뉴-추천) |
+| **#10 안전 모니터링팀 TL** | 안전 모니터링팀<br>CCTV 카메라 배치, 가시성 극대화, 2D 도면, 사각지대, Set Cover, 기하 최적화, 예산 | • **유형 A (기하 최적화)**: 2D 도면 기반 CCTV Coverage 극대화 | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. CCTV 배치](#-10-안전-모니터링팀-tl--11-safety-monitoring-tl-cctv-배치-set-cover)<br>[실전 카드 #10/#11](#카드-10--11-안전-모니터링팀-tl--safety-monitoring-tl-cctv-설치안-검토) |
+| **#11 Safety Monitoring TL** | Safety Monitoring<br>#10 영문 대칭, CCTV layout, visibility, budget | • **유형 A (영문 대칭)**: Set Cover CCTV 최적화 (`README.en.md`) | • [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md) | [Case 5-3. Safety Monitoring](#-10-안전-모니터링팀-tl--11-safety-monitoring-tl-cctv-배치-set-cover)<br>[실전 카드 #10/#11](#카드-10--11-안전-모니터링팀-tl--safety-monitoring-tl-cctv-설치안-검토) |
+| **#12 Dietitian (개인 맞춤 식단 추천)** | Dietitian<br>#9 영문 대칭 + "오늘의 메뉴 추천" 개인화 변형 | • **유형 A (월간 편성)**: ILP 식단<br>• **유형 C (맞춤 추천 웹)**: 개인 건강/혼잡도 | • 거시 편성: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 미시 추천: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 5-3. 식단편성](#-9-이천-식단운영-영양사--12-dietitian-식단편성-cspilp)<br>[Case 7-4. 맞춤 추천](#4-12-dietitian-오늘의-메뉴-맞춤-추천-변형)<br>[실전 카드 #9/#12](#카드-9--12-이천-식단운영-영양사--dietitian-월간-식단-편성--오늘의-메뉴-추천) |
+| **#13 이천 포토기술팀 TL** | 이천 포토기술팀<br>`dx`, `dy`, `chuck_id`, `reticle`, `scanner`, `ADI`, `AEI`, `residual`, Overlay, 트윈 척, PM, 6-param OLS, Edge Exclusion | • **13-A (유형 A)**: 노광기 Job Shop<br>• **13-B (유형 B)**: 2D Overlay OLS 보정<br>• **13-C (유형 C)**: Overlay 관제 대시보드 | • 13-A: [`case5_optimization_csp.md`](./skills/case5_optimization_csp.md)<br>• 13-B: [`case6_semicon_data_spc.md`](./skills/case6_semicon_data_spc.md)<br>• 13-C: [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 5-3. 노광기 배정](#-13-a-이천-포토기술팀-tl-노광기-배정--pm-스케줄링)<br>[Case 6-2. 2D Overlay](#2-2d-웨이퍼-overlay-보정-apc--reworkscrap-판정-13-b-이천-포토기술팀-tl)<br>[실전 카드 #13](#카드-13-이천-포토기술팀-tl-overlay-품질장비-운영--팹-엔지니어링) |
+| **#14 경영전략팀 시장분석 TL** | 경영전략팀 시장분석<br>`skhynix-value-chain-business-persona`, DAG, 수급 충격 전파, Ripple Effect, Decay Factor, CoWoS, HBM 적층, SPOF | • **유형 A+C (그래프 시뮬레이터)**: 공급망 충격 전파 & CoWoS 병목 탐지 웹앱 | • [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 7-1. 경영전략 시뮬레이터](#1-경영전략-밸류체인-수급-충격-시뮬레이터-14-경영전략팀-시장분석-tl)<br>[실전 카드 #14/#15](#카드-14--15-경영전략팀-시장분석-tl--반도체-산업교육-tl-skhynix-value-chain-) |
+| **#15 반도체 산업교육 TL** | 반도체 산업교육<br>`skhynix-value-chain-educator-persona`, AI 튜터, Level-Adaptive (3개 직무), 오개념 진단, FAIL_INTERLOCK, 선수과목 DAG | • **유형 C (AI 교육 플랫폼)**: 인터랙티브 튜터, 오개념 교정 & 비상 인터락 | • [`case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md) | [Case 7-2. 산업교육 AI 튜터](#2-반도체-산업교육-ai-튜터--오개념-진단-15-반도체-산업교육-tl)<br>[실전 카드 #14/#15](#카드-14--15-경영전략팀-시장분석-tl--반도체-산업교육-tl-skhynix-value-chain-) |
 
 ---
 
@@ -438,36 +438,36 @@ AI 분류나 챗봇 모델이 잘못된 답변(환각)을 내놓을 경우 현�
 
 ### 3. SK하이닉스 기출 및 출제 예상 페르소나별 특화 질의문
 
-#### 🚍 `#8` 윤서영 책임 (이천 HR운영팀 — 통근버스 배차 VRP/CSP)
+#### 🚍 `#8` 이천 HR운영팀 책임 (통근버스 배차 VRP/CSP)
 ```text
 통근버스 좌석 정원을 초과하는 입석 탑승은 절대 금지(하드 제약)인가요? 정류장별 최소 정차 시간과 출근 목적지 도착 허용 마감 시각(예: 08:20 정각)의 등호 포함 기준은 무엇인가요? 탑승 희망 인원이 남았을 때 미탑승 페널티를 부과하나요, 아니면 예비 버스를 추가 배차하는 것이 원칙인가요?
 ```
 
-#### 🍱 `#9` 이하린 영양사 & `#12` Sarah Collins (식단편성 CSP/ILP)
+#### 🍱 `#9` 이천 식단운영 영양사 & `#12` Dietitian (식단편성 CSP/ILP)
 ```text
 '3일 연속 동일 메뉴 편성 금지' 규칙은 메뉴의 메인 단백질 식자재(예: 돼지고기) 기준인가요, 아니면 요리명(예: 제육볶음) 기준인가요? 1식당 단가 상한선(예: 7,500원)은 매 끼니마다 개별 준수해야 하나요, 아니면 월평균 단가로 준수하나요?
 ```
-*(12번 Sarah Collins 개인 맞춤 확장 시 추가):*
+*(12번 Dietitian (개인 맞춤 추천) 확장 시 추가):*
 ```text
 개인 알러지 유발 성분(땅콩, 갑각류 등) 포함 메뉴는 추천 리스트에서 원천 제외(Hard Filter)하는 것이 맞나요?
 ```
 
-#### 📹 `#10` 정유진 TL & `#11` Jordan Reyes (CCTV 배치 Set Cover)
+#### 📹 `#10` 안전 모니터링팀 TL & `#11` Safety Monitoring TL (CCTV 배치 Set Cover)
 ```text
 복수의 카메라 시야각이 겹치는 중복 커버리지 구역은 가시성 점수 계산 시 1회만 카운트하나요(합집합), 아니면 중복 가산하나요? 도면 내 기둥이나 내벽 장애물에 의한 시야 차폐(Raycasting)는 점 단위로 검사하나요, 폴리곤 교차로 검사하나요? 예산 잔액이 남았을 때, 예산 절감보다 가시성 면적을 1픽셀이라도 더 넓히는 것이 최우선 목적함수인가요?
 ```
 
-#### 🔬 `#13-A` 이도윤 TL (포토기술팀 — 노광기 배정 & PM 스케줄링)
+#### 🔬 `#13-A` 이천 포토기술팀 TL (노광기 배정 & PM 스케줄링)
 ```text
 Critical Layer의 하부층 가공 동일 스캐너 및 동일 척(Dedicated Scanner/Chuck) 배정은 위반 시 0점 처리되는 하드 제약인가요? 포토마스크(Reticle) 교체 시 장비 간 물리 이송 및 장착 셋업 시간은 몇 분으로 고정 계산하나요? 장비 누적 웨이퍼 수가 PM 한계에 도달했을 때, 진행 중인 Lot을 마저 끝내고 PM에 진입하나요 아니면 Lot 중간에 즉시 인터락이 걸리나요?
 ```
 
-#### 🧪 `#7-A` 박서연 책임 (소재품질팀 — 원자재 공급사 쿼터 배분 LP)
+#### 🧪 `#7-A` 소재품질팀 책임매니저 (원자재 공급사 쿼터 배분 LP)
 ```text
 공급망 안정성을 위한 이원화(Dual-Sourcing) 시 1위 공급사의 최대 점유율 상한(예: 60%)과 신규 공급사의 첫 분기 최대 상한(예: 20%)은 엄격한 하드 제약인가요? 특정 공급사의 치명 금속 불순물(Fe, Cu) 농도가 Spec 상한을 단 1ppb라도 초과하면 발주 가능 후보군에서 영구 배제(Zero Allocation)되나요? 공급사별 최소 발주 수량(MOQ) 제약이 걸려 있을 때, 0을 주문하거나 MOQ 이상을 주문해야 하는 이진(Semi-continuous) 제약이 맞나요?
 ```
 
-#### 📈 `#6-B` 김현우 책임 (시장전략팀 — HBM/DDR5 Product Mix LP)
+#### 📈 `#6-B` 시장전략팀 책임매니저 (HBM/DDR5 Product Mix LP)
 ```text
 DDR5 웨이퍼 캐파를 HBM3E로 전환할 때 적용하는 웨이퍼 면적 손실 및 TSV 적층 페널티 계수(알파)의 정확한 값은 얼마인가요? 주요 고객사와의 장기공급계약(LTA) 의무 물량 하한선은 어떤 시장 상황에서도 반드시 100% 공급해야 하는 하드 제약인가요? 라인 전환(Conversion) 시 발생하는 리드타임 동안 캐파 손실과 램프업 수율 감소치는 분기별로 어떻게 감가하나요?
 ```
@@ -479,7 +479,7 @@ DDR5 웨이퍼 캐파를 HBM3E로 전환할 때 적용하는 웨이퍼 면적 �
 > **연동 스킬:** [`skills/case6_semicon_data_spc.md`](./skills/case6_semicon_data_spc.md)  
 > **적용 상황:** 원소재 시험성적서(CoA) 정규화 및 SPC 통계 판정, 2D 웨이퍼 Overlay 보정(APC) 및 공정 분기, 반도체 경쟁사 실적 CY 매핑 및 Waterfall 매출 요인 분해
 
-### 1. 원소재 CoA 시험성적서 검증 & PCN 인터락 (`#7-B` 박서연 책임)
+### 1. 원소재 CoA 시험성적서 검증 & PCN 인터락 (#7-B 소재품질팀 책임매니저)
 ```text
 시험성적서에 '< 0.01 ppb'처럼 표기된 정량한계 미만(< DL) 수치는 0으로 처리하나요, 검출한계값(0.01)으로 보수적 처리하나요, 아니면 DL/sqrt(2) 값으로 대치하나요?
 ```
@@ -502,7 +502,7 @@ DDR5 웨이퍼 캐파를 HBM3E로 전환할 때 적용하는 웨이퍼 면적 �
 
 ---
 
-### 2. 2D 웨이퍼 Overlay 보정 (APC) & Rework/Scrap 판정 (`#13-B` 이도윤 TL)
+### 2. 2D 웨이퍼 Overlay 보정 (APC) & Rework/Scrap 판정 (#13-B 이천 포토기술팀 TL)
 ```text
 웨이퍼 에지 제외(Edge Exclusion) 마진은 직경 300mm 웨이퍼 기준 반경 몇 mm(예: 147mm) 바깥을 필터링해야 하나요?
 ```
@@ -525,7 +525,7 @@ DDR5 웨이퍼 캐파를 HBM3E로 전환할 때 적용하는 웨이퍼 면적 �
 
 ---
 
-### 3. 반도체 경쟁사 실적 캘린더 매핑 & Waterfall 요인 분해 (`#6-A` 김현우 책임)
+### 3. 반도체 경쟁사 실적 캘린더 매핑 & Waterfall 요인 분해 (#6-A 시장전략팀 책임매니저)
 ```text
 마이크론의 회계 분기(9~11월 등 8월 결산 법인)를 캘린더 분기(CY)로 매핑할 때, 단순 월 매핑을 적용하나요 아니면 월별 선형 보간을 적용하나요?
 ```
@@ -553,7 +553,7 @@ DDR5 웨이퍼 캐파를 HBM3E로 전환할 때 적용하는 웨이퍼 면적 �
 > **연동 스킬:** [`skills/case7_fde_valuechain_app.md`](./skills/case7_fde_valuechain_app.md)  
 > **적용 상황:** 반도체 밸류체인 DAG 수급 충격 전파 및 CoWoS/TSV 병목 시뮬레이터, Level-Adaptive 직무별 설명 및 FAIL_INTERLOCK 오개념 진단 AI 튜터, 듀얼 모드 웹 애플리케이션 수직 완성
 
-### 1. 경영전략 밸류체인 수급 충격 시뮬레이터 (`#14` 한서진 TL)
+### 1. 경영전략 밸류체인 수급 충격 시뮬레이터 (#14 경영전략팀 시장분석 TL)
 ```text
 공급망 충격이 상류(Upstream)에서 하류(Downstream)로 전달될 때 노드 간 감쇠 계수(Decay Factor) 기본값(예: 0.85)과 리드타임 시차 반영 공식이 정해져 있나요?
 ```
@@ -581,7 +581,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 2. 반도체 산업교육 AI 튜터 & 오개념 진단 (`#15` 윤지안 TL)
+### 2. 반도체 산업교육 AI 튜터 & 오개념 진단 (#15 반도체 산업교육 TL)
 ```text
 직무별 Level-Adaptive 설명에서 지원해야 하는 필수 직무 그룹이 [신입/비전공자], [공정 엔지니어], [경영전략] 3가지로 확정인가요?
 ```
@@ -627,7 +627,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 4. #12 Sarah Collins 개인화 변형 (오늘의 메뉴 맞춤 추천)
+### 4. #12 Dietitian (오늘의 메뉴 맞춤 추천 변형)
 ```text
 알러지 성분 포함 메뉴는 점수 감점이 아닌 즉각적인 후보 제외(Hard Constraint Cutoff)가 맞나요?
 ```
@@ -656,7 +656,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 💳 [카드 #6] 김현우 책임매니저 (시장전략팀 — 메모리 시장·경쟁사 실적 분석)
+### 💳 [카드 #6] 시장전략팀 책임매니저 (메모리 시장·경쟁사 실적 분석)
 
 > **🎯 이 키워드/페르소나라면:**  
 > - **단서 키워드:** `ASP`, `bit_growth`, `WSPM`, `DOI`, `LTA`, `Micron`, `CY`, `Waterfall`, 메모리 시장 점유율, 어닝스 콜  
@@ -676,7 +676,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 💳 [카드 #7] 박서연 책임매니저 (소재품질팀 — 신규 소재·공급사 변경 검토)
+### 💳 [카드 #7] 소재품질팀 책임매니저 (신규 소재·공급사 변경 검토)
 
 > **🎯 이 키워드/페르소나라면:**  
 > - **단서 키워드:** `CoA`, `ppm`, `ppb`, `ppt`, `< DL`, `Cpk`, `Nelson`, `PCN`, `vendor`, `MOQ`, `Dual-Sourcing`, 소재 성적서  
@@ -696,7 +696,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 💳 [카드 #8] 윤서영 책임 (이천 HR운영팀 — 통근버스 노선 배차 및 정류장 최적화)
+### 💳 [카드 #8] 이천 HR운영팀 책임 (통근버스 노선 배차 및 정류장 최적화)
 
 > **🎯 이 키워드/페르소나라면:**  
 > - **단서 키워드:** 통근버스 운영, 정류장, 버스 배차, 입석 금지, 정차 시간, 노선, VRP, CSP  
@@ -713,7 +713,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 💳 [카드 #9 & #12] 이하린 영양사 & Sarah Collins (이천 식단운영 / Dietitian)
+### 💳 [카드 #9 & #12] 이천 식단운영 영양사 & Dietitian (월간 식단 편성 / 오늘의 메뉴 추천)
 
 > **🎯 이 키워드/페르소나라면:**  
 > - **단서 키워드:** 월간 식단 편성, 영양소, 단가 상한, 3일 연속 동일 메뉴 금지, CSP, ILP, Dietitian, 오늘의 메뉴 추천, 알러지  
@@ -725,14 +725,14 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 ```text
 1. '3일 연속 동일 메뉴 편성 금지' 규칙은 메인 단백질 식자재(예: 돼지고기) 기준인가요, 아니면 개별 요리명(예: 제육볶음) 기준인가요?
 2. 1식당 단가 상한선(예: 7,500원) 준수는 매 끼니마다 개별 준수해야 하나요, 아니면 월평균 단가로 준수하나요?
-3. (Sarah Collins 개인화 시) 개인 알러지 유발 성분(땅콩, 갑각류 등) 포함 메뉴는 추천 리스트에서 원천 제외(Hard Filter)하는 것이 맞나요?
-4. (Sarah Collins 개인화 시) 실시간 식당 코너 혼잡도(대기열)와 당일 소진 잔여 식자재 중 추천 우선순위 가중치는 각각 몇 %인가요?
-5. (Sarah Collins 개인화 시) 개인 맞춤 추천 결과는 화면에 1순위 단일 메뉴로 노출하나요, 아니면 Top 3 카드 형태로 노출하나요?
+3. (Dietitian 개인화 시) 개인 알러지 유발 성분(땅콩, 갑각류 등) 포함 메뉴는 추천 리스트에서 원천 제외(Hard Filter)하는 것이 맞나요?
+4. (Dietitian 개인화 시) 실시간 식당 코너 혼잡도(대기열)와 당일 소진 잔여 식자재 중 추천 우선순위 가중치는 각각 몇 %인가요?
+5. (Dietitian 개인화 시) 개인 맞춤 추천 결과는 화면에 1순위 단일 메뉴로 노출하나요, 아니면 Top 3 카드 형태로 노출하나요?
 ```
 
 ---
 
-### 💳 [카드 #10 & #11] 정유진 TL & Jordan Reyes (안전 모니터링팀 / Safety Monitoring)
+### 💳 [카드 #10 & #11] 안전 모니터링팀 TL & Safety Monitoring TL (CCTV 설치안 검토)
 
 > **🎯 이 키워드/페르소나라면:**  
 > - **단서 키워드:** 공정·지원 구역 카메라 설치안 검토, CCTV, 가시성(Coverage), 2D 도면, 사각지대, Set Cover, 기하 최적화, 예산  
@@ -749,7 +749,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 💳 [카드 #13] 이도윤 TL (이천 포토기술팀 — Overlay 품질·장비 운영 & 팹 엔지니어링)
+### 💳 [카드 #13] 이천 포토기술팀 TL (Overlay 품질·장비 운영 & 팹 엔지니어링)
 
 > **🎯 이 키워드/페르소나라면:**  
 > - **단서 키워드:** `dx`, `dy`, `chuck_id`, `reticle`, `scanner`, `ADI`, `AEI`, `residual`, Overlay, 트윈 척, PM 주기, 6-param OLS, Edge Exclusion  
@@ -769,7 +769,7 @@ AI 가속기 완제품 출하량 병목(SPOF) 산정 시 CoWoS 패키징 외주 
 
 ---
 
-### 💳 [카드 #14 & #15] 한서진 TL & 윤지안 TL (`skhynix-value-chain-*`)
+### 💳 [카드 #14 & #15] 경영전략팀 시장분석 TL & 반도체 산업교육 TL (skhynix-value-chain-*)
 
 > **🎯 이 키워드/페르소나라면:**  
 > - **단서 키워드:** `skhynix-value-chain-business-persona`, `skhynix-value-chain-educator-persona`, DAG, 수급 충격 전파, Ripple Effect, Decay Factor, CoWoS 병목, AI 튜터, Level-Adaptive, 오개념 진단, FAIL_INTERLOCK  

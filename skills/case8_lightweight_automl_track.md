@@ -53,17 +53,18 @@
 
 ## 3. 원본 공략법 전문 (Single Source of Truth)
 
-### 3.1 데이터셋 자체 경량화 4대 파이프라인 (Data Compaction)
-초기 데이터 탐색 및 전처리 시 `python3 .probe-kit/scripts/ml_feasibility_check.py --compact`의 산출물(`.probe-kit/ml_track/data_compact/`)을 우선 활용하거나, 아래 4대 파이프라인을 자율적으로 적용합니다:
+### 3.1 LLM 주도 맞춤형 데이터 경량화 (Semantic Compaction) & 4대 파이프라인
+단순 코드 규칙(예: 결측 95% 이상 일괄 삭제)은 희소하지만 결정적인 도메인 신호(비상 인터락 코드, `< DL` 특수 불량 등)를 날려버리거나 비정형/다중 테이블 조인 키에서 에러를 낼 수 있습니다.  
+따라서 진단 스크립트(`python3 .probe-kit/scripts/ml_feasibility_check.py`)는 100% 안전한 Read-Only 프로파일링(`.probe-kit/ml_track/FEASIBILITY_SUMMARY.txt`)만 수행하고, **터미널 4의 `Sol 6.1`이 `README.md`와 컬럼 샘플을 직접 읽고 중요 피처(Keep) vs 노이즈/누수 피처(Drop) vs 조인/그룹 키(Key)를 판단해 맞춤형 경량화 코드(`compact_pipeline.py`)를 작성·실행·자기디버깅(Self-Healing)**합니다:
 
-1. **포맷 & 타입 경량화 (Downcasting & Fast Binary Serialization):**
+1. **도메인 의미 판단 기반 컬럼 선별 (Semantic Feature Selection):**
+   - 예측 타깃(y) 및 다중 테이블 조인/그룹 키(Key: Lot, Wafer, Equip 등) 100% 보존.
+   - 결측률이 높아도 특정 불량/비상 상황을 지시하는 희소 도메인 센티널(`< DL`, Interlock Flag 등)은 보존 및 지표 피처(`_is_sentinel`) 생성.
+   - 단순 일련번호, 해시, 고유 UUID 및 타깃 정보가 사후 유입된 누수(Leakage) 변수만 선별 제거(Drop).
+2. **포맷 & 타입 경량화 (Downcasting & Fast Binary Serialization):**
    - 부동소수점 `float64` $\rightarrow$ `float32` (정밀도 유지하면서 메모리 50% 절감).
    - 정수형 `int64` $\rightarrow$ 값의 범위에 따라 `int32`, `int16`, `int8`로 다운캐스팅.
-   - 대용량 CSV/JSON 대신 Parquet, Feather, Numpy(`.npz`), Pickle(`.pkl`) 바이너리 캐시를 생성하여 데이터 로딩 시간을 80% 이상 단축합니다.
-2. **무의미 컬럼 가지치기 (Pruning Zero-Variance & Sparse Columns):**
-   - 분산이 0인 상수(Constant) 컬럼 및 모든 값이 단일한 컬럼 제거.
-   - 결측치 비율이 95%를 초과하는 고결측 컬럼 배제 (유의미한 도메인 플래그가 아닌 경우).
-   - 단순 일련번호, 행 인덱스, 고유 UUID 등 학습에 잡음만 주는 컬럼은 피처 세트에서 배제하고 메타 식별자로만 격리.
+   - 대용량 CSV/JSON 대신 Parquet, Feather, Numpy(`.npz`), Pickle(`.pkl`) 바이너리 캐시를 생성하여 데이터 로딩 시간을 80% 이상 단축.
 3. **도메인 센티널 분리 (Domain Sentinel Decoupling):**
    - 반도체 및 계측 장비 특유의 센티널 값(`< DL`, `ND`, `-999`, `-9999`, `None`, `Inf`)을 수치 컬럼에서 안전하게 파싱.
    - 원본 수치 컬럼은 결측치(`NaN`) 또는 통계적 대치값(중앙값, 보수적 검출한계값)으로 변환하되, **`{col}_is_sentinel` (또는 `_is_nd`) 형태의 이진 플래그(0/1) 파생변수를 생성**하여 정보 손실을 0%로 방지.
@@ -113,7 +114,14 @@ flowchart TD
     P3 --> P4["Phase 4 (04:00~05:00)\n하드 제약 클램핑 & Drop-in 패키징\nml_submission_ready + CHAMPION_REPORT"]
 ```
 
-#### ⏱️ Phase 1 (00:00~00:20 / 20분): 로컬 검증셋(Leak-Free CV) 구축 & 베이스라인
+#### ⏱️ Phase 1 (00:00~00:20 / 20분): LLM 주도 맞춤형 경량화(Semantic Compaction) & 베이스라인
+- **LLM 주도 데이터 경량화 & 자기디버깅(Self-Healing):**
+  - 단순 기계적 규칙(결측 95% 이상 일괄 삭제 등)으로 컬럼을 자르지 않고, `README.md`(문제 요구사항)와 `.probe-kit/ml_track/FEASIBILITY_SUMMARY.txt`(컬럼별 결측률·고유값·샘플값) 및 원본 데이터 샘플을 직접 읽고 도메인 관점에서 다음을 판단:
+    ① 예측 타깃(y)
+    ② 테이블 조인/그룹 키(Key)
+    ③ 결측이 많아도 반드시 살려야 할 핵심/희소 도메인 변수(Keep)
+    ④ 단순 일련번호/해시/데이터 누수 변수(Drop)
+  - 이 데이터 구조와 인코딩에 딱 맞는 맞춤형 경량화 스크립트(`.probe-kit/ml_track/compact_data.py`)를 작성해 실행. 파싱/타입/메모리 에러 발생 시 즉시 에러 로그를 보고 코드를 수정(Self-Healing)하여 `.probe-kit/ml_track/data_compact/`에 고속 포맷(.pkl/.parquet/float32 또는 정제된 CSV, 대용량일 경우 고속 탐색용 20% 층화 코어셋 포함)으로 안전하게 저장.
 - **데이터 누수 없는(Leak-Free) 분할 전략 수립:**
   - 시계열/시퀀스: `TimeSeriesSplit` 또는 Out-of-Time 분할.
   - 그룹 종속 데이터(동일 Lot, 동일 설비, 동일 사용자): `GroupKFold(n_splits=5)`.
@@ -169,9 +177,10 @@ flowchart TD
 
 ## 4. 단계별 실행 체크리스트 (자율 점검용)
 
-### Phase 1: 로컬 검증 및 베이스라인 (0~20분)
+### Phase 1: LLM 맞춤형 경량화 & 베이스라인 (0~20분)
 - [ ] 메인 루트 소스 코드를 건드리지 않고 `.probe-kit/ml_track/` 폴더를 생성했는가?
 - [ ] 스크립트 최상단에 `OMP_NUM_THREADS="2"` 환경변수를 설정하고 `n_jobs=2`를 고정했는가?
+- [ ] FEASIBILITY_SUMMARY.txt 컬럼 프로파일을 읽고 타깃/키/도메인변수 판단 후 맞춤형 경량화(`compact_data.py`) 및 자기디버깅(Self-Healing)을 완수했는가?
 - [ ] 타깃 변수와 특성에 맞는 누수 없는 K-Fold(Stratified / TimeSeries / Group) 분할기를 설정했는가?
 - [ ] 원시 수치 컬럼만으로 첫 베이스라인 모델을 학습하고 검증 점수를 `leaderboard.json`에 기록했는가?
 

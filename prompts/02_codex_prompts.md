@@ -33,8 +33,13 @@
 [MAIN] 먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.
 아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
 현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt(초기 스캔 결과 및 [CASE_SIGNAL]), 그리고 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑하고 워크스페이스 루트의 NOTES_TEMP.md에 기록해줘:
-1. EDA_SUMMARY.txt의 [CASE_SIGNAL] 및 과제 지시서 키워드를 분석하여 이번 과제가 Case 1~7 (또는 복합형) 중 어느 유형인지 분류하고, 연관된 SK하이닉스 도메인 아키타입(#6~#15, 예: #6 시장전략/경쟁사, #7 원소재 CoA/SPC, #8 통근버스 VRP, #9 식단 CSP, #10 CCTV 기하, #13 포토/웨이퍼 오버레이, #14 밸류체인 시뮬레이터, #15 교육 튜터 등)과 매칭해줘.
-2. 매칭된 단 1~2개의 전용 스킬 파일(.probe-kit/skills/caseX_*.md)과 .probe-kit/dm_question.md의 해당 질문 카드를 선택해줘. (Sol 토큰 예산 보호를 위해 7개 스킬 전체를 읽지 말고 판별된 스킬 1~2개만 온디맨드로 로드)
+1. EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 과제 지시서(README.md)를 분석하여 이번 과제를 아래 3가지 중 하나로 분류해줘:
+   - [단일형 (Case 1~7)]: 가장 일치하는 Case 1개와 SK하이닉스 도메인 아키타입(#6~#15 직무) 매칭
+   - [혼합형 (Case 9, 예: 알고리즘/데이터 파이프라인 + 웹 UI/RAG 등)]: 주력(Primary) Case 1개 + 보조(Secondary) Case 1개를 결합 매칭하고, 반드시 "Step 1: 백엔드 코어 엔진/데이터 출력 완성 및 단독 검증 ➔ Step 2: 프론트엔드 UI/API 결합" 순서의 Core-First 아키텍처로 설계
+   - [완전 신규 유형 (Novel Case 0 — 기존 Case 1~7에 없는 새로운 문제)]: 억지로 기존 스킬에 끼워 맞추지 말고 [제1원칙 분해(First-Principles Decomposition)]를 가동하여 ① 채점기 입출력 계약(I/O Contract), ② 위반 시 0점 되는 Hard 제약 vs 점수 극대화 Soft 목적함수, ③ 15분 내 동작하는 최소 베이스라인(Tier 1) ➔ 핵심 알고리즘 고도화(Tier 2) ➔ 엣지케이스 방어(Tier 3)의 3-Tier 계획으로 직접 구조화
+2. 스킬 및 DM 질문 선택:
+   - 단일형/혼합형이면 매칭된 전용 스킬 파일(.probe-kit/skills/caseX_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
+   - 만약 혼합형이거나 기존에 없는 [완전 신규 유형(Novel Case 0)]이어서 기존 DM 카드가 딱 맞지 않는다면, 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개]와 [자체 표본 검증 기준(custom_sample_check.py 설계안)]을 이 브리핑에 즉시 생성해줘.
 3. 우리가 해결해야 할 핵심 문제, 입·출력 포맷, 작업 대상 파일 범위
 4. 절대 건드리면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 인터페이스, 함수 시그니처, 파일 경로 등)
 5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 구현(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
@@ -215,7 +220,7 @@ bash .probe-kit/scripts/subagent.sh status
 - [CPU/RAM Throttling]: 메인 터미널의 응답성을 위해 모든 파이썬 스크립트 최상단에 OMP_NUM_THREADS="2", MKL_NUM_THREADS="2"를 강제 설정하고, 모든 모델 파라미터에 n_jobs=2를 고정해. 쉘 명령 실행 시 nice -n 10을 붙여 실행해.
 
 [5시간 4-Phase 자율 수행 시퀀스]:
-1. Phase 1 (0~20분): .probe-kit/ml_track/data_compact/ 경량 데이터 또는 자체 다운캐스팅/센티널 분리를 적용하고, 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
+1. Phase 1 (LLM 주도 도메인 맞춤형 데이터 경량화 & 자기디버깅): 무작정 기계적 규칙으로 컬럼을 버리지 마. 먼저 README.md(문제 요구사항)와 .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt(컬럼별 결측률·고유값·샘플값) 및 원본 데이터 샘플을 직접 읽고, 도메인 관점에서 ① 예측 타깃(y), ② 테이블 조인/그룹 키(Key), ③ 결측이 많아도 반드시 살려야 할 핵심/희소 도메인 변수(Keep), ④ 단순 일련번호/해시/데이터 누수 변수(Drop)를 직접 판단해. 그 후 이 데이터셋 구조와 인코딩에 딱 맞는 경량화 스크립트(.probe-kit/ml_track/compact_data.py)를 작성해서 실행하고, 만약 파싱/타입/메모리 에러가 발생하면 즉시 에러 로그를 보고 코드를 수정(Self-Healing)하여 .probe-kit/ml_track/data_compact/ 안에 고속 포맷(.pkl/.parquet/float32 또는 정제된 CSV, 대용량일 경우 고속 탐색용 20% 층화 코어셋 포함)으로 안전하게 저장해. 그런 다음 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
 2. Phase 2 (20~120분): N > 30,000일 경우 20% Coreset을 활용하여 비율/차이/그룹통계량/Lag/OOF Target Encoding 피처를 자동 생성하고, CV 점수가 상승한 피처만 영구 채택(Forward Selection)해.
 3. Phase 3 (120~240분): HistGradientBoosting, RandomForest, Ridge 등 서로 다른 3종 모델을 튜닝하고, Out-of-Fold(OOF) 예측값을 결합하는 최적 가중치 블렌딩 앙상블을 구축해 단일 모델 대비 성능 개선을 확인해. (20% Coreset으로 최적화한 상위 모델은 100% Full 데이터셋으로 최종 재학습)
 4. Phase 4 (240~300분):

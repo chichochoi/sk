@@ -16,7 +16,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **10:00** | **09:30** | **[1단계]** 원클릭 하네스 설치 | 외부 Git 차단 및 하네스 자동 장착 | `git clone ... && bash init.sh` |
 | **10:02** | **09:35** | **[2단계]** 환경 검증 & 듀얼 터미널 | 무토큰 EDA 확인 및 Sol/GPT 5.6-terra 분리 기동 | `git status` / `EDA_SUMMARY` / `codex` |
-| **10:04** | **09:40** | **[2.5단계]** 초반 5분 (09:40) | 🧪 경량 ML 해결 가능성 10초 판별 & 백그라운드 Sol 6.1 (터미널 4) 5시간 자율 학습 가동 | `python3 .probe-kit/scripts/ml_feasibility_check.py --compact` |
+| **10:04** | **09:40** | **[2.5단계]** 초반 5분 (09:40) | 🧪 경량 ML 해결 가능성 10초 판별 & 백그라운드 Sol 6.1 (터미널 4) 5시간 자율 학습 가동 | `python3 .probe-kit/scripts/ml_feasibility_check.py` |
 | **10:05** | **09:45** | **[3단계]** 문제 탐색 & Case 식별 | 과제 README·[CASE_SIGNAL] 분석 및 Case 1~8 스킬 매핑 | 메인 프롬프트 (`NOTES_TEMP.md` 기록) |
 | **10:10** | **09:55** | **[4단계]** DM 실무자 만능 질의 | 목표, 입출력, 결측/중복, 인터페이스 질의 | 우측 DM 창 (범용 템플릿) |
 | **10:20** | **10:10** | **[5단계]** 케이스별 DM 질문 질의 | Case 1~8 / #6~#15 전용 DM 질문 및 스킬 온디맨드 로드 | `.probe-kit/dm_question.md` |
@@ -118,19 +118,22 @@ codex
 
 시험 시작 직후(09:40 또는 10:04), 이번 과제가 순수 알고리즘뿐만 아니라 머신러닝(ML)으로도 더 높은 정확도나 점수를 낼 수 있는지 **10초 만에 자동으로 8대 조건을 진단**하고, 필요 시 백그라운드에서 5시간 무인 자율 학습을 수행할 독립 에이전트(터미널 4)를 가동합니다.
 
-### 1) 10초 자동 판별 & 데이터 자체 경량화 실행 (터미널 3 — Bash 전용 창)
+### 1) 10초 자동 판별 & 컬럼 프로파일 생성 (터미널 3 — Bash 전용 창)
 
 터미널 3(Bash)에서 아래 1줄 명령어를 복사하여 실행합니다:
 
 ```bash
-python3 .probe-kit/scripts/ml_feasibility_check.py --compact
+python3 .probe-kit/scripts/ml_feasibility_check.py
 ```
 
-이 명령어는 10초 이내에 다음 작업을 100% 무인으로 완료합니다:
+이 명령어는 10초 이내에 다음 작업을 **100% 안전한 Read-Only(3중 try-except 에러 방어)**로 완료합니다:
 - 과제 워크스페이스 내 데이터셋/타깃 컬럼 자동 스캔 및 가용 시스템 리소스(CPU/RAM) 측정
 - 8대 진입 조건(Gatekeeper Conditions) 검사
-- `--compact` 옵션으로 불필요 컬럼(상수·고결측) 제거, `float32/int32` 다운캐스팅, 바이너리 직렬화(`.pkl`) 수행 후 `.probe-kit/ml_track/data_compact/`에 저장
-- 최종 판정(`[ML_VERDICT: ...]`) 및 요약 리포트(`.probe-kit/ml_track/FEASIBILITY_SUMMARY.txt`) 생성
+- 데이터 파일별 컬럼 상세 프로파일 표(컬럼명, 추정 타입, 결측률%, 고유값 수, 센티널 포함 여부, 실제 샘플 값 3~5개)를 `.probe-kit/ml_track/FEASIBILITY_SUMMARY.txt`에 풍부하게 생성
+- 최종 판정(`[ML_VERDICT: ...]`) 및 요약 리포트 저장
+
+> 💡 **왜 기계적 코드로만 자르지 않고 Sol 6.1 LLM에게 경량화를 맡길까요?**  
+> 단순 코드 규칙(예: 결측 95% 이상 일괄 삭제)은 희소하지만 결정적인 도메인 신호(비상 인터락 코드, `< DL` 특수 불량 등)를 날려버리거나 비정형/다중 테이블 조인 키에서 에러를 낼 수 있습니다. 따라서 스크립트는 안전한 프로파일링(`FEASIBILITY_SUMMARY.txt`)만 수행하고, **터미널 4의 `Sol 6.1`이 `README.md`와 컬럼 샘플을 직접 읽고 중요 피처(Keep) vs 노이즈/누수 피처(Drop) vs 조인/그룹 키(Key)를 판단해 맞춤형 경량화 코드(`compact_pipeline.py`)를 작성·실행·자기디버깅(Self-Healing)**합니다. (`--compact` 플래그는 필요 시 보조 도구로 활용 가능합니다.)
 
 ---
 
@@ -141,7 +144,7 @@ python3 .probe-kit/scripts/ml_feasibility_check.py --compact
 | **조건 1** | **경량 모델 적합성** | 무거운 DL이 아닌 CPU 고속 모델(`LightGBM`, `XGBoost`, `HistGradientBoosting`, `RandomForest`, `Ridge` 또는 순수 `Numpy/Scipy` 모델)로 풀리는 구조(타깃/수요/수율/이상치 존재)인가? | 타깃 레이블(수율, 불량, 수요, 잔차, 결함 확률, 이상치) 존재 시 PASS |
 | **조건 2** | **학습 시간 견적**<br>(09:30~16:00 기준) | 단일 모델 1회 학습이 **3분 이내**에 끝나며, 5시간(300분) 동안 수십 회의 피처 탐색·교차검증(CV)·앙상블이 가능한가? | 추정 학습 시간 $\le$ 180초 (대규모 시 20% Coreset 기준) |
 | **조건 3** | **데이터셋 크기·형식** | 학습 표본 수 $N \ge 50$행 이상이며, 데이터 크기가 가용 RAM의 50% 이내 크기인가? | $N \ge 50$ && 메모리 점유율 안전 |
-| **조건 4** | **데이터셋 자체 경량화**<br>(`--compact`) | 불필요 컬럼(상수·고결측·ID) 제거, `float32/int32` 다운캐스팅, 대규모 데이터($N > 30,000$) 시 **20% 고속 코어셋 + 100% 전체셋**으로 경량화(`.probe-kit/ml_track/data_compact/`)가 완료되었는가? | `--compact` 성공 및 캐시 생성 완료 |
+| **조건 4** | **데이터셋 자체 경량화**<br>(Semantic Compaction) | FEASIBILITY_SUMMARY.txt의 컬럼 프로파일을 읽고 타깃/키/희소신호 보존 및 노이즈 제거, `float32/int32` 다운캐스팅, 대규모 데이터($N > 30,000$) 시 **20% 고속 코어셋 + 100% 전체셋**으로 경량화(`.probe-kit/ml_track/data_compact/`)가 가능한가? | LLM 주도 맞춤형 경량화 및 캐시 생성 지원 |
 | **조건 5** | **추론 SLA & 모델 용량** | 채점 시 추론이 5초 내에 끝나고(`추론 SLA < 5초`), 제출 용량 제한을 넘지 않는가(`용량 < 10MB`)? | 가벼운 모델 가중치 & 빠른 Vectorized 추론 |
 | **조건 6** | **하드 제약 후처리**<br>(Guardrail) | 버스 정원, 예산, 알레르기, 비음수, 규격 상하한 등 하드 제약을 **"ML 예측 + 결정론적 클램핑 후처리"**로 100% 방어할 수 있는가? | 후처리 클램핑/마스킹 방어 가능 시 PASS |
 | **조건 7** | **파일·CPU 완전 격리** | 내가 `foruser.md`로 진행하는 메인 코드와 충돌하지 않게 **`.probe-kit/ml_track/` 내부에만** 파일을 쓰고, CPU 스레드를 제한(`OMP_NUM_THREADS=2`, `n_jobs=2`, `nice -n 10`)하는가? | 무간섭 샌드박스 및 메인 터미널 응답성 100% 보장 |
@@ -195,7 +198,7 @@ python3 .probe-kit/scripts/ml_feasibility_check.py --compact
 - [CPU/RAM Throttling]: 메인 터미널의 응답성을 위해 모든 파이썬 스크립트 최상단에 OMP_NUM_THREADS="2", MKL_NUM_THREADS="2"를 강제 설정하고, 모든 모델 파라미터에 n_jobs=2를 고정해. 쉘 명령 실행 시 nice -n 10을 붙여 실행해.
 
 [5시간 4-Phase 자율 수행 시퀀스]:
-1. Phase 1 (0~20분): .probe-kit/ml_track/data_compact/ 경량 데이터 또는 자체 다운캐스팅/센티널 분리를 적용하고, 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
+1. Phase 1 (LLM 주도 도메인 맞춤형 데이터 경량화 & 자기디버깅): 무작정 기계적 규칙으로 컬럼을 버리지 마. 먼저 README.md(문제 요구사항)와 .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt(컬럼별 결측률·고유값·샘플값) 및 원본 데이터 샘플을 직접 읽고, 도메인 관점에서 ① 예측 타깃(y), ② 테이블 조인/그룹 키(Key), ③ 결측이 많아도 반드시 살려야 할 핵심/희소 도메인 변수(Keep), ④ 단순 일련번호/해시/데이터 누수 변수(Drop)를 직접 판단해. 그 후 이 데이터셋 구조와 인코딩에 딱 맞는 경량화 스크립트(.probe-kit/ml_track/compact_data.py)를 작성해서 실행하고, 만약 파싱/타입/메모리 에러가 발생하면 즉시 에러 로그를 보고 코드를 수정(Self-Healing)하여 .probe-kit/ml_track/data_compact/ 안에 고속 포맷(.pkl/.parquet/float32 또는 정제된 CSV, 대용량일 경우 고속 탐색용 20% 층화 코어셋 포함)으로 안전하게 저장해. 그런 다음 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
 2. Phase 2 (20~120분): N > 30,000일 경우 20% Coreset을 활용하여 비율/차이/그룹통계량/Lag/OOF Target Encoding 피처를 자동 생성하고, CV 점수가 상승한 피처만 영구 채택(Forward Selection)해.
 3. Phase 3 (120~240분): HistGradientBoosting, RandomForest, Ridge 등 서로 다른 3종 모델을 튜닝하고, Out-of-Fold(OOF) 예측값을 결합하는 최적 가중치 블렌딩 앙상블을 구축해 단일 모델 대비 성능 개선을 확인해. (20% Coreset으로 최적화한 상위 모델은 100% Full 데이터셋으로 최종 재학습)
 4. Phase 4 (240~300분):
@@ -227,8 +230,13 @@ python3 .probe-kit/scripts/ml_feasibility_check.py --compact
 [MAIN] 먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.
 아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
 현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑하고 워크스페이스 루트의 NOTES_TEMP.md 에 기록해줘: (키트 내부 README가 아닌 과제 문제 지시서여야 함)
-1. EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 과제 지시서 키워드를 분석하여 이번 과제가 Case 1~7 (또는 복합형 Case 9) 중 어느 유형인지 분류하고, 연관된 SK하이닉스 도메인 아키타입(#6~#15, 예: #6 시장전략/경쟁사, #7 원소재 CoA/SPC, #8 통근버스 VRP, #9 식단 CSP, #10 CCTV 기하, #13 포토/웨이퍼 오버레이, #14 밸류체인 시뮬레이터, #15 교육 튜터 등)과 매칭해줘.
-2. 매칭된 단 1~2개의 전용 스킬 파일(.probe-kit/skills/caseX_*.md)과 .probe-kit/dm_question.md의 해당 질문 카드/섹션 이름을 선택해줘. (Sol 토큰 예산 보호를 위해 7개 스킬 전체를 읽지 말고 판별된 스킬 1~2개만 온디맨드로 로드하고, dm_question.md에서 복사할 정확한 섹션 또는 카드 명칭을 출력해줘)
+1. EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 과제 지시서(README.md)를 분석하여 이번 과제를 아래 3가지 중 하나로 분류해줘:
+   - [단일형 (Case 1~7)]: 가장 일치하는 Case 1개와 SK하이닉스 도메인 아키타입(#6~#15 직무) 매칭
+   - [혼합형 (Case 9, 예: 알고리즘/데이터 파이프라인 + 웹 UI/RAG 등)]: 주력(Primary) Case 1개 + 보조(Secondary) Case 1개를 결합 매칭하고, 반드시 "Step 1: 백엔드 코어 엔진/데이터 출력 완성 및 단독 검증 ➔ Step 2: 프론트엔드 UI/API 결합" 순서의 Core-First 아키텍처로 설계
+   - [완전 신규 유형 (Novel Case 0 — 기존 Case 1~7에 없는 새로운 문제)]: 억지로 기존 스킬에 끼워 맞추지 말고 [제1원칙 분해(First-Principles Decomposition)]를 가동하여 ① 채점기 입출력 계약(I/O Contract), ② 위반 시 0점 되는 Hard 제약 vs 점수 극대화 Soft 목적함수, ③ 15분 내 동작하는 최소 베이스라인(Tier 1) ➔ 핵심 알고리즘 고도화(Tier 2) ➔ 엣지케이스 방어(Tier 3)의 3-Tier 계획으로 직접 구조화
+2. 스킬 및 DM 질문 선택:
+   - 단일형/혼합형이면 매칭된 전용 스킬 파일(.probe-kit/skills/caseX_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
+   - 만약 혼합형이거나 기존에 없는 [완전 신규 유형(Novel Case 0)]이어서 기존 DM 카드가 딱 맞지 않는다면, 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개]와 [자체 표본 검증 기준(custom_sample_check.py 설계안)]을 이 브리핑에 즉시 생성해줘.
 3. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
 4. 절대 변경하면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 규격, 함수 시그니처, 파일 경로 등)
 5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 핵심 기능(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
@@ -237,6 +245,12 @@ python3 .probe-kit/scripts/ml_feasibility_check.py --compact
 bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 완료"
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "탐색" "Case 식별 및 초기 분석 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
+
+> [!TIP]
+> **💡 [참고] 만약 과제가 혼합형(Case 9)이거나 아예 처음 보는 신규 유형(Case 0)이라면?**  
+> 1. **혼합형 (Case 9):** 백엔드 코어 연산/데이터 정합성(Step 1)을 먼저 완성 및 표본 검증한 뒤, 프론트엔드 UI/API(Step 2)를 결합하는 Core-First 순서로 진행합니다.  
+> 2. **완전 신규 유형 (Novel Case 0):** 억지로 기존 케이스에 맞추지 말고 제1원칙(입출력 계약 ➔ 0점 방지 Hard 제약 ➔ 3-Tier 점수 최적화)으로 분해합니다.  
+> 3. **맞춤형 DM 질문:** 기존 카드가 안 맞을 경우 메인이 생성해 준 3개 DM 질문으로 실무자의 예외 처리 정책을 캐내어 공략합니다.
 
 ### 🗺️ 1-Page Quick Router (Case 1~8 및 SK하이닉스 #6~#15 즉시 매핑표)
 
@@ -248,10 +262,10 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 | **Case 2**<br>Web/HTML, REST API, 대시보드, 등록/수정 폼, 단일 유저 동선 MVP, 0.0.0.0 바인딩 | 사내 운영 웹 서비스, 현황 모니터링 대시보드 구축 | `case2_web_service.md` | `dm_question.md`<br>▶ **Case 2 섹션** (핵심 유저 동선, 권한/인증, API 불변, 영속성) | `0.0.0.0:포트` 바인딩 + `curl` / 플랫폼 내장 Browser 직접 클릭·조작 |
 | **Case 3**<br>기존 `tests/`, 레거시 코드베이스, API 엔드포인트 유지, 하위 호환성, Zero Regression | 기존 레거시 시스템 버그 픽스, 신규 파라미터/기능 확장 | `case3_legacy_debug.md` | `dm_question.md`<br>▶ **Case 3 섹션** (인터페이스 불변, 기존 실패 테스트 분별, 회귀 방지) | `pytest` / `npm test`<br>(베이스라인 100% PASS 유지) |
 | **Case 4**<br>규정집/매뉴얼(PDF/TXT/MD), RAG, 업무 자동화, 수동 검토 큐, Strict Grounding, 환각 거절 | 사내 복지/인사 규정 판정기, 정책 대안 비교 보고서 | `case4_policy_rag_doc.md` | `dm_question.md`<br>▶ **Case 4 섹션** (업무 자동화 경계, 수동 검토 큐, 규정 충돌 우선순위) | 테스트 쿼리 15건 근거 조항 라인 대조 + 환각 거절 문구 검증 |
-| **Case 5**<br>배차/배치/편성/스케줄링, VRP, ILP, CSP, Hard vs Soft 제약, Makespan, 28초 타임아웃 | **[기출 3종 + 미출제 4종]**<br>• **#8 윤서영 책임** (통근버스 VRP/CSP)<br>• **#9 이하린 영양사** (월간 식단 CSP/ILP)<br>• **#10 정유진 TL & #11 Jordan** (CCTV Set Cover)<br>• **#13-A 이도윤 TL** (노광기 배정 & PM 스케줄링)<br>• **#7-A 박서연 책임** (원자재 공급사 쿼터 LP)<br>• **#6-B 김현우 책임** (HBM/DDR5 Product Mix LP)<br>• **#15-B 윤지안 TL** (선수지식 DAG 커리큘럼) | `case5_optimization_csp.md` | `dm_question.md`<br>▶ **Case 5 섹션**<br>(또는 페르소나별 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_opt.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
-| **Case 6**<br>화학 단위(ppm/ppb/ppt), `< DL`, Cpk, Nelson Rules, PCN, 좌표 $(x, y)$, $\Delta x, \Delta y$, 6-Param OLS, ADI/AEI, FY/CY 보간, Bit*ASP, DOI | **[반도체 특화 3종]**<br>• **#7-B 박서연 책임** (원소재 CoA 성적서, Cpk, PCN 3단 인터락)<br>• **#13-B 이도윤 TL** (웨이퍼 Overlay 6-Param OLS, ADI REWORK vs AEI SCRAP)<br>• **#6-A 김현우 책임** (경쟁사 실적 CY 보간, 환율 분리, Waterfall, DOI) | `case6_semicon_data_spc.md` | `dm_question.md`<br>▶ **Case 6 섹션**<br>(또는 반도체 도메인 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_spc.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
-| **Case 7**<br>밸류체인 DAG 수급 충격, HBM/CoWoS 후공정 병목 클리핑, 오개념 진단 튜터, `FAIL_INTERLOCK`, Role Switcher, `0.0.0.0` | **[FDE / Full-Stack 웹앱]**<br>• **#14 한서진 TL** (밸류체인 수급 충격 전파 What-If 시뮬레이터)<br>• **#15 윤지안 TL** (반도체 지식그래프 오개념 진단 AI 튜터)<br>• **#14+#15 듀얼 모드** (전략 분석가 ↔ 산업 교육자 통합 웹앱)<br>• **#6-C / #7-C / #13-C / #12** (FDE 인터랙티브 대시보드 확장) | `case7_fde_valuechain_app.md`<br>(보조: `case2_web_service.md`, `case4_policy_rag_doc.md`) | `dm_question.md`<br>▶ **Case 7 섹션**<br>(또는 FDE 밸류체인 특화 질문 카드) | `0.0.0.0:8000` 백그라운드 바인딩<br>+ `curl /api/simulate`<br>+ 내장 Browser `Role Switcher`·슬라이더·`FAIL_INTERLOCK` 직접 점검 |
-| **Case 8**<br>정형 테이블(Tabular), 센서/장비 시계열 로그, 수율/불량 예측, 웨이퍼 잔차 회귀, 리드타임/수요 예측, `GO — DIRECT_ML`, `GO — HYBRID_ML` | 경량 머신러닝 자율 트랙 & 챔피언 솔루션 패키징 | `case8_lightweight_automl_track.md` | `dm_question.md`<br>▶ **Case 8 섹션**<br>(평가지표, 하드제약 클램핑, 추론 SLA) | `python3 .probe-kit/scripts/ml_feasibility_check.py --compact`<br>`python3 .probe-kit/scripts/ml_feasibility_check.py --compare` |
+| **Case 5**<br>배차/배치/편성/스케줄링, VRP, ILP, CSP, Hard vs Soft 제약, Makespan, 28초 타임아웃 | **[기출 3종 + 미출제 4종]**<br>• **#8 이천 HR운영팀 책임** (통근버스 VRP/CSP)<br>• **#9 이천 식단운영 영양사** (월간 식단 CSP/ILP)<br>• **#10 안전 모니터링팀 TL & #11 Safety Monitoring TL** (CCTV Set Cover)<br>• **#13-A 이천 포토기술팀 TL** (노광기 배정 & PM 스케줄링)<br>• **#7-A 소재품질팀 책임매니저** (원자재 공급사 쿼터 LP)<br>• **#6-B 시장전략팀 책임매니저** (HBM/DDR5 Product Mix LP)<br>• **#15-B 반도체 산업교육 TL** (선수지식 DAG 커리큘럼) | `case5_optimization_csp.md` | `dm_question.md`<br>▶ **Case 5 섹션**<br>(또는 페르소나별 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_opt.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
+| **Case 6**<br>화학 단위(ppm/ppb/ppt), `< DL`, Cpk, Nelson Rules, PCN, 좌표 $(x, y)$, $\Delta x, \Delta y$, 6-Param OLS, ADI/AEI, FY/CY 보간, Bit*ASP, DOI | **[반도체 특화 3종]**<br>• **#7-B 소재품질팀 책임매니저** (원소재 CoA 성적서, Cpk, PCN 3단 인터락)<br>• **#13-B 이천 포토기술팀 TL** (웨이퍼 Overlay 6-Param OLS, ADI REWORK vs AEI SCRAP)<br>• **#6-A 시장전략팀 책임매니저** (경쟁사 실적 CY 보간, 환율 분리, Waterfall, DOI) | `case6_semicon_data_spc.md` | `dm_question.md`<br>▶ **Case 6 섹션**<br>(또는 반도체 도메인 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_spc.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
+| **Case 7**<br>밸류체인 DAG 수급 충격, HBM/CoWoS 후공정 병목 클리핑, 오개념 진단 튜터, `FAIL_INTERLOCK`, Role Switcher, `0.0.0.0` | **[FDE / Full-Stack 웹앱]**<br>• **#14 경영전략팀 시장분석 TL** (밸류체인 수급 충격 전파 What-If 시뮬레이터)<br>• **#15 반도체 산업교육 TL** (반도체 지식그래프 오개념 진단 AI 튜터)<br>• **#14+#15 듀얼 모드** (전략 분석가 ↔ 산업 교육자 통합 웹앱)<br>• **#6-C / #7-C / #13-C / #12** (FDE 인터랙티브 대시보드 확장) | `case7_fde_valuechain_app.md`<br>(보조: `case2_web_service.md`, `case4_policy_rag_doc.md`) | `dm_question.md`<br>▶ **Case 7 섹션**<br>(또는 FDE 밸류체인 특화 질문 카드) | `0.0.0.0:8000` 백그라운드 바인딩<br>+ `curl /api/simulate`<br>+ 내장 Browser `Role Switcher`·슬라이더·`FAIL_INTERLOCK` 직접 점검 |
+| **Case 8**<br>정형 테이블(Tabular), 센서/장비 시계열 로그, 수율/불량 예측, 웨이퍼 잔차 회귀, 리드타임/수요 예측, `GO — DIRECT_ML`, `GO — HYBRID_ML` | 경량 머신러닝 자율 트랙 & 챔피언 솔루션 패키징 | `case8_lightweight_automl_track.md` | `dm_question.md`<br>▶ **Case 8 섹션**<br>(평가지표, 하드제약 클램핑, 추론 SLA) | `python3 .probe-kit/scripts/ml_feasibility_check.py`<br>`python3 .probe-kit/scripts/ml_feasibility_check.py --compare` |
 
 ✅ **완료 시그널:**
 메인 에이전트가 과제 유형(Case 1~8 및 매핑 페르소나 #6~#15)과 로드할 스킬 파일명을 보고하고, `NOTES_TEMP.md`에 문제 개요가 기록되며, `HANDOFF.md`에 탐색 로그가 추가됨.
@@ -339,13 +353,13 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 | **Case 6** | `## Case 6. 반도체 CoA/SPC·2D Overlay·재무 정규화` | CoA 정량한계(< DL), Overlay 6-Param OLS, 재무 CY보간 |
 | **Case 7** | `## Case 7. 밸류체인 DAG·듀얼 페르소나·교육 AI/시뮬레이터` | 수급 충격 DAG, CoWoS 병목, AI 튜터, FAIL_INTERLOCK |
 | **Case 9** | `## Case 판별이 안 될 때 (복합형 및 모호한 상황 긴급 대응)` | 복합형(파이프라인 + 웹 UI) 우선순위 및 인터페이스 질의 |
-| **카드 #6** | `### 💳 [카드 #6] 김현우 책임매니저 (시장전략팀 — 메모리 시장·경쟁사 실적 분석)` | ASP, bit_growth, WSPM, Micron CY, Waterfall |
-| **카드 #7** | `### 💳 [카드 #7] 박서연 책임매니저 (소재품질팀 — 신규 소재·공급사 변경 검토)` | CoA < DL 대치, Cpk 기준, Nelson Rules, PCN 3단 인터락 |
-| **카드 #8** | `### 💳 [카드 #8] 윤서영 책임 (이천 HR운영팀 — 통근버스 노선 배차 및 정류장 최적화)` | 통근버스 VRP, 입석 금지(Hard), 목적지 마감 시각 |
-| **카드 #9/#12** | `### 💳 [카드 #9 & #12] 이하린 영양사 & Sarah Collins (이천 식단운영 / Dietitian)` | 월간 식단 CSP/ILP, 3일 연속 금지, 개인화 메뉴 추천 |
-| **카드 #10/#11** | `### 💳 [카드 #10 & #11] 정유진 TL & Jordan Reyes (안전 모니터링팀 / Safety Monitoring)` | CCTV 2D 도면 Set Cover, 가시성 극대화, 사각지대 |
-| **카드 #13** | `### 💳 [카드 #13] 이도윤 TL (이천 포토기술팀 — Overlay 품질·장비 운영 & 팹 엔지니어링)` | 노광 스케줄링(A), 2D Overlay OLS(B), 관제 대시보드(C) |
-| **카드 #14/#15** | `### 💳 [카드 #14 & #15] 한서진 TL & 윤지안 TL (skhynix-value-chain-*)` | 밸류체인 DAG 충격 시뮬레이터 + AI 튜터 통합 웹앱 |
+| **카드 #6** | `### 💳 [카드 #6] 시장전략팀 책임매니저 (메모리 시장·경쟁사 실적 분석)` | ASP, bit_growth, WSPM, Micron CY, Waterfall |
+| **카드 #7** | `### 💳 [카드 #7] 소재품질팀 책임매니저 (신규 소재·공급사 변경 검토)` | CoA < DL 대치, Cpk 기준, Nelson Rules, PCN 3단 인터락 |
+| **카드 #8** | `### 💳 [카드 #8] 이천 HR운영팀 책임 (통근버스 노선 배차 및 정류장 최적화)` | 통근버스 VRP, 입석 금지(Hard), 목적지 마감 시각 |
+| **카드 #9/#12** | `### 💳 [카드 #9 & #12] 이천 식단운영 영양사 & Dietitian (월간 식단 편성 / 오늘의 메뉴 추천)` | 월간 식단 CSP/ILP, 3일 연속 금지, 개인화 메뉴 추천 |
+| **카드 #10/#11** | `### 💳 [카드 #10 & #11] 안전 모니터링팀 TL & Safety Monitoring TL (CCTV 설치안 검토)` | CCTV 2D 도면 Set Cover, 가시성 극대화, 사각지대 |
+| **카드 #13** | `### 💳 [카드 #13] 이천 포토기술팀 TL (Overlay 품질·장비 운영 & 팹 엔지니어링)` | 노광 스케줄링(A), 2D Overlay OLS(B), 관제 대시보드(C) |
+| **카드 #14/#15** | `### 💳 [카드 #14 & #15] 경영전략팀 시장분석 TL & 반도체 산업교육 TL (skhynix-value-chain-*)` | 밸류체인 DAG 충격 시뮬레이터 + AI 튜터 통합 웹앱 |
 
 4. 실무자 답변을 받는 즉시 워크스페이스 루트의 `NOTES_TEMP.md`를 열고 `## 3. 실무자 DM Q&A 기록` 섹션에 아래 표(Table) 형식으로 기록합니다:
 
