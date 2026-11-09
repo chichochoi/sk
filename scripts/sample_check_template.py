@@ -6,7 +6,8 @@ scripts/sample_check_template.py
 - 수동 계산된 기댓값(EXPECTED)과 실제 처리 함수 출력값 정밀 비교
 - 단계별(원본 -> 중복제거 -> 불량제외 -> 결측제외) 건수 추적 로깅
 - 불일치 시 직관적인 diff 출력
-- TARGET_MODULE / TARGET_FUNC 동적 로딩 지원 (미지정 시 Fail 보고, --demo 플래그 시 내장 reference_impl 검증)
+- TARGET_MODULE / TARGET_FUNC 동적 로딩 지원 (미지정 시 안내 후 내장 참조 검증, --demo 플래그 시 내장 reference_impl 검증)
+- 선택적 입력 파일(CSV/TSV/JSON/JSONL 산출물) 유효성 및 센티널 잔존 검증 지원
 """
 
 import os
@@ -16,7 +17,7 @@ import importlib
 import difflib
 import json
 import math
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # 워크스페이스 루트 및 현재 작업 디렉토리 sys.path 등록 (루트 모듈 임포트 지원)
 WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -28,23 +29,29 @@ if os.getcwd() not in sys.path:
 # Windows CP949 환경 대응
 if hasattr(sys.stdout, "reconfigure"):
     try:
-        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stdout.reconfigure(errors="replace")
     except Exception:
         pass
 if hasattr(sys.stderr, "reconfigure"):
     try:
-        sys.stderr.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(errors="replace")
     except Exception:
         pass
 
+def safe_print(text, file=None):
+    """터미널 인코딩(cp949 등)으로 인한 UnicodeEncodeError 방어 출력 함수"""
+    out_file = file or sys.stdout
+    try:
+        print(text, file=out_file)
+    except UnicodeEncodeError:
+        encoding = getattr(out_file, "encoding", None) or "utf-8"
+        clean_text = text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        print(clean_text, file=out_file)
+
 # --------------------------------------------------------------------------
 # [0] 실행 모드 확인 (--demo 플래그 또는 DEMO_MODE 환경변수)
-#     - unittest.main() 인자 충돌 방지를 위해 sys.argv에서 사전 분리
 # --------------------------------------------------------------------------
 IS_DEMO = "--demo" in sys.argv or os.environ.get("DEMO_MODE", "0") == "1"
-if "--demo" in sys.argv:
-    while "--demo" in sys.argv:
-        sys.argv.remove("--demo")
 
 # --------------------------------------------------------------------------
 # [1] 테스트 대상 모듈 및 함수 설정 (환경 변수 또는 코드 수정)
@@ -285,12 +292,190 @@ def load_target_function():
     print("ℹ️ [안내] TARGET_MODULE 및 TARGET_FUNC 환경변수가 미지정되어,")
     print("   내장 참조 구현체(reference_impl) 데모 모드로 검증을 수행합니다.")
     print("   👉 실제 과제 함수 검증 시 아래와 같이 환경변수를 지정하여 실행하세요:")
-    print("      TARGET_MODULE=src.pipeline.aggregator TARGET_FUNC=process_wafers python3 scripts/sample_check_template.py")
+    print("      TARGET_MODULE=src.pipeline TARGET_FUNC=process_wafers python3 scripts/sample_check_template.py")
     print("=" * 60 + "\n")
     return reference_impl
 
 # --------------------------------------------------------------------------
-# [6] 단위 테스트 케이스 및 불일치 diff 출력
+# [6] 산출물 데이터 파일 유효성 및 센티널 잔존 검증 (verify_output_file)
+# --------------------------------------------------------------------------
+def verify_output_file(file_path: str):
+    """
+    선택적 산출물 데이터 파일(.csv, .tsv, .json, .jsonl 등) 유효성 및 센티널 잔존 검증
+    """
+    safe_print("=" * 70)
+    safe_print(f"🔍 [산출물 파일 정밀 검증 모드] 대상 파일: {file_path}")
+    safe_print("=" * 70)
+
+    # 1. 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        safe_print(f"❌ [파일 검증 실패] {file_path}: 파일이 존재하지 않습니다.", file=sys.stderr)
+        safe_print("=" * 70)
+        sys.exit(1)
+
+    # 2. 파일 크기 > 0 바이트 확인
+    file_size = os.path.getsize(file_path)
+    if file_size == 0:
+        safe_print(f"❌ [파일 검증 실패] {file_path}: 파일 크기가 0 바이트입니다 (빈 파일).", file=sys.stderr)
+        safe_print("=" * 70)
+        sys.exit(1)
+
+    ext = os.path.splitext(file_path)[1].lower()
+    record_count = 0
+    leaks = []
+
+    # 미정제 센티널 및 결측 토큰 (-999, -999.0, -9999, < DL, ND, NaN, null 등)
+    sentinel_str_set = {"-999", "-999.0", "-9999", "< dl", "<dl", "nd", "nan", "null"}
+
+    def check_val_sentinel(val: Any) -> Optional[str]:
+        if val is None:
+            return "null/None"
+        if isinstance(val, (int, float)):
+            if val in (-999, -999.0, -9999):
+                return str(val)
+            if math.isnan(val):
+                return "NaN"
+            return None
+        s = str(val).strip().lower()
+        if s in sentinel_str_set:
+            return str(val).strip()
+        if s.startswith("<") and "dl" in s:
+            return str(val).strip()
+        return None
+
+    try:
+        if ext in (".csv", ".tsv"):
+            delimiter = "\t" if ext == ".tsv" else ","
+            import csv
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                reader = csv.reader(f, delimiter=delimiter)
+                rows = [row for row in reader if any(cell.strip() for cell in row)]
+
+            total_rows = len(rows)
+            if total_rows == 0:
+                safe_print(f"❌ [파일 검증 실패] {file_path}: 유효한 레코드가 0건입니다 (빈 파일).", file=sys.stderr)
+                safe_print("=" * 70)
+                sys.exit(1)
+
+            # 첫 행이 헤더인지 데이터인지 (2행 이상이면 첫 행은 헤더로 간주하여 데이터 행 수 = total_rows - 1)
+            if total_rows > 1:
+                data_rows = rows[1:]
+                record_count = len(data_rows)
+            else:
+                data_rows = rows
+                record_count = 1
+
+            for r_idx, row in enumerate(data_rows, start=1):
+                for c_idx, cell in enumerate(row):
+                    token = check_val_sentinel(cell)
+                    if token:
+                        leaks.append(f"행 {r_idx}, 열 {c_idx+1}: '{token}'")
+
+        elif ext == ".json":
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                data = json.load(f)
+
+            if isinstance(data, list):
+                record_count = len(data)
+                items = enumerate(data, start=1)
+            elif isinstance(data, dict):
+                record_count = len(data)
+                items = data.items()
+            else:
+                record_count = 1
+                items = [(1, data)]
+
+            if record_count == 0:
+                safe_print(f"❌ [파일 검증 실패] {file_path}: 유효한 레코드가 0건입니다 (빈 JSON).", file=sys.stderr)
+                safe_print("=" * 70)
+                sys.exit(1)
+
+            def scan_json_obj(obj, loc_prefix):
+                if isinstance(obj, dict):
+                    for k, v in obj.items():
+                        scan_json_obj(v, f"{loc_prefix}.{k}")
+                elif isinstance(obj, list):
+                    for idx, item in enumerate(obj):
+                        scan_json_obj(item, f"{loc_prefix}[{idx}]")
+                else:
+                    tok = check_val_sentinel(obj)
+                    if tok:
+                        leaks.append(f"{loc_prefix}: '{tok}'")
+
+            for loc, elem in items:
+                scan_json_obj(elem, f"레코드 {loc}")
+
+        elif ext == ".jsonl":
+            lines = []
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line_s = line.strip()
+                    if line_s:
+                        lines.append(line_s)
+
+            record_count = len(lines)
+            if record_count == 0:
+                safe_print(f"❌ [파일 검증 실패] {file_path}: 유효한 레코드가 0건입니다 (빈 JSONL).", file=sys.stderr)
+                safe_print("=" * 70)
+                sys.exit(1)
+
+            def scan_json_obj(obj, loc_prefix):
+                if isinstance(obj, dict):
+                    for k, v in obj.items():
+                        scan_json_obj(v, f"{loc_prefix}.{k}")
+                elif isinstance(obj, list):
+                    for idx, item in enumerate(obj):
+                        scan_json_obj(item, f"{loc_prefix}[{idx}]")
+                else:
+                    tok = check_val_sentinel(obj)
+                    if tok:
+                        leaks.append(f"{loc_prefix}: '{tok}'")
+
+            for r_idx, line in enumerate(lines, start=1):
+                try:
+                    obj = json.loads(line)
+                    scan_json_obj(obj, f"행 {r_idx}")
+                except Exception as je:
+                    leaks.append(f"행 {r_idx}: JSON 파싱 오류 ({je})")
+
+        else:
+            # 일반 텍스트 라인 기반 폴백 검증
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = [l.strip() for l in f if l.strip()]
+            record_count = len(lines)
+            if record_count == 0:
+                safe_print(f"❌ [파일 검증 실패] {file_path}: 유효한 레코드가 0건입니다.", file=sys.stderr)
+                safe_print("=" * 70)
+                sys.exit(1)
+            for r_idx, line in enumerate(lines, start=1):
+                for tok in ("-999.0", "-9999", "-999", "< DL", "<DL", "ND", "NaN", "null"):
+                    if tok.lower() in line.lower():
+                        leaks.append(f"행 {r_idx}: '{tok}'")
+
+    except Exception as e:
+        safe_print(f"❌ [파일 검증 실패] {file_path}: 파일 파싱 중 에러 발생 ({e})", file=sys.stderr)
+        safe_print("=" * 70)
+        sys.exit(1)
+
+    if leaks:
+        leak_sample = ", ".join(leaks[:5])
+        if len(leaks) > 5:
+            leak_sample += f" 외 {len(leaks)-5}건"
+        safe_print(f"❌ [파일 검증 실패] {file_path}: 미정제 센티널/결측 {len(leaks)}건 누출 감지! ({leak_sample})", file=sys.stderr)
+        safe_print("   👉 결측치/센티널(-999, NaN, null 등) 정제 로직을 확인하세요.", file=sys.stderr)
+        safe_print("=" * 70)
+        sys.exit(1)
+
+    safe_print(f"  * 대상 파일        : {file_path}")
+    safe_print(f"  * 파일 크기        : {file_size:,} bytes")
+    safe_print(f"  * 유효 레코드 수   : {record_count:,}건")
+    safe_print(f"  * 센티널/결측 누출 : 0건 (Clean)")
+    safe_print("=" * 70)
+    safe_print(f"✅ [파일 검증 통과] {file_path}: 총 {record_count}건 레코드, 센티널/결측 누출 0건 정상 확인!")
+    sys.exit(0)
+
+# --------------------------------------------------------------------------
+# [7] 단위 테스트 케이스 및 불일치 diff 출력
 # --------------------------------------------------------------------------
 class TestSampleCheck(unittest.TestCase):
     def test_pipeline_output_against_expected(self):
@@ -334,6 +519,36 @@ class TestSampleCheck(unittest.TestCase):
 
         print("\n[검증 통과] 15건 표본(정상/중복/불량/결측/경계값) 수동 기댓값과 100% 일치합니다!\n")
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
+def print_help():
+    print("""사용법:
+  # 1. 내장 참조 구현체 자체 데모 검증 (--demo 플래그)
+  python3 .probe-kit/scripts/sample_check_template.py --demo
 
+  # 2. 산출물 데이터 파일 유효성 및 센티널 누출 검증
+  python3 .probe-kit/scripts/sample_check_template.py [input_path]
+  예: python3 .probe-kit/scripts/sample_check_template.py output/cleaned_data.csv
+
+  # 3. 실제 과제 모듈 및 함수 지정 대조 실행
+  TARGET_MODULE=src.pipeline TARGET_FUNC=process_wafers python3 .probe-kit/scripts/sample_check_template.py
+""")
+
+if __name__ == "__main__":
+    # 1. --help / -h 플래그 처리
+    if any(arg in sys.argv[1:] for arg in ("-h", "--help", "help")):
+        print_help()
+        sys.exit(0)
+
+    # 2. 위치 인자 [input_path] 확인 (--demo 제외, '-'로 시작하지 않는 첫 인자)
+    input_path = None
+    for arg in sys.argv[1:]:
+        if not arg.startswith("-"):
+            input_path = arg
+            break
+
+    if input_path and not IS_DEMO:
+        verify_output_file(input_path)
+
+    # 3. --demo 또는 TARGET_MODULE / TARGET_FUNC 단위 테스트 실행
+    #    unittest.main()의 인자 충돌 방지를 위해 sys.argv 초기화
+    sys.argv = [sys.argv[0]]
+    unittest.main(verbosity=2)

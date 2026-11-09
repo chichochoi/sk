@@ -16,23 +16,23 @@
    - ④ **[기준(Criteria)]** 실무자 DM 확인 비즈니스 규칙, 수치 경계값/임계값 판정 기준(`>=` vs `>`), 결측치·이상치 처리 및 격리 기준, 충돌 시 우선순위(데이터 정합성 최우선)
    - ⑤ **[검증(Verification)]** 베이스라인 회귀 검증, 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드 작성 및 실행(`tests/test_*.py` 즉석 작성, 고정 템플릿 금지, git commit 없이 untracked 유지), 정상 및 예외/경계값 검증 명령
    - ⑥ **[DoD]** 완료 정의 체크리스트(베이스라인 100% 통과, 스키마 일치, 비즈니스 규칙/경계값 검증, diff 파일 범위 준수)
-   - ⑦ **[종료(End)]** 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 임의 추측 구현 즉시 중단 및 보고 대기), `SUB_RESULT.md` 요약 보고, `handoff.sh log "sub done: ..."` 갱신, 서브 터미널 즉시 `/clear` 실행(누적 토큰 0 리셋)
+   - ⑦ **[종료(End)]** 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 임의 추측 구현 즉시 중단 및 보고 대기), `SUB_RESULT.md` 요약 보고, `handoff.sh log "서브 구현 완료" "Step N 구현 및 자체 검증 완료"` 갱신, 서브 터미널 즉시 `/clear` 실행(누적 토큰 0 리셋)
 3. **모듈 단위 분할 위임 및 오버엔지니어링 통제:** 한 번에 하나씩 쪼개서 서브에 위임하고, 시키지 않은 거창한 기능(불필요한 쓰기 가드, 복잡한 캐싱/패턴 등)을 넣지 못하게 고삐를 쥡니다.
 4. **버그 수정도 '원인 보고 → 범위 합의' 후에만:** 서브 에이전트에서 테스트 실패 시 무작정 코드를 덮어쓰지 않고 원인과 수정 범위를 먼저 확인합니다.
 5. **방향 수정 시 이유를 텍스트로 기록:** *"A 방식은 ~한 문제가 있어 접고 B 방식으로 전환한다"*고 메인 에이전트 프롬프트에 명시해야 '방향 조정' 가점을 받습니다.
-6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
+6. **단계별 HANDOFF.md 갱신 의무:** 각 단계(TASK_SPEC issued / sub done / verification done) 종료 직후 `bash .probe-kit/scripts/handoff.sh log "<단계>" "<메시지>"`를 실행하여 `runtime/HANDOFF.md`를 즉시 갱신합니다 (handoff 로그는 에이전트가 실행되는 터미널과 같은 셸에서 실행. bash가 실패하면(WSL E_ACCESSDENIED 등) `python3 .probe-kit/scripts/handoff.py log "<step>" "<msg>"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가).
 
 ---
 
 ## 2. 실전 복붙용 핵심 프롬프트 6종 (전문)
 
-### 📋 [메인 프롬프트 1 — `Sol 6.1 xhigh`] 초기 탐색 및 아키텍처 구조화 (코드 수정 금지)
+### 📋 [메인 프롬프트 1 — Sol 6.1 xhigh] 초기 탐색, Case 분류(단일/혼합/신규) 및 아키텍처 구조화
 > **용도:** 과제 시작 직후(10:05~10:15) 터미널 1에 입력하여 문제 정의, 제약사항, MVP 모듈 분할 계획을 핵심 위주로 간결하고 명확하게 도출합니다.
 
 ```text
 [MAIN] 먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.
 아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
-현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt(초기 스캔 결과 및 [CASE_SIGNAL]), 그리고 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑하고 워크스페이스 루트의 NOTES_TEMP.md에 기록해줘:
+현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑하고 워크스페이스 루트의 NOTES_TEMP.md 에 기록해줘: (키트 내부 README가 아닌 과제 문제 지시서여야 함)
 1. EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 과제 지시서(README.md)를 분석하여 이번 과제를 아래 3가지 중 하나로 분류해줘:
    - [단일형 (Case 1~7)]: 가장 일치하는 Case 1개와 SK하이닉스 도메인 아키타입(#6~#15 직무) 매칭
    - [혼합형 (Case 9, 예: 알고리즘/데이터 파이프라인 + 웹 UI/RAG 등)]: 주력(Primary) Case 1개 + 보조(Secondary) Case 1개를 결합 매칭하고, 반드시 "Step 1: 백엔드 코어 엔진/데이터 출력 완성 및 단독 검증 ➔ Step 2: 프론트엔드 UI/API 결합" 순서의 Core-First 아키텍처로 설계
@@ -40,21 +40,25 @@
 2. 스킬 및 DM 질문 선택:
    - 단일형/혼합형이면 매칭된 전용 스킬 파일(.probe-kit/skills/caseX_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
    - 만약 혼합형이거나 기존에 없는 [완전 신규 유형(Novel Case 0)]이어서 기존 DM 카드가 딱 맞지 않는다면, 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개]와 [자체 표본 검증 기준(custom_sample_check.py 설계안)]을 이 브리핑에 즉시 생성해줘.
-3. 우리가 해결해야 할 핵심 문제, 입·출력 포맷, 작업 대상 파일 범위
-4. 절대 건드리면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 인터페이스, 함수 시그니처, 파일 경로 등)
-5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 구현(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
+3. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
+4. 절대 변경하면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 규격, 함수 시그니처, 파일 경로 등)
+5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 핵심 기능(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
 6. 기존 단위 테스트 스위트가 존재한다면 사전 베이스라인 실행 결과(PASS/FAIL 및 실패 내역)도 NOTES_TEMP.md에 함께 기록해줘.
 7. [ML 트랙 적합성 교차 의견]: 과제 요구사항(README.md)과 데이터 구조로 볼 때 백그라운드 경량 ML/하이브리드 모델(터미널 4) 적용이 유의미한지(GO/SKIP) 한 줄 의견
+브리핑과 NOTES_TEMP.md 기록이 끝나면 터미널에서 다음 명령어를 실행해줘:
+bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "탐색" "Case 식별 및 초기 분석 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
 
 ---
 
-### 📋 [메인 프롬프트 2 — `Sol 6.1 xhigh`] 서브 에이전트용 작업 지시서(`TASK_SPEC.md`) 생성
+### 📋 [메인 프롬프트 2 — Sol 6.1 xhigh] 서브 작업 지시서(TASK_SPEC.md) 발행
 > **용도:** 실무자 DM으로 확정한 세부 규칙과 제약을 반영하여, 서브 에이전트가 실행할 단일 모듈 작업 지시서를 생성합니다.
 
 ```text
-[MAIN] 실무자 에이전트에게 확인한 요구사항을 반영해서, 서브 에이전트(GPT 5.6-terra medium)가 수행할 [Step 1: X 모듈/기능] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘. (비즈니스 코드는 직접 수정하지 마!)
-TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 바탕으로 다음 7대 표준 섹션을 누락 없이 포함해:
+[MAIN] 비즈니스 코드는 절대 직접 작성하거나 수정하지 마.
+우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(GPT 5.6-terra medium)가 수행할 이번 단계(Step 1, 이후 반복 시 Step 2, Step 3...) [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
+TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 바탕으로 다음 7대 표준 섹션을 누락 없이 포함해야 해:
 1. [시작 / Start]: 이번 단계 단일 목표(MVP), 직전 단계 선행 완료 상태 확인, 착수 전 기존 베이스라인 테스트 100% PASS 확인
 2. [통제 / Scope]: 변경 허용 파일 및 절대 수정 금지 파일 범위, 5대 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, .gitignore 수정 금지, git add/commit/reset/clean 금지)
 3. [정의 / Definition]: 도메인 핵심 용어 정의, 상태 코드(Status/State) 의미, 입·출력 데이터 스키마 및 계약(반환 타입, 정렬, 반올림 등)
@@ -63,15 +67,19 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
      * Case 5 (최적화/CSP): 하드 제약과 소프트 목적함수 물리적 분리, is_valid(candidate, constraints) -> tuple[bool, list[str]] 독립 불리언 검증 필수, 실행가능 베이스라인 우선 확보, 30초 타임아웃 페일세이프 가드
      * Case 6 (반도체/SPC/오버레이): < DL/ND 보수적 대치, 치명 불순물 초과 즉시 REJECT, Edge Exclusion(147mm) 마진 필터링, 6-Param OLS 잔차 및 제조공장 변경 PCN HOLD 인터락
      * Case 7 (FDE/밸류체인 앱): 백엔드 수리 연산(DAG 충격전파/수율곱/병목클리핑)과 프론트 UI 분리, HTTP 500 방어(400/422 Bad Request), 웹 서버 0.0.0.0 바인딩 필수
-5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
+5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 사용 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
 6. [DoD]: 완료 정의 체크리스트 (베이스라인 100% 통과, 스키마 계약 일치, 비즈니스 규칙 및 경계값 검증 통과, git diff 범위 준수)
-7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" -> 서브 터미널 /clear 실행 대기)
+7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 서브 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "서브 구현 완료" "Step N 구현 및 자체 검증 완료" 실행 (실패 시 python3 .probe-kit/scripts/handoff.py log "서브 구현 완료" "Step N 구현 및 자체 검증 완료") -> 서브 터미널 /clear 실행 대기)
 - 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
+TASK_SPEC.md 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
+bash .probe-kit/scripts/handoff.sh log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
+담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
 ```
 
 ---
 
-### 📋 [서브 프롬프트 3 — `GPT 5.6-terra medium`] 작업 지시서 실행 및 검증 보고 (구현·실행 전담)
+### 📋 [서브 프롬프트 3 — GPT 5.6-terra medium] 코드 구현 및 테스트 실행
 > **용도:** 터미널 2(`GPT 5.6-terra medium`) 창에 입력하여 `TASK_SPEC.md`에 명시된 파일만 수정하고, 정상/예외 테스트를 직접 돌려 `SUB_RESULT.md`를 작성하게 합니다.
 
 ```text
@@ -80,19 +88,26 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
 1. [시작 / Start]: 코드 수정 전 기존 베이스라인 테스트 100% PASS 여부와 진입 조건을 먼저 확인해. (사전 베이스라인 실패 시 착수 금지, 즉시 원인 보고)
 2. [정의 & 기준]: 명시된 도메인 용어/상태 정의, 입·출력 스키마 계약, 실무자 DM 판정 규칙 및 경계값 기준을 숙지하고, 허용 파일 범위 내에서 MVP 최소 구현을 수행해. (범위 밖 수정 불가피하거나 스키마/기준 모호 시 임의 추측 구현 즉시 중단 및 보고)
 3. [검증 / Verification]: 베이스라인 회귀 테스트 + 매 태스크 DM 요구사항 맞춤 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로 및 예외/경계값(결측치, 경계 수치, 중복 등)을 직접 검증해. (고정 템플릿 금지, git add/commit/reset/clean 금지 및 untracked 유지. 실패 시 덮어쓰지 말고 원인 진단)
-4. [종료 / End]: DoD 완료 정의 점검 후 .probe-kit/runtime/SUB_RESULT.md 에 요약 보고서를 작성하고, bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" 으로 갱신해줘 (실패 시 python3 .probe-kit/scripts/handoff.py log "sub done" "<요약>" 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가; 불필요한 줄 수 제한 없음). 완료 보고 후 서브 터미널에서 즉시 /clear 실행 대기해.
+4. [종료 / End]: DoD 완료 정의 점검 후 .probe-kit/runtime/SUB_RESULT.md 에 요약 보고서를 작성하고, 다음 명령어를 터미널에서 실행해줘:
+bash .probe-kit/scripts/handoff.sh log "서브 구현 완료" "Step N 구현 및 자체 검증 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "서브 구현 완료" "Step N 구현 및 자체 검증 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
 
 *(💡 서브 에이전트의 작업 완료 및 `SUB_RESULT.md` 확인 후, 터미널 2에서는 반드시 `/clear`를 입력해 누적 토큰을 0으로 초기화하세요!)*
 
 ---
 
-### 📋 [메인 프롬프트 4 — `Sol 6.1 xhigh`] 서브 결과 검수 및 방향 전환 로그 남기기
+### 📋 [메인 프롬프트 4 — Sol 6.1 xhigh] 서브 결과 검수 & 다음 단계 반복
 > **용도:** 서브 에이전트의 결과 보고서와 git diff를 검수하고, 다음 단계 지시서를 작성하거나 방향 전환(오버엔지니어링/병목 배제) 가산점 로그를 남깁니다.
 
 ```text
-[MAIN] .probe-kit/runtime/SUB_RESULT.md 와 git diff --stat 만 확인해서 Step 1이 의도대로 검증되었는지 점검해줘.
-(방향 수정이 필요한 경우) 테스트/검토 결과를 보니 기존 [A 방식]은 [메모리 초과 / 현업의 X 예외 조건 충돌 / 불필요한 복잡도] 문제가 있어서 제외하기로 결정했어. 우선순위를 조정해서 더 안정적이고 단순한 [B 방식]으로 방향을 바꿔서 다음 단계 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
+[MAIN] .probe-kit/runtime/SUB_RESULT.md 와 git diff --stat 만 확인해서 Step N이 실무자 DM 조건에 맞게 검증되었는지 엣지 케이스 관점에서 비판적으로 검토해줘.
+(방향 수정이 필요한 경우) 테스트/검토 결과를 보니 기존 [A 방식]은 [메모리 초과 / 현업 예외 충돌 / 불필요한 복잡도] 문제가 있어서 제외하기로 결정했어. 우선순위를 조정해서 더 안정적이고 단순한 [B 방식]으로 방향을 바꿔서 다음 단계 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
+검토가 완료되면 다음 모듈인 [Step N+1]에 대한 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
+검수 및 다음 지시서 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
+bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및 의사결정 기록 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "검수 완료" "Step N 메인 검수 및 의사결정 기록 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
+담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
 ```
 
 ---
@@ -169,7 +184,7 @@ bash .probe-kit/scripts/subagent.sh status
 
 ### 2) 메인 에이전트 (터미널 A) 세션 전환 및 Handoff 운용 원칙
 - 메인 에이전트는 전체 설계 맥락을 유지해야 하므로 원칙적으로 세션을 유지합니다.
-- 하네스 초기화(`init.sh`) 시 `templates/HANDOFF.md`가 `runtime/HANDOFF.md`로 초기 복사되며, 각 단계(TASK_SPEC issued / sub done / verification done)마다 `bash .probe-kit/scripts/handoff.sh log "<단계: 요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log "<단계>" "<요약>"`)으로 실시간 진행 상태를 누적합니다.
+- 하네스 초기화(`init.sh`) 시 `templates/HANDOFF.md`가 `runtime/HANDOFF.md`로 초기 복사되며, 각 단계(TASK_SPEC issued / sub done / verification done)마다 `bash .probe-kit/scripts/handoff.sh log "<단계>" "<요약>"` (실패 시 `python3 .probe-kit/scripts/handoff.py log "<단계>" "<요약>"`)으로 실시간 진행 상태를 누적합니다.
 - 단순 `/compact`를 반복하면 컨텍스트 오염과 실무자 비즈니스 제약 망각(Drift)이 발생할 수 있으므로, 컨텍스트가 비대해지거나 4대 골든 타이밍(Step 1 MVP 완료, 제약 망각 감지, 대규모 방향 전환, 12:15 최종 검증 진입)에 도달하면 단순 `/clear` 대신 **공식 Handoff 프로토콜**을 수행합니다:
   1. 터미널 1에서 `bash .probe-kit/scripts/handoff.sh` 실행 (기계적 메타데이터 자동 추출 및 단계별 로그 보존)
   2. 메인에게 **[메인 프롬프트 5]**를 주입하여 `HANDOFF.md`에 [결정]-[근거]-[포기한 대안], DM 불변 제약, Next Actions 1~3을 완벽히 보강 및 저장
@@ -253,7 +268,7 @@ bash .probe-kit/scripts/subagent.sh status
 우리는 메인 파이프라인의 완성도를 점검하고, 백그라운드(터미널 4)에서 자율 학습된 ML 챔피언 솔루션을 최종 채택하거나 결합할지 결정해야 해.
 
 먼저 다음 파일들을 확인해:
-1. bash 터미널에서 python3 .probe-kit/scripts/ml_feasibility_check.py --compare 실행 결과 (메인 휴리스틱 vs 백그라운드 ML 챔피언의 점수 및 추론 속도 비교 출력)
+1. bash 터미널에서 python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv 실행 결과 (메인 휴리스틱 vs 백그라운드 ML 챔피언의 점수 및 추론 속도 비교 출력)
 2. .probe-kit/ml_track/CHAMPION_REPORT.md (ML 챔피언 성능 향상폭, 상위 피처, 하드 제약 통과 여부)
 3. 메인 트랙의 현재 검증 점수 및 안정성
 

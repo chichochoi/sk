@@ -17,13 +17,13 @@
 | **10:00** | **09:30** | **[1단계]** 원클릭 하네스 설치 | 외부 Git 차단 및 하네스 자동 장착 | `git clone ... && bash init.sh` |
 | **10:02** | **09:35** | **[2단계]** 환경 검증 & 듀얼 터미널 | 무토큰 EDA 확인 및 Sol/GPT 5.6-terra 분리 기동 | `git status` / `EDA_SUMMARY` / `codex` |
 | **10:04** | **09:40** | **[2.5단계]** 초반 5분 (09:40) | 🧪 경량 ML 해결 가능성 10초 판별 & 백그라운드 Sol 6.1 (터미널 4) 5시간 자율 학습 가동 | `python3 .probe-kit/scripts/ml_feasibility_check.py` |
-| **10:05** | **09:45** | **[3단계]** 문제 탐색 & Case 식별 | 과제 README·[CASE_SIGNAL] 분석 및 Case 1~8 스킬 매핑 | 메인 프롬프트 (`NOTES_TEMP.md` 기록) |
+| **10:05** | **09:45** | **[3단계]** 문제 탐색 & Case 식별 | 과제 README·[CASE_SIGNAL] 분석 및 Case 1~7 식별 (및 복합 Case 9 / 신규 Case 0 분기) | 메인 프롬프트 (`NOTES_TEMP.md` 기록) |
 | **10:10** | **09:55** | **[4단계]** DM 실무자 만능 질의 | 목표, 입출력, 결측/중복, 인터페이스 질의 | 우측 DM 창 (범용 템플릿) |
 | **10:20** | **10:10** | **[5단계]** 케이스별 DM 질문 질의 | Case 1~8 / #6~#15 전용 DM 질문 및 스킬 온디맨드 로드 | `.probe-kit/dm_question.md` |
 | **10:25** | **10:25** | **[6단계]** 솔루션 브레인스토밍 | N단계 분할 ➔ 트레이드오프 ➔ 주도적 결정 | 3-Part 메인 프롬프트 & 결정 로깅 |
 | **10:35** | **10:45** | **[6.5단계]** 구현 & 온더플라이 검증 | `TASK_SPEC` 발행 ➔ 서브 구현 ➔ `/clear` | 터미널 1 ↔ 터미널 2 핑퐁 반복 |
 | **상시** | **상시** | **[7단계]** 다음 단계 전환 시그널 | ALL PASS / FAIL / Drift 상황별 액션 | 전환 시그널 판정표 |
-| **12:20** | **14:40** | **[8단계]** 마무리 검증 & 사전 감사 | 🏆 알고리즘 vs 백그라운드 ML 챔피언 비교·채택 + 표본 검증 + 사전 감사 | `ml_feasibility_check.py --compare` / `sample_check_*.py` / `pre_submit_audit.py` |
+| **12:20** | **14:40** | **[8단계]** 마무리 검증 & 사전 감사 | 🏆 알고리즘 vs 백그라운드 ML 챔피언 비교·채택 + 표본 검증 + 사전 감사 | `python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv` / `sample_check_*.py` / `pre_submit_audit.py` |
 | **12:45** | **15:30** | **[9단계]** 실무자 DM 최종 완료 보고 | 검증 결과 보고 및 만족도 확인 요청 | 메인 초안 작성 ➔ 우측 DM 전송 |
 | **12:47** | **15:35** | **[10단계]** 제출 보고서 3대 요소 점검 | [판단·근거]-[검증]-[남은 한계] 점검 | 메인 보고서 검토 프롬프트 |
 | **12:50** | **15:45** | **[11단계]** 보안 취약점 전수 점검 | API 키, 0.0.0.0 바인딩, 로그 누출 점검 | 메인 보안 감사 프롬프트 |
@@ -219,6 +219,8 @@ python3 .probe-kit/scripts/ml_feasibility_check.py
 과제 루트의 문제 지시서(`README.md`)와 `.probe-kit/runtime/EDA_SUMMARY.txt` 상단의 `[CASE_SIGNAL]`을 메인 에이전트가 읽고 어떤 Case에 해당하는지 판별하도록 지시합니다.  
 *(⚠️ 주의: 키트의 README가 아니라 **시험장 과제 루트의 문제 README.md**를 읽게 해야 합니다.)*
 
+### 📋 [메인 프롬프트 1 — Sol 6.1 xhigh] 초기 탐색, Case 분류(단일/혼합/신규) 및 아키텍처 구조화
+
 터미널 1 (`Sol 6.1 xhigh`)에 아래 프롬프트를 복사하여 입력합니다:
 
 ```text
@@ -261,7 +263,7 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 | **Case 5**<br>배차/배치/편성/스케줄링, VRP, ILP, CSP, Hard vs Soft 제약, Makespan, 28초 타임아웃 | **[기출 3종 + 미출제 4종]**<br>• **#8 이천 HR운영팀 책임** (통근버스 VRP/CSP)<br>• **#9 이천 식단운영 영양사** (월간 식단 CSP/ILP)<br>• **#10 안전 모니터링팀 TL & #11 Safety Monitoring TL** (CCTV Set Cover)<br>• **#13-A 이천 포토기술팀 TL** (노광기 배정 & PM 스케줄링)<br>• **#7-A 소재품질팀 책임매니저** (원자재 공급사 쿼터 LP)<br>• **#6-B 시장전략팀 책임매니저** (HBM/DDR5 Product Mix LP)<br>• **#15-B 반도체 산업교육 TL** (선수지식 DAG 커리큘럼) | `case5_optimization_csp.md` | `dm_question.md`<br>▶ **Case 5 섹션**<br>(또는 페르소나별 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_opt.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
 | **Case 6**<br>화학 단위(ppm/ppb/ppt), `< DL`, Cpk, Nelson Rules, PCN, 좌표 $(x, y)$, $\Delta x, \Delta y$, 6-Param OLS, ADI/AEI, FY/CY 보간, Bit*ASP, DOI | **[반도체 특화 3종]**<br>• **#7-B 소재품질팀 책임매니저** (원소재 CoA 성적서, Cpk, PCN 3단 인터락)<br>• **#13-B 이천 포토기술팀 TL** (웨이퍼 Overlay 6-Param OLS, ADI REWORK vs AEI SCRAP)<br>• **#6-A 시장전략팀 책임매니저** (경쟁사 실적 CY 보간, 환율 분리, Waterfall, DOI) | `case6_semicon_data_spc.md` | `dm_question.md`<br>▶ **Case 6 섹션**<br>(또는 반도체 도메인 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_spc.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
 | **Case 7**<br>밸류체인 DAG 수급 충격, HBM/CoWoS 후공정 병목 클리핑, 오개념 진단 튜터, `FAIL_INTERLOCK`, Role Switcher, `0.0.0.0` | **[FDE / Full-Stack 웹앱]**<br>• **#14 경영전략팀 시장분석 TL** (밸류체인 수급 충격 전파 What-If 시뮬레이터)<br>• **#15 반도체 산업교육 TL** (반도체 지식그래프 오개념 진단 AI 튜터)<br>• **#14+#15 듀얼 모드** (전략 분석가 ↔ 산업 교육자 통합 웹앱)<br>• **#6-C / #7-C / #13-C / #12** (FDE 인터랙티브 대시보드 확장) | `case7_fde_valuechain_app.md`<br>(보조: `case2_web_service.md`, `case4_policy_rag_doc.md`) | `dm_question.md`<br>▶ **Case 7 섹션**<br>(또는 FDE 밸류체인 특화 질문 카드) | `0.0.0.0:8000` 백그라운드 바인딩<br>+ `curl /api/simulate`<br>+ 내장 Browser `Role Switcher`·슬라이더·`FAIL_INTERLOCK` 직접 점검 |
-| **Case 8**<br>정형 테이블(Tabular), 센서/장비 시계열 로그, 수율/불량 예측, 웨이퍼 잔차 회귀, 리드타임/수요 예측, `GO — DIRECT_ML`, `GO — HYBRID_ML` | 경량 머신러닝 자율 트랙 & 챔피언 솔루션 패키징 | `case8_lightweight_automl_track.md` | `dm_question.md`<br>▶ **Case 8 섹션**<br>(평가지표, 하드제약 클램핑, 추론 SLA) | `python3 .probe-kit/scripts/ml_feasibility_check.py`<br>`python3 .probe-kit/scripts/ml_feasibility_check.py --compare` |
+| **Case 8**<br>정형 테이블(Tabular), 센서/장비 시계열 로그, 수율/불량 예측, 웨이퍼 잔차 회귀, 리드타임/수요 예측, `GO — DIRECT_ML`, `GO — HYBRID_ML` | 경량 머신러닝 자율 트랙 & 챔피언 솔루션 패키징 | `case8_lightweight_automl_track.md` | (독립 백그라운드 트랙 — 실무자 DM 불필요) | `python3 .probe-kit/scripts/ml_feasibility_check.py`<br>`python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv` |
 
 ✅ **완료 시그널:**
 메인 에이전트가 과제 유형(Case 1~8 및 매핑 페르소나 #6~#15)과 로드할 스킬 파일명을 보고하고, `NOTES_TEMP.md`에 문제 개요가 기록되며, `HANDOFF.md`에 탐색 로그가 추가됨.
@@ -446,10 +448,10 @@ sequenceDiagram
     User->>T1: 메인 결과 검수 및 다음 모듈 지시
 ```
 
-### 1) 범용 `TASK_SPEC.md` 작성 지시 프롬프트 (터미널 1 - 메인 `Sol 6.1 xhigh`)
+### 1) 📋 [메인 프롬프트 2] 터미널 1 (메인 Sol 6.1 xhigh) — 서브 작업 지시서(TASK_SPEC.md) 발행
 ```text
 [MAIN] 비즈니스 코드는 절대 직접 작성하거나 수정하지 마.
-우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(GPT 5.6-terra medium)가 수행할 [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
+우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(GPT 5.6-terra medium)가 수행할 이번 단계(Step 1, 이후 반복 시 Step 2, Step 3...) [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
 TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 바탕으로 다음 7대 표준 섹션을 누락 없이 포함해야 해:
 1. [시작 / Start]: 이번 단계 단일 목표(MVP), 직전 단계 선행 완료 상태 확인, 착수 전 기존 베이스라인 테스트 100% PASS 확인
 2. [통제 / Scope]: 변경 허용 파일 및 절대 수정 금지 파일 범위, 5대 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, .gitignore 수정 금지, git add/commit/reset/clean 금지)
@@ -461,14 +463,15 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
      * Case 7 (FDE/밸류체인 앱): 백엔드 수리 연산(DAG 충격전파/수율곱/병목클리핑)과 프론트 UI 분리, HTTP 500 방어(400/422 Bad Request), 웹 서버 0.0.0.0 바인딩 필수
 5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 사용 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
 6. [DoD]: 완료 정의 체크리스트 (베이스라인 100% 통과, 스키마 계약 일치, 비즈니스 규칙 및 경계값 검증 통과, git diff 범위 준수)
-7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 서브 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통과 완료" 실행 (실패 시 python3 .probe-kit/scripts/handoff.py log "sub done" "Step N 구현 및 검증 통과 완료") -> 서브 터미널 /clear 실행 대기)
+7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 서브 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "서브 구현 완료" "Step N 구현 및 자체 검증 완료" 실행 (실패 시 python3 .probe-kit/scripts/handoff.py log "서브 구현 완료" "Step N 구현 및 자체 검증 완료") -> 서브 터미널 /clear 실행 대기)
 - 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
-메인이 TASK_SPEC.md 발행을 완료한 직후에는 내가 bash .probe-kit/scripts/handoff.sh log "TASK_SPEC" "Step N 명세서 발행 완료" (실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC" "Step N 명세서 발행 완료"`) 를 실행할 수 있게 안내해줘.
+TASK_SPEC.md 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
+bash .probe-kit/scripts/handoff.sh log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
-
 ```
 
-### 2) 서브 에이전트 구현 및 온더플라이 검증 지시 (터미널 2 - 서브 `GPT 5.6-terra medium`)
+### 2) 📋 [서브 프롬프트 3] 터미널 2 (서브 GPT 5.6-terra medium) — 코드 구현 및 테스트 실행
 터미널 2 창으로 전환하여 아래 프롬프트를 입력합니다:
 
 ```text
@@ -478,8 +481,8 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
 2. [정의 & 기준]: 명시된 도메인 용어/상태 정의, 입·출력 스키마 계약, 실무자 DM 판정 규칙 및 경계값 기준을 숙지하고, 허용 파일 범위 내에서 MVP 최소 구현을 수행해. (범위 밖 수정 불가피하거나 스키마/기준 모호 시 임의 추측 구현 즉시 중단 및 보고)
 3. [검증 / Verification]: 베이스라인 회귀 테스트 + 매 태스크 DM 요구사항 맞춤 전용 테스트 코드(tests/test_*.py 등)를 온더플라이로 즉석 작성하여 정상 경로 및 예외/경계값(결측치, 경계 수치, 중복 등)을 직접 검증해. (고정 템플릿 금지, git add/commit/reset/clean 금지 및 untracked 유지. 실패 시 덮어쓰지 말고 원인 진단)
 4. [종료 / End]: DoD 완료 정의 점검 후 .probe-kit/runtime/SUB_RESULT.md 에 요약 보고서를 작성하고, 다음 명령어를 터미널에서 실행해줘:
-bash .probe-kit/scripts/handoff.sh log "sub done" "Step N 구현 및 검증 통과 완료"
-(실패 시 `python3 .probe-kit/scripts/handoff.py log "sub done" "Step N 구현 및 검증 통과 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
+bash .probe-kit/scripts/handoff.sh log "서브 구현 완료" "Step N 구현 및 자체 검증 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "서브 구현 완료" "Step N 구현 및 자체 검증 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 ```
 
 #### 🚀 `subagent.sh` 스크립트 연동 명령어 3종 (단일 터미널 또는 CLI 자동화 환경 시)
@@ -500,15 +503,17 @@ bash .probe-kit/scripts/subagent.sh guide
 > 서브가 `SUB_RESULT.md` 작성을 마치면, **터미널 2에 반드시 `/clear`를 입력**하세요!  
 > 서브 세션의 이전 코드 잔재와 에러 로그를 비워 토큰을 0으로 리셋하고, 다음 모듈 구현 시 이전 기억과 혼동하여 발생하는 환각(Hallucination)을 원천 차단합니다.
 
-### 3) 메인 결과 검수 및 다음 모듈 지시 프롬프트 (터미널 1 - 메인 `Sol 6.1 xhigh`)
+### 3) 📋 [메인 프롬프트 4] 터미널 1 (메인 Sol 6.1 xhigh) — 서브 결과 검수 & 다음 단계 반복
 터미널 1 창으로 돌아와 아래 프롬프트를 입력합니다:
 
 ```text
 [MAIN] .probe-kit/runtime/SUB_RESULT.md 와 git diff --stat 만 확인해서 Step N이 실무자 DM 조건에 맞게 검증되었는지 엣지 케이스 관점에서 비판적으로 검토해줘.
 (방향 수정이 필요한 경우) 테스트/검토 결과를 보니 기존 [A 방식]은 [메모리 초과 / 현업 예외 충돌 / 불필요한 복잡도] 문제가 있어서 제외하기로 결정했어. 우선순위를 조정해서 더 안정적이고 단순한 [B 방식]으로 방향을 바꿔서 다음 단계 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
 검토가 완료되면 다음 모듈인 [Step N+1]에 대한 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
+검수 및 다음 지시서 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
+bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및 의사결정 기록 완료"
+(실패 시 `python3 .probe-kit/scripts/handoff.py log "검수 완료" "Step N 메인 검수 및 의사결정 기록 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
 담당자나 나에게 물어볼게 있으면 언제든 나에게 말해.
-
 ```
 
 ---
@@ -561,7 +566,7 @@ bash .probe-kit/scripts/subagent.sh guide
 
 메인 에이전트의 컨텍스트가 비대해지거나 4대 골든 타이밍(Step 1 MVP 완료 직후 / 실무자 제약 망각 Drift 감지 / 대규모 방향 전환 / 12:20 최종 검증 진입 직전) 도달 시, 단순 `/clear` 대신 아래 4단계 무손실 인수인계 절차를 수행합니다:
 
-1. **1단계 (기계 초안 조립):** 터미널에서 `bash .probe-kit/scripts/handoff.sh` 실행 (초안 조립 및 단계별 로그 보존, 실패 시 `python3 .probe-kit/scripts/handoff.py`)
+1. **1단계 (기계 초안 조립):** 터미널에서 `bash .probe-kit/scripts/handoff.sh` 실행 (초안 조립 및 단계별 로그 보존; 실패 시 `python3 .probe-kit/scripts/handoff.py` 무인자 실행 시 동일하게 `HANDOFF.md` 기계 초안 자동 조립)
 2. **2단계 (인수인계서 최종 확정):** 구(Old) 메인 터미널(`Sol 6.1 xhigh`)에 아래 `[메인 프롬프트 5]` 복붙 실행 (`HANDOFF.md` 결정 로그·불변 제약·Next Actions 최종 확정)
 3. **3단계 (새 세션 기동):** 새(New) 터미널 탭 열고 `codex` 실행 (`Sol 6.1 xhigh` 모델 선택)
 4. **4단계 (인수 및 복창/승인):** 새(New) 메인 터미널에 아래 `[메인 프롬프트 6]` 복붙 실행 (인수 및 복창 확인 ➔ 인간 아키텍트의 `[승인(Approved)]`을 거쳐 다음 단계 착수)
@@ -626,7 +631,7 @@ python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_�
 우리는 메인 파이프라인의 완성도를 점검하고, 백그라운드(터미널 4)에서 자율 학습된 ML 챔피언 솔루션을 최종 채택하거나 결합할지 결정해야 해.
 
 먼저 다음 파일들을 확인해:
-1. bash 터미널에서 python3 .probe-kit/scripts/ml_feasibility_check.py --compare 실행 결과 (메인 휴리스틱 vs 백그라운드 ML 챔피언의 점수 및 추론 속도 비교 출력)
+1. bash 터미널에서 python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv 실행 결과 (메인 휴리스틱 vs 백그라운드 ML 챔피언의 점수 및 추론 속도 비교 출력)
 2. .probe-kit/ml_track/CHAMPION_REPORT.md (ML 챔피언 성능 향상폭, 상위 피처, 하드 제약 통과 여부)
 3. 메인 트랙의 현재 검증 점수 및 안정성
 
@@ -1002,9 +1007,10 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 │   ├── case2_web_service.md         # Case 2: 0.0.0.0 바인딩·핵심 동선 수직 완성 지침
 │   ├── case3_legacy_debug.md        # Case 3: 베이스라인 테스트·인터페이스 불변 디버깅 지침
 │   ├── case4_policy_rag_doc.md      # Case 4: 규정 색인·수동 검토 플래그·환각 통제 지침
-│   ├── case5_optimization_csp.md    # Case 5: 수리·조합 최적화 / CSP 스케줄링 / 배차·배치 지침
-│   ├── case6_semicon_data_spc.md    # Case 6: 반도체 CoA/SPC 통계·2D 웨이퍼 Overlay·재무 정규화 지침
-│   ├── case7_fde_valuechain_app.md  # Case 7: 반도체 밸류체인 시뮬레이터 & 교육 코칭 웹앱 지침
+│   ├── case5_optimization_csp.md    # Case 5: 수리 최적화/배차/식단/CCTV/스케줄링 스킬
+│   ├── case6_semicon_data_spc.md    # Case 6: 반도체 CoA/SPC/2D Overlay/재무 정규화 스킬
+│   ├── case7_fde_valuechain_app.md  # Case 7: FDE 밸류체인 시뮬레이터 & AI 교육 튜터 웹앱 스킬
+│   ├── case8_lightweight_automl_track.md # Case 8: 백그라운드 터미널 4 전용 5시간 자율 경량 ML 스킬
 │   └── handoff.md                   # Handoff 4대 골든 타이밍 및 표준 프로토콜 지침
 │
 ├── templates/                       # [문서 템플릿]
@@ -1017,9 +1023,10 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
     ├── handoff.py                   # OS 독립형 Python 3 버전 단계별 로그(log 서브커맨드) 갱신기
     ├── subagent.sh                  # 서브 에이전트 자동 호출 래퍼 스크립트
     ├── eda_scan.py                  # 토큰 0원으로 CSV/JSON/테스트 파일 구조 분석 스캐너
+    ├── ml_feasibility_check.py      # 하드웨어·데이터 팩트 프로파일러 & 데이터 경량화 & 알고리즘 vs ML 챔피언 비교기
     ├── sample_check_template.py     # Case 1 표본 15건 수동 기댓값 vs 스크립트 출력 교차 검증 도구
-    ├── sample_check_opt.py          # Case 5 최적화/CSP 표본 15건 제약/목적함수 수동 대조 검증 도구
-    ├── sample_check_spc.py          # Case 6 반도체 CoA/SPC·웨이퍼 Overlay·재무 정규화 표본 15건 검증 도구
+    ├── sample_check_opt.py          # Case 5 최적화 결과 표본·제약 검증 스크립트
+    ├── sample_check_spc.py          # Case 6 반도체 SPC/오버레이/재무 표본 검증 스크립트
     ├── pre_submit_audit.sh          # Linux/WSL/Git Bash용 종합 무감점 사전 감사 도구
     └── pre_submit_audit.py          # 범용 Python 3 버전 사전 감사 도구
 ```
