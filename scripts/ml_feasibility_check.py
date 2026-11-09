@@ -8,11 +8,11 @@ scripts/ml_feasibility_check.py
 scikit-learn, lightgbm, xgboost, catboost, scipy를 자동 감지하여 가속합니다.
 
 4가지 실행 모드:
-1. [기본 진단 (100% Read-Only)] python3 .probe-kit/scripts/ml_feasibility_check.py [workspace_dir]
-   - 원본/복사본 일체 수정 없는 안전한 진단 (3중 try-except 에러 방어)
-   - 8대 Gatekeeper Conditions 판정 및 FEASIBILITY_SUMMARY.txt, feasibility_report.json 저장
+1. [기본 프로파일링 (100% Read-Only)] python3 .probe-kit/scripts/ml_feasibility_check.py [workspace_dir]
+   - 원본/복사본 일체 수정 없는 안전한 팩트 프로파일링 (3중 try-except 에러 방어)
+   - 8대 Gatekeeper 기초 신호 수집 및 FEASIBILITY_SUMMARY.txt, feasibility_report.json 저장
    - 데이터 파일별 컬럼 상세 프로파일 표 (컬럼명, 추정 타입, 결측률%, 고유값 수, 센티널 감지 여부, 실제 샘플 값 3~5개) 풍부하게 출력
-   - 터미널 4의 Sol 6.1 LLM이 README.md와 FEASIBILITY_SUMMARY.txt를 읽고 도메인 중요도를 직접 판단해 맞춤형 경량화(Semantic Compaction)를 수행하도록 가이드 제공
+   - ⚠️ 중요: 단순 스크립트가 단정짓는 것이 아니라, 터미널 4의 Sol 6.1 LLM이 README.md와 이 프로파일을 함께 읽고 주어진 문제의 ML 적합성(최종 GO/SKIP 판정, 예상 학습 시간, 데이터 경량화 방식)을 직접 판단하도록 객관적 팩트 시트 제공
 2. [보조 데이터 경량화] python3 .probe-kit/scripts/ml_feasibility_check.py --compact [workspace_dir]
    - 원본 불변(Read-Only), 3중 try-except 방어로 상수/고결측 컬럼 제거, 센티널 정제 보조 모드
    - 3만행 초과 시 20% 코어셋 및 경량 CSV/PKL 생성, compact_manifest.json 저장
@@ -678,11 +678,11 @@ def evaluate_feasibility(ws_dir: Path, ml_track_dir: Path):
     # 콘솔 출력 및 요약문 생성
     summary_lines = []
     summary_lines.append("=" * 70)
-    summary_lines.append(f"  {verdict_banner}")
-    summary_lines.append(f"  판정 이유: {verdict_reason}")
-    summary_lines.append("  💡 [데이터 경량화 가이드] 기계적 코드가 아닌 터미널 4의 Sol 6.1 LLM이")
-    summary_lines.append("     README.md와 FEASIBILITY_SUMMARY.txt의 컬럼 프로파일을 읽고 도메인")
-    summary_lines.append("     중요도를 직접 판단해 맞춤형 경량화(Semantic Compaction)를 수행합니다.")
+    summary_lines.append("  [하드웨어/환경/데이터 팩트 프로파일 생성 완료: .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt]")
+    summary_lines.append(f"  - 스크립트 기초 신호(참고용): {verdict_banner} ({verdict_reason})")
+    summary_lines.append("  - ⚠️ 중요: 주어진 문제를 실제로 경량 AI/ML 모델로 해결할 수 있는지(최종 GO / SKIP 판정,")
+    summary_lines.append("     예상 학습 시간, 데이터 경량화 방식)는 단순 스크립트가 아닌 Sol 6.1 LLM이")
+    summary_lines.append("     README.md(문제 요구사항/평가지표)와 이 프로파일을 함께 읽고 직접 판단합니다!")
     summary_lines.append("=" * 70)
     summary_lines.append(f"■ 워크스페이스: {ws_dir}")
     summary_lines.append(f"■ 발견된 데이터 파일: {len(data_files)}개 | 총 용량: {total_data_mb} MB | 총 행 수: {total_rows:,}행")
@@ -703,9 +703,9 @@ def evaluate_feasibility(ws_dir: Path, ml_track_dir: Path):
 
     if dataset_profiles:
         summary_lines.append("-" * 70)
-        summary_lines.append("【 데이터 파일별 컬럼 상세 프로파일 (Semantic Compaction 가이드) 】")
-        summary_lines.append("💡 터미널 4의 Sol 6.1 LLM은 아래 프로파일을 기반으로")
-        summary_lines.append("   ① 예측 타깃(y), ② 조인/그룹 키(Key), ③ 희소 도메인 변수(Keep), ④ 노이즈/누수 변수(Drop)를 판단하세요.")
+        summary_lines.append("【 데이터 파일별 컬럼 상세 프로파일 (Sol 6.1 LLM 심층 판단 및 경량화 가이드) 】")
+        summary_lines.append("💡 터미널 4의 Sol 6.1 LLM은 README.md와 아래 프로파일을 기반으로")
+        summary_lines.append("   ① 최종 ML 적합성(GO/SKIP), ② 예측 타깃(y), ③ 조인/그룹 키(Key), ④ 희소 도메인 변수(Keep), ⑤ 노이즈/누수 변수(Drop)를 직접 판단하세요.")
         for ds in dataset_profiles:
             summary_lines.append(f"\n▶ 데이터 파일: {ds['file']} (총 {ds['total_rows']:,}행, {ds['total_cols']}개 컬럼)")
             summary_lines.append(f"  | {'컬럼명':<20} | {'추정 타입':<16} | {'결측률':<8} | {'고유값':<8} | {'센티널 감지':<16} | {'실제 샘플 값 (3~4개)'}")

@@ -43,6 +43,8 @@
 3. 우리가 해결해야 할 핵심 문제, 입·출력 포맷, 작업 대상 파일 범위
 4. 절대 건드리면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 인터페이스, 함수 시그니처, 파일 경로 등)
 5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 구현(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
+6. 기존 단위 테스트 스위트가 존재한다면 사전 베이스라인 실행 결과(PASS/FAIL 및 실패 내역)도 NOTES_TEMP.md에 함께 기록해줘.
+7. [ML 트랙 적합성 교차 의견]: 과제 요구사항(README.md)과 데이터 구조로 볼 때 백그라운드 경량 ML/하이브리드 모델(터미널 4) 적용이 유의미한지(GO/SKIP) 한 줄 의견
 ```
 
 ---
@@ -201,17 +203,17 @@ bash .probe-kit/scripts/subagent.sh status
 
 ---
 
-### 📋 [AutoML 프롬프트 1 — 터미널 4 (Sol 6.1 xhigh 백그라운드 자율 학습)] 5시간 무인 경량화·학습·평가 지시
-> **용도:** 시험 시작 직후(09:40~10:00) 또는 ML Feasibility `GO` 확인 직후, 독립된 터미널 4 탭을 열고 `codex` 기동 후 주입하여 5시간 무인 자율 파이프라인을 가동합니다.
+### 📋 [AutoML 프롬프트 1 — 터미널 4 (Sol 6.1 xhigh)] LLM 적격성 직접 판단 & 5시간 자율 학습 통합 지시
+> **용도:** 시험 시작 직후(09:40~10:00) 또는 `FEASIBILITY_SUMMARY.txt` 생성 직후, 독립된 터미널 4 탭을 열고 `codex` 기동 후 주입하여 Phase 0(자율 심층 판정)부터 Phase 4(최종 패키징)까지 가동합니다.
 
 ```text
 [AUTOML_SHADOW_TRACK]
 너는 메인 트랙과 완전히 격리된 독립 백그라운드 머신러닝 학습 에이전트(Sol 6.1 xhigh)야.
-인간 사용자의 추가 개입 없이 최대 5시간 동안 자율적으로 데이터 경량화, 피처 엔지니어링, 경량 모델 학습/튜닝, 앙상블 블렌딩, 하드 제약 후처리, 최종 패키징을 완수해야 해.
+스크립트의 단순 추정에 의존하지 않고, 네가 직접 과제 지시서(README.md)와 환경/데이터 프로파일(.probe-kit/ml_track/FEASIBILITY_SUMMARY.txt)을 읽고 ML 적격성(GO/SKIP)을 직접 판단한 뒤, 적합할 경우 인간 사용자의 추가 개입 없이 최대 5시간 동안 데이터 경량화, 피처 엔지니어링, 경량 모델 학습/튜닝, 앙상블 블렌딩, 하드 제약 후처리, 최종 패키징까지 자율 완수해야 해.
 
 먼저 다음 파일들을 정독해:
-1. .probe-kit/skills/case8_lightweight_automl_track.md (절대 헌법 및 4-Phase 자율 루프)
-2. .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt (ML 타당성 진단 요약 및 타깃/피처 신호)
+1. .probe-kit/skills/case8_lightweight_automl_track.md (절대 헌법 및 5-Phase 자율 루프)
+2. .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt (하드웨어/환경 스펙 및 데이터 컬럼 상세 프로파일)
 3. 워크스페이스 루트의 README.md (과제 목표 및 채점 지표)
 
 반드시 다음 [절대 격리 & 리소스 보호 헌법]을 준수해:
@@ -219,8 +221,14 @@ bash .probe-kit/scripts/subagent.sh status
 - [완전 격리 샌드박스]: 모든 중간 전처리 데이터, 실험 코드, 모델 체크포인트, 최종 산출물은 반드시 .probe-kit/ml_track/ 내부에만 생성해.
 - [CPU/RAM Throttling]: 메인 터미널의 응답성을 위해 모든 파이썬 스크립트 최상단에 OMP_NUM_THREADS="2", MKL_NUM_THREADS="2"를 강제 설정하고, 모든 모델 파라미터에 n_jobs=2를 고정해. 쉘 명령 실행 시 nice -n 10을 붙여 실행해.
 
-[5시간 4-Phase 자율 수행 시퀀스]:
-1. Phase 1 (LLM 주도 도메인 맞춤형 데이터 경량화 & 자기디버깅): 무작정 기계적 규칙으로 컬럼을 버리지 마. 먼저 README.md(문제 요구사항)와 .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt(컬럼별 결측률·고유값·샘플값) 및 원본 데이터 샘플을 직접 읽고, 도메인 관점에서 ① 예측 타깃(y), ② 테이블 조인/그룹 키(Key), ③ 결측이 많아도 반드시 살려야 할 핵심/희소 도메인 변수(Keep), ④ 단순 일련번호/해시/데이터 누수 변수(Drop)를 직접 판단해. 그 후 이 데이터셋 구조와 인코딩에 딱 맞는 경량화 스크립트(.probe-kit/ml_track/compact_data.py)를 작성해서 실행하고, 만약 파싱/타입/메모리 에러가 발생하면 즉시 에러 로그를 보고 코드를 수정(Self-Healing)하여 .probe-kit/ml_track/data_compact/ 안에 고속 포맷(.pkl/.parquet/float32 또는 정제된 CSV, 대용량일 경우 고속 탐색용 20% 층화 코어셋 포함)으로 안전하게 저장해. 그런 다음 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
+[자율 수행 시퀀스 (Phase 0 ~ Phase 4)]:
+0. Phase 0 (0~2분, Sol 6.1 LLM 주도 8대 조건 적격성 심층 판정 및 GO/SKIP 자율 분기):
+   - README.md와 FEASIBILITY_SUMMARY.txt를 바탕으로 아래 8대 조건을 직접 심사해:
+     ① 문제의 경량 ML 해결 가능성(타깃 y 또는 목적함수 존재 여부), ② 학습 시간 견적(1회 3분 이내 & 5시간 완주 가능 여부), ③ 데이터 크기/표본 수 적합성, ④ 데이터 자체 경량화 가능성, ⑤ 추론 SLA(<5초) 및 아티팩트 용량(<10MB), ⑥ 하드 제약 후처리 클램핑 결합 가능성, ⑦ .probe-kit/ml_track/ 완전 격리 및 CPU 스레드 제한(2코어) 준수, ⑧ 동일 평가지표 1:1 비교 가능성.
+   - [분기 행동]:
+     ❌ 조건 미충족 시 (SKIP): 콘솔 및 .probe-kit/ml_track/CHAMPION_REPORT.md에 [LLM 최종 판정: ❌ SKIP (ML 부적합) — 사유: ...]를 명확히 기록하고 즉시 세션을 종료해 리소스/토큰 낭비를 차단해.
+     ✅ 조건 통과 시 (GO): 콘솔에 [LLM 최종 판정: ✅ GO — 예상 1회 학습 시간: 약 X초(분), 채택 모델 계열: Y, 경량화 전략: Z]를 출력하고, 사용자 승인 대기 없이 즉시 Phase 1으로 진입해!
+1. Phase 1 (통과 시 LLM 주도 도메인 맞춤형 데이터 경량화 & 자기디버깅): 무작정 기계적 규칙으로 컬럼을 버리지 마. 먼저 README.md(문제 요구사항)와 .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt(컬럼별 결측률·고유값·샘플값) 및 원본 데이터 샘플을 직접 읽고, 도메인 관점에서 ① 예측 타깃(y), ② 테이블 조인/그룹 키(Key), ③ 결측이 많아도 반드시 살려야 할 핵심/희소 도메인 변수(Keep), ④ 단순 일련번호/해시/데이터 누수 변수(Drop)를 직접 판단해. 그 후 이 데이터셋 구조와 인코딩에 딱 맞는 경량화 스크립트(.probe-kit/ml_track/compact_data.py)를 작성해서 실행하고, 만약 파싱/타입/메모리 에러가 발생하면 즉시 에러 로그를 보고 코드를 수정(Self-Healing)하여 .probe-kit/ml_track/data_compact/ 안에 고속 포맷(.pkl/.parquet/float32 또는 정제된 CSV, 대용량일 경우 고속 탐색용 20% 층화 코어셋 포함)으로 안전하게 저장해. 그런 다음 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
 2. Phase 2 (20~120분): N > 30,000일 경우 20% Coreset을 활용하여 비율/차이/그룹통계량/Lag/OOF Target Encoding 피처를 자동 생성하고, CV 점수가 상승한 피처만 영구 채택(Forward Selection)해.
 3. Phase 3 (120~240분): HistGradientBoosting, RandomForest, Ridge 등 서로 다른 3종 모델을 튜닝하고, Out-of-Fold(OOF) 예측값을 결합하는 최적 가중치 블렌딩 앙상블을 구축해 단일 모델 대비 성능 개선을 확인해. (20% Coreset으로 최적화한 상위 모델은 100% Full 데이터셋으로 최종 재학습)
 4. Phase 4 (240~300분):
@@ -232,7 +240,7 @@ bash .probe-kit/scripts/subagent.sh status
      3) leaderboard.json (전체 실험 히스토리 및 CV 점수 변천사)
      4) CHAMPION_REPORT.md (베이스라인 대비 오차 감소율, 상위 피처 Top 5, 하드 제약 통과 여부, 1줄 채택 쉘 명령어, 사후 질의용 [결정]-[근거]-[검증]-[한계] 4문장 요약)
 
-지금 즉시 Phase 1에 착수해.
+지금 즉시 Phase 0 심사에 착수해.
 ```
 
 ---
