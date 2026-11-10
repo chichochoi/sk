@@ -800,6 +800,7 @@ git status
 과제 README.md에서 요구하는 제출 보고서 파일명(예: SUBMISSION_REPORT.md 또는 REPORT.md)으로, .probe-kit/templates/SUBMISSION_REPORT.md 양식에 맞춰 최종 보고서를 작성해줘.
 우리가 실무자 DM으로 확인한 내용, NOTES_TEMP.md, 그리고 SUB_RESULT.md의 검증 기록을 바탕으로 [결정] - [근거] - [검증] - [한계] 구조를 명확히 포함해줘. 우리가 택한 구조와 왜 그 구조를 택했는지를 적어.
 특히 어떤 방식으로 AI 오버엔지니어링을 통제했는지, 현재 구현의 실패 가능 조건(한계점)을 구체적으로 적어줘.
+API명세서도 함께 적어줘.
 ```
 
 ### 5) 최종 인수인계서 동기화 및 모든 에디터 탭 저장
