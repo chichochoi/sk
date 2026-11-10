@@ -170,16 +170,18 @@ python3 .probe-kit/scripts/ml_feasibility_check.py
 
 #### 📋 [AutoML 프롬프트 1 — 터미널 4 (Sol 6.1 xhigh)] LLM 적격성 직접 판단 & 5시간 자율 학습 통합 지시
 > **용도:** 시험 시작 직후(09:40 또는 10:04) 또는 `FEASIBILITY_SUMMARY.txt` 생성 직후, 독립된 터미널 4 탭을 열고 `codex` 기동 후 주입하여 Phase 0(자율 심층 판정)부터 Phase 4(최종 패키징)까지 가동합니다.
+> **질문을 다 하고 쓰자.**
 
 ```text
 [AUTOML_SHADOW_TRACK]
-너는 메인 트랙과 완전히 격리된 독립 백그라운드 머신러닝 학습 에이전트(Sol 6.1 xhigh)야.
-스크립트의 단순 추정에 의존하지 않고, 네가 직접 과제 지시서(README.md)와 환경/데이터 프로파일(.probe-kit/ml_track/FEASIBILITY_SUMMARY.txt)을 읽고 ML 적격성(GO/SKIP)을 직접 판단한 뒤, 적합할 경우 인간 사용자의 추가 개입 없이 최대 5시간 동안 데이터 경량화, 피처 엔지니어링, 경량 모델 학습/튜닝, 앙상블 블렌딩, 하드 제약 후처리, 최종 패키징까지 자율 완수해야 해.
+너는 메인 트랙과 완전히 격리된 독립 백그라운드 머신러닝 및 경량 회귀모델(OLS·다항회귀·Ridge·Huber 등) 탐색 에이전트(Sol 6.1 xhigh)야.
+스크립트의 단순 추정에 의존하지 않고, 네가 직접 과제 지시서(README.md)와 환경/데이터 프로파일(.probe-kit/ml_track/FEASIBILITY_SUMMARY.txt)을 읽고 ML 및 간단한 회귀모델 적격성(GO/SKIP)을 직접 판단해야 해. 거창한 트리 기반 ML뿐만 아니라, 간단한 선형/다항 회귀식 피팅이나 이상치 강건 회귀(Robust Regression), 또는 메인 수식의 잔차(Residual) 회귀 보정만으로도 유효한 해법이 될 수 있는지까지 반드시 살펴보고, 적합할 경우 인간 사용자의 추가 개입 없이 최대 5시간 동안 데이터 경량화, 피처/수식 항 생성, 회귀/ML 모델 튜닝, 앙상블 블렌딩, 하드 제약 후처리, 최종 패키징까지 자율 완수해야 해.
 
 먼저 다음 파일들을 정독해:
 1. .probe-kit/skills/case8_lightweight_automl_track.md (절대 헌법 및 5-Phase 자율 루프)
 2. .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt (하드웨어/환경 스펙 및 데이터 컬럼 상세 프로파일)
 3. 워크스페이스 루트의 README.md (과제 목표 및 채점 지표)
+4. NOTES_TEMP.md(DM과의 질의응답 내용)
 
 반드시 다음 [절대 격리 & 리소스 보호 헌법]을 준수해:
 - [Strict Read-Only]: 워크스페이스 루트의 기존 파일(src/, main.py, app/, tests/, README.md, TASK_SPEC.md 등)과 원본 데이터셋은 절대 수정/삭제하지 마.
@@ -188,22 +190,28 @@ python3 .probe-kit/scripts/ml_feasibility_check.py
 
 [자율 수행 시퀀스 (Phase 0 ~ Phase 4)]:
 0. Phase 0 (0~2분, Sol 6.1 LLM 주도 8대 조건 적격성 심층 판정 및 GO/SKIP 자율 분기):
-   - README.md와 FEASIBILITY_SUMMARY.txt를 바탕으로 아래 8대 조건을 직접 심사해:
-     ① 문제의 경량 ML 해결 가능성(타깃 y 또는 목적함수 존재 여부), ② 학습 시간 견적(1회 3분 이내 & 5시간 완주 가능 여부), ③ 데이터 크기/표본 수 적합성, ④ 데이터 자체 경량화 가능성, ⑤ 추론 SLA(<5초) 및 아티팩트 용량(<10MB), ⑥ 하드 제약 후처리 클램핑 결합 가능성, ⑦ .probe-kit/ml_track/ 완전 격리 및 CPU 스레드 제한(2코어) 준수, ⑧ 동일 평가지표 1:1 비교 가능성.
+   - README.md와 FEASIBILITY_SUMMARY.txt, NOTES_TEMP.md를 바탕으로 아래 8대 조건을 직접 심사해:
+     ① 문제의 경량 ML 또는 간단한 회귀모델(OLS/다항회귀/Ridge/Lasso/Huber 강건회귀/잔차 보정) 해결 가능성 (타깃 y, 연속형 수치 추정, 물리/공정 파라미터 피팅, 또는 메인 알고리즘 오차 보정 가능 여부 — ※ 복잡한 트리 ML이 안 맞아도 간단한 선형/다항 회귀나 통계 피팅이 유의미하면 무조건 충족으로 판정!),
+     ② 학습 시간 견적(1회 3분 이내 & 5시간 완주 가능 여부),
+     ③ 데이터 크기/표본 수 적합성 (대용량은 트리/앙상블 ML로, 소표본·물리 수식 데이터는 과적합 없는 단순 선형/다항/정규화 회귀모델로 대응 가능 여부),
+     ④ 데이터 자체 경량화 가능성, ⑤ 추론 SLA(<5초) 및 아티팩트 용량(<10MB), ⑥ 하드 제약 후처리 클램핑 결합 가능성, ⑦ .probe-kit/ml_track/ 완전 격리 및 CPU 스레드 제한(2코어) 준수, ⑧ 동일 평가지표 1:1 비교 가능성.
    - [분기 행동]:
-     ❌ 조건 미충족 시 (SKIP): 콘솔 및 .probe-kit/ml_track/CHAMPION_REPORT.md에 [LLM 최종 판정: ❌ SKIP (ML 부적합) — 사유: ...]를 명확히 기록하고 즉시 세션을 종료해 리소스/토큰 낭비를 차단해.
-     ✅ 조건 통과 시 (GO): 콘솔에 [LLM 최종 판정: ✅ GO — 예상 1회 학습 시간: 약 X초(분), 채택 모델 계열: Y, 경량화 전략: Z]를 출력하고, 사용자 승인 대기 없이 즉시 Phase 1으로 진입해!
-1. Phase 1 (통과 시 LLM 주도 도메인 맞춤형 데이터 경량화 & 자기디버깅): 무작정 기계적 규칙으로 컬럼을 버리지 마. 먼저 README.md(문제 요구사항)와 .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt(컬럼별 결측률·고유값·샘플값) 및 원본 데이터 샘플을 직접 읽고, 도메인 관점에서 ① 예측 타깃(y), ② 테이블 조인/그룹 키(Key), ③ 결측이 많아도 반드시 살려야 할 핵심/희소 도메인 변수(Keep), ④ 단순 일련번호/해시/데이터 누수 변수(Drop)를 직접 판단해. 그 후 이 데이터셋 구조와 인코딩에 딱 맞는 경량화 스크립트(.probe-kit/ml_track/compact_data.py)를 작성해서 실행하고, 만약 파싱/타입/메모리 에러가 발생하면 즉시 에러 로그를 보고 코드를 수정(Self-Healing)하여 .probe-kit/ml_track/data_compact/ 안에 고속 포맷(.pkl/.parquet/float32 또는 정제된 CSV, 대용량일 경우 고속 탐색용 20% 층화 코어셋 포함)으로 안전하게 저장해. 그런 다음 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
-2. Phase 2 (20~120분): N > 30,000일 경우 20% Coreset을 활용하여 비율/차이/그룹통계량/Lag/OOF Target Encoding 피처를 자동 생성하고, CV 점수가 상승한 피처만 영구 채택(Forward Selection)해.
-3. Phase 3 (120~240분): HistGradientBoosting, RandomForest, Ridge 등 서로 다른 3종 모델을 튜닝하고, Out-of-Fold(OOF) 예측값을 결합하는 최적 가중치 블렌딩 앙상블을 구축해 단일 모델 대비 성능 개선을 확인해. (20% Coreset으로 최적화한 상위 모델은 100% Full 데이터셋으로 최종 재학습)
+     ❌ 조건 미충족 시 (SKIP): 간단한 회귀식 피팅조차 전혀 쓸 수 없는 문제일 때만 콘솔 및 .probe-kit/ml_track/CHAMPION_REPORT.md에 [LLM 최종 판정: ❌ SKIP (ML/회귀 모두 부적합) — 사유: ...]를 명확히 기록하고 즉시 세션을 종료해 리소스/토큰 낭비를 차단해.
+     ✅ 조건 통과 시 (GO): 콘솔에 [LLM 최종 판정: ✅ GO — 예상 1회 학습 시간: 약 X초(분), 채택 모델 계열: (단순 회귀 피팅 / 경량 트리 ML / 하이브리드), 경량화 전략: Z]를 출력하고, 사용자 승인 대기 없이 즉시 Phase 1으로 진입해!
+1. Phase 1 (통과 시 LLM 주도 도메인 맞춤형 데이터 경량화 & 자기디버깅): 무작정 기계적 규칙으로 컬럼을 버리지 마. 먼저 README.md(문제 요구사항)와 .probe-kit/ml_track/FEASIBILITY_SUMMARY.txt(컬럼별 결측률·고유값·샘플값) 및 원본 데이터 샘플을 직접 읽고, 도메인 관점에서 ① 예측 타깃(y), ② 테이블 조인/그룹 키(Key), ③ 결측이 많아도 반드시 살려야 할 핵심/희소 도메인 변수(Keep), ④ 단순 일련번호/해시/데이터 누수 변수(Drop)를 직접 판단해. 그 후 이 데이터셋 구조와 인코딩에 딱 맞는 경량화 스크립트(.probe-kit/ml_track/compact_data.py)를 작성해서 실행하고, 만약 파싱/타입/메모리 에러가 발생하면 즉시 에러 로그를 보고 코드를 수정(Self-Healing)하여 .probe-kit/ml_track/data_compact/ 안에 고속 포맷(.pkl/.parquet/float32 또는 정제된 CSV, 대용량일 경우 고속 탐색용 20% 층화 코어셋 포함)으로 안전하게 저장해. 그런 다음 타깃 특성에 맞는 누수 없는 K-Fold(Stratified/TimeSeries/Group)를 구축해 가장 단순한 회귀/베이스라인 점수를 .probe-kit/ml_track/leaderboard.json 에 기록해.
+2. Phase 2 (20~120분): N > 30,000일 경우 20% Coreset을 활용하고, 소표본일 경우 전체 데이터를 활용해 도메인 수식 기반 회귀 항(다항식 거듭제곱/교호작용항 x*y, 로그 변환) 및 파생 피처(비율/차이/그룹통계량/Lag/OOF Target Encoding)를 생성하고, CV 점수가 상승한 피처만 영구 채택(Forward Selection)해.
+3. Phase 3 (120~240분):
+   - [간단한 회귀모델 탐색]: 먼저 해석 가능하고 외삽(Extrapolation)에 강한 전통 회귀모델(OLS 선형/다항회귀, Ridge, Lasso, ElasticNet, 이상치에 강건한 HuberRegressor)을 정밀 피팅해 살펴봐.
+   - [경량 ML 탐색]: HistGradientBoosting, RandomForest 등 비선형 트리 모델을 튜닝해.
+   - Out-of-Fold(OOF) 예측값을 비교하여 간단한 회귀모델만으로 충분하면 과적합 없는 회귀식을 채택하고, 결합 시 성능이 오르면 최적 가중치 블렌딩(회귀 + 트리 ML) 앙상블을 구축해 단일 모델 대비 성능 개선을 확인해. (20% Coreset으로 최적화한 상위 모델은 100% Full 데이터셋으로 최종 재학습)
 4. Phase 4 (240~300분):
    - 예측값이 문제의 물리적/비즈니스 제약(비음수, 상하한 규격, 정수 제약)을 100% 만족하도록 post_process_constraints() 후처리를 강제 적용해.
    - 전체 테스트셋 추론 시간 < 3초 및 아티팩트 용량 < 10MB를 확인해.
    - 최종 4대 산출물을 .probe-kit/ml_track/ 에 생성하고 대기 상태로 들어가:
      1) ml_submission_ready.<csv|json> (즉시 제출 가능한 최종 예측 결과)
-     2) ml_solution.py (메인 파이프라인 1분 교체용 predict_solution(df) 함수 모듈)
+     2) ml_solution.py (메인 파이프라인 1분 교체용 predict_solution(df) 함수 모듈 — 회귀식 계수 또는 경량 모델 내장)
      3) leaderboard.json (전체 실험 히스토리 및 CV 점수 변천사)
-     4) CHAMPION_REPORT.md (베이스라인 대비 오차 감소율, 상위 피처 Top 5, 하드 제약 통과 여부, 1줄 채택 쉘 명령어, 사후 질의용 [결정]-[근거]-[검증]-[한계] 4문장 요약)
+     4) CHAMPION_REPORT.md (베이스라인 대비 오차 감소율, 회귀식/상위 피처 Top 5, 하드 제약 통과 여부, 1줄 채택 쉘 명령어, 사후 질의용 [결정]-[근거]-[검증]-[한계] 4문장 요약)
 
 지금 즉시 Phase 0 심사에 착수해.
 ```
