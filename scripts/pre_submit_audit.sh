@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # [참고] Windows PowerShell/CMD 환경에서는 Python 버전(scripts/pre_submit_audit.py)을 직접 실행할 수 있습니다.
 # scripts/pre_submit_audit.sh: 제출 직전(12:40) 종합 무감점 사전 점검 스크립트
-# - [1] Git 변경 범위(diff --stat)
-# - [2] 민감정보 평문 노출 스캔
-# - [3] localhost/127.0.0.1 바인딩 경고
-# - [4] 시스템 메모리 상태
-# - [5] 임시/하네스 파일 git 노출 확인 및 클린업 안내
-# - [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
-# - [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)
+# - [1/8] Git 변경 범위(diff --stat)
+# - [2/8] 민감정보 평문 노출 스캔
+# - [3/8] localhost/127.0.0.1 바인딩 경고
+# - [4/8] 시스템 메모리 상태
+# - [5/8] 임시/하네스 파일 git 노출 확인 및 클린업 안내
+# - [6/8] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
+# - [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)
+# - [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)
 
 # 감사 스크립트는 실패 항목이 있어도 끝까지 완주해야 하므로 errexit(-e)는 사용하지 않음
 set -u
@@ -16,13 +17,14 @@ set -o pipefail 2>/dev/null || true
 if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
   echo "사용법: bash pre_submit_audit.sh [WORKSPACE_ROOT]"
   echo "제출 직전(12:40) 종합 무감점 사전 점검 스크립트:"
-  echo "  [1] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)"
-  echo "  [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔"
-  echo "  [3] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검"
-  echo "  [4] 시스템 메모리 상태 점검"
-  echo "  [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검 (.git/info/exclude)"
-  echo "  [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)"
-  echo "  [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)"
+  echo "  [1/8] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)"
+  echo "  [2/8] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔"
+  echo "  [3/8] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검"
+  echo "  [4/8] 시스템 메모리 상태 점검"
+  echo "  [5/8] 임시 파일 및 하네스 파일 Git 격리 여부 점검 (.git/info/exclude)"
+  echo "  [6/8] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)"
+  echo "  [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)"
+  echo "  [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)"
   exit 0
 fi
 
@@ -57,9 +59,9 @@ echo "   루트 경로: ${WORKSPACE_ROOT}"
 echo "=========================================================="
 
 # --------------------------------------------------------------------------
-# [1] Git 저장소 상태 및 변경 범위 점검
+# [1/8] Git 저장소 상태 및 변경 범위 점검
 # --------------------------------------------------------------------------
-echo -e "\n📌 [1] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)"
+echo -e "\n📌 [1/8] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)"
 if command -v git >/dev/null 2>&1 && git -C "${WORKSPACE_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "--- [git status --short] ---"
   git -C "${WORKSPACE_ROOT}" status --short || true
@@ -74,9 +76,9 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [2] 민감정보(API Key, Secret, Token, Private Key) 평문 노출 스캔
+# [2/8] 민감정보(API Key, Secret, Token, Private Key) 평문 노출 스캔
 # --------------------------------------------------------------------------
-echo -e "\n📌 [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔"
+echo -e "\n📌 [2/8] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔"
 SENSITIVE_PATTERN="sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|-----BEGIN .*PRIVATE KEY-----"
 
 LEAK_RESULTS=""
@@ -101,9 +103,9 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [3] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검 (0.0.0.0 바인딩 필수)
+# [3/8] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검 (0.0.0.0 바인딩 필수)
 # --------------------------------------------------------------------------
-echo -e "\n📌 [3] 웹 서버 네트워크 바인딩 점검 (localhost vs 0.0.0.0)"
+echo -e "\n📌 [3/8] 웹 서버 네트워크 바인딩 점검 (localhost vs 0.0.0.0)"
 BINDING_PATTERN="(host[[:space:]]*=[[:space:]]*['\"](localhost|127\.0\.0\.1)['\"]|listen[[:space:]]+.*(localhost|127\.0\.0\.1)|--host[=[:space:]]+(localhost|127\.0\.0\.1))"
 
 BINDING_FOUND=""
@@ -127,9 +129,9 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [4] 시스템 리소스(Memory/Swap) 여유 상태 점검
+# [4/8] 시스템 리소스(Memory/Swap) 여유 상태 점검
 # --------------------------------------------------------------------------
-echo -e "\n📌 [4] 시스템 메모리 상태 점검"
+echo -e "\n📌 [4/8] 시스템 메모리 상태 점검"
 if command -v free >/dev/null 2>&1; then
   free -m 2>/dev/null || true
   record_pass "free 명령으로 메모리 여유 상태 확인 완료"
@@ -142,9 +144,9 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [5] 임시 파일 및 하네스 파일의 Git Status 노출 여부 점검
+# [5/8] 임시 파일 및 하네스 파일의 Git Status 노출 여부 점검
 # --------------------------------------------------------------------------
-echo -e "\n📌 [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검"
+echo -e "\n📌 [5/8] 임시 파일 및 하네스 파일 Git 격리 여부 점검"
 if command -v git >/dev/null 2>&1 && git -C "${WORKSPACE_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   EXPOSED_PROBE=$(git -C "${WORKSPACE_ROOT}" status --porcelain 2>/dev/null | grep -E "(\.probe-kit|probe-kit|NOTES_TEMP\.md|TASK_SPEC\.md|SUB_RESULT\.md|HANDOFF\.md)" || true)
   if [ -n "$EXPOSED_PROBE" ]; then
@@ -159,9 +161,9 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [6] 하네스 및 인수인계 기록 디스크 영구 보존 점검
+# [6/8] 하네스 및 인수인계 기록 디스크 영구 보존 점검
 # --------------------------------------------------------------------------
-echo -e "\n📌 [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)"
+echo -e "\n📌 [6/8] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)"
 HARNESS_PRESERVED=0
 if [ -d "${WORKSPACE_ROOT}/.probe-kit" ] || [ -d "${WORKSPACE_ROOT}/probe-kit" ] || [ "$(basename "${WORKSPACE_ROOT}")" = "probe-kit" ] || [ -f "${WORKSPACE_ROOT}/init.sh" ]; then
   HARNESS_PRESERVED=1
@@ -200,9 +202,9 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [7] 도메인 산출물 센티널 잔존 및 무결성 점검
+# [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검
 # --------------------------------------------------------------------------
-echo -e "\n📌 [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)"
+echo -e "\n📌 [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)"
 SENTINEL_PATTERN="((^|[^0-9])-9999([^0-9]|$)|(^|[^0-9])-999(\.0+)?([^0-9]|$)|<[[:space:]]*[Dd][Ll]|(^|[^a-zA-Z0-9_])(NaN|nan|NAN)([^a-zA-Z0-9_]|$))"
 
 OUTPUT_TARGETS=()
@@ -280,7 +282,241 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# [8] 제출 직전 확인 지침
+# [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)
+# --------------------------------------------------------------------------
+echo -e "\n📌 [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)"
+
+PYTHON_CMD=""
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON_CMD="python3"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON_CMD="python"
+fi
+
+if [ -n "$PYTHON_CMD" ]; then
+  AUDIT_RESULT=$("$PYTHON_CMD" - "${WORKSPACE_ROOT}" << 'PY_EOF'
+import sys
+import os
+import ast
+import re
+from pathlib import Path
+
+workspace_root = Path(sys.argv[1]).resolve()
+
+STDLIB_FALLBACK = {
+    "abc", "aifc", "antigravity", "argparse", "array", "ast", "asynchat", "asyncio", "asyncore",
+    "base64", "bdb", "binascii", "binhex", "bisect", "builtins", "bz2",
+    "calendar", "cgi", "cgitb", "chunk", "cmath", "cmd", "code", "codecs", "codeop",
+    "collections", "colorsys", "compileall", "concurrent", "configparser", "contextlib",
+    "contextvars", "copy", "copyreg", "crypt", "csv", "ctypes", "curses",
+    "dataclasses", "datetime", "dbm", "decimal", "difflib", "dis", "distutils", "doctest",
+    "email", "encodings", "ensurepip", "enum", "errno",
+    "faulthandler", "fcntl", "filecmp", "fileinput", "fnmatch", "formatter", "fractions",
+    "ftplib", "functools",
+    "gc", "getopt", "getpass", "gettext", "glob", "graphlib", "grp", "gzip",
+    "hashlib", "heapq", "hmac", "html", "http",
+    "idlelib", "imaplib", "imghdr", "imp", "importlib", "inspect", "io", "ipaddress", "itertools",
+    "json",
+    "keyword",
+    "lib2to3", "linecache", "locale", "logging", "lzma",
+    "mailbox", "mailcap", "marshal", "math", "mimetypes", "mmap", "modulefinder", "msilib",
+    "msvcrt", "multiprocessing",
+    "netrc", "nis", "nntplib", "numbers",
+    "operator", "optparse", "os", "ossaudiodev",
+    "parser", "pathlib", "pdb", "pickle", "pickletools", "pipes", "pkgutil", "platform",
+    "plistlib", "poplib", "posix", "posixpath", "pprint", "profile", "pstats", "pty", "pwd",
+    "py_compile", "pyclbr", "pydoc", "pydoc_data", "pyexpat",
+    "queue", "quopri",
+    "random", "re", "readline", "reprlib", "resource", "rlcompleter", "runpy",
+    "sched", "secrets", "select", "selectors", "shelve", "shlex", "shutil", "signal",
+    "site", "smtpd", "smtplib", "sndhdr", "socket", "socketserver", "spwd", "sqlite3",
+    "sre_compile", "sre_constants", "sre_parse", "ssl", "stat", "statistics", "string",
+    "stringprep", "struct", "subprocess", "sunau", "symbol", "symtable", "sys",
+    "sysconfig", "syslog",
+    "tabnanny", "tarfile", "telnetlib", "tempfile", "termios", "test", "textwrap",
+    "this", "threading", "time", "timeit", "tkinter", "token", "tokenize", "tomllib",
+    "trace", "traceback", "tracemalloc", "tty", "turtle", "turtledemo", "types", "typing",
+    "unicodedata", "unittest", "urllib", "uu", "uuid",
+    "venv",
+    "warnings", "wave", "weakref", "webbrowser", "winreg", "winsound", "wsgiref",
+    "xdrlib", "xml", "xmlrpc", "zipapp", "zipfile", "zipimport", "zlib",
+    "_thread", "__future__"
+}
+
+DEPS_IGNORE = {"setuptools", "pip", "wheel", "pkg_resources", "distutils"}
+
+IMPORT_TO_PKG = {
+    "sklearn": "scikit-learn",
+    "PIL": "pillow",
+    "cv2": "opencv-python|opencv-python-headless",
+    "yaml": "pyyaml",
+    "bs4": "beautifulsoup4",
+    "dotenv": "python-dotenv",
+    "jwt": "pyjwt",
+    "dateutil": "python-dateutil",
+    "multipart": "python-multipart",
+}
+
+def parse_req_file(p, visited=None):
+    if visited is None: visited = set()
+    p = p.resolve()
+    if p in visited or not p.is_file(): return set()
+    visited.add(p)
+    out = set()
+    try:
+        with open(p, "r", encoding="utf-8", errors="ignore") as f:
+            for l in f:
+                l = l.strip()
+                if not l or l.startswith("#"): continue
+                m_inc = re.match(r"^(?:-r|--requirement)\s+(\S+)", l)
+                if m_inc:
+                    out |= parse_req_file((p.parent / m_inc.group(1)).resolve(), visited)
+                    continue
+                if l.startswith("-"): continue
+                m = re.match(r"^([A-Za-z0-9][A-Za-z0-9._-]*)", l)
+                if m:
+                    out.add(re.sub(r"[-_.]+", "-", m.group(1).lower()))
+    except Exception:
+        pass
+    return out
+
+def parse_pyp_file(p):
+    if not p.is_file(): return set()
+    out = set()
+    try:
+        with open(p, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        try:
+            import tomllib
+            d = tomllib.loads(content)
+            for dep in d.get("project", {}).get("dependencies", []):
+                m = re.match(r"^([A-Za-z0-9][A-Za-z0-9._-]*)", str(dep).strip())
+                if m: out.add(re.sub(r"[-_.]+", "-", m.group(1).lower()))
+        except Exception:
+            in_deps = False
+            for line in content.splitlines():
+                if "dependencies" in line and "=" in line: in_deps = True
+                if in_deps:
+                    for m in re.finditer(r'["\']([A-Za-z0-9][A-Za-z0-9._-]*)', line):
+                        out.add(re.sub(r"[-_.]+", "-", m.group(1).lower()))
+                    if "]" in line: in_deps = False
+    except Exception:
+        pass
+    return out
+
+exclude_dirs = {".git", ".probe-kit", "probe-kit", "__pycache__", "venv", ".venv", "env", "node_modules", "dist", "build"}
+exclude_files = {"pre_submit_audit.py", "cofa_check.py"}
+
+py_files = []
+for root, dirs, files in os.walk(str(workspace_root)):
+    dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
+    for file in files:
+        if file not in exclude_files and file.endswith(".py"):
+            py_files.append(Path(root) / file)
+
+if not py_files:
+    print("STATUS:PASS:의존성 점검 완료 (.py 소스 코드 파일 없음)")
+    sys.exit(0)
+
+local_modules = {pf.stem for pf in py_files}
+for pf in py_files:
+    try:
+        for part in pf.relative_to(workspace_root).parts[:-1]:
+            local_modules.add(part)
+    except Exception:
+        pass
+try:
+    for e in workspace_root.iterdir():
+        if e.is_dir() and e.name not in exclude_dirs and not e.name.startswith("."):
+            local_modules.add(e.name)
+except Exception:
+    pass
+
+stdlib_modules = getattr(sys, "stdlib_module_names", set()) | STDLIB_FALLBACK
+
+external_imports = {}
+for pf in py_files:
+    try:
+        rel = pf.relative_to(workspace_root)
+    except Exception:
+        rel = pf
+    try:
+        with open(pf, "r", encoding="utf-8", errors="ignore") as f:
+            tree = ast.parse(f.read(), filename=str(pf))
+    except Exception:
+        continue
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".")[0]
+                if top and top not in external_imports:
+                    external_imports[top] = (str(rel), node.lineno)
+        elif isinstance(node, ast.ImportFrom):
+            if (node.level is None or node.level == 0) and node.module:
+                top = node.module.split(".")[0]
+                if top and top not in external_imports:
+                    external_imports[top] = (str(rel), node.lineno)
+
+third_party = {
+    m: loc for m, loc in external_imports.items()
+    if m not in stdlib_modules and m not in local_modules and m not in DEPS_IGNORE
+}
+
+req_file = workspace_root / "requirements.txt"
+pyp_file = workspace_root / "pyproject.toml"
+has_req, has_pyp = req_file.is_file(), pyp_file.is_file()
+
+declared = set()
+if has_req: declared |= parse_req_file(req_file)
+if has_pyp: declared |= parse_pyp_file(pyp_file)
+
+if has_req or has_pyp:
+    missing = []
+    v_count = 0
+    for mod, (fpath, lno) in sorted(third_party.items()):
+        targets = [re.sub(r"[-_.]+", "-", p.lower()) for p in IMPORT_TO_PKG.get(mod, mod).split("|")]
+        matched = any(r == c or r.startswith(c + "-") or c.startswith(r + "-") for c in targets for r in declared)
+        if matched:
+            v_count += 1
+        else:
+            missing.append((fpath, lno, mod, targets[0]))
+    if missing:
+        print("MSG:⚠️ [주의] 코드에서 import 되었으나 requirements.txt에 누락된 외부 패키지가 감지되었습니다:")
+        for fpath, lno, mod, fix_pkg in missing:
+            print(f"MSG:   - {fpath}:{lno}: import {mod} → requirements.txt에 누락됨 (추천: requirements.txt에 `{fix_pkg}` 추가)")
+        print(f"STATUS:WARN:requirements.txt 누락 패키지 {len(missing)}건 발견! 의존성 파일에 누락된 패키지를 추가하세요.")
+    else:
+        print(f"STATUS:PASS:의존성(requirements.txt) AST 정합성 점검 통과 (외부 패키지 {v_count}종 모두 선언됨)")
+else:
+    if third_party:
+        print("MSG:⚠️ [주의] 코드에서 외부 패키지를 import하고 있으나 requirements.txt(또는 pyproject.toml)가 존재하지 않습니다:")
+        for mod, (fpath, lno) in sorted(third_party.items())[:10]:
+            p = re.sub(r"[-_.]+", "-", IMPORT_TO_PKG.get(mod, mod).split("|")[0].lower())
+            print(f"MSG:   - {fpath}:{lno}: import {mod} (추천 패키지명: `{p}`)")
+        if len(third_party) > 10:
+            print(f"MSG:   ... 외 {len(third_party) - 10}건")
+        print("STATUS:WARN:프로젝트에 requirements.txt가 없습니다. 재현성 및 채점 환경을 위해 requirements.txt를 생성하세요.")
+    else:
+        print("STATUS:PASS:의존성 점검 통과 (표준 라이브러리 및 로컬 모듈만 사용됨, 외부 의존성 없음)")
+PY_EOF
+)
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^MSG:(.*)$ ]]; then
+      echo "${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^STATUS:PASS:(.*)$ ]]; then
+      record_pass "${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^STATUS:WARN:(.*)$ ]]; then
+      record_warn "${BASH_REMATCH[1]}"
+    elif [ -n "$line" ]; then
+      echo "$line"
+    fi
+  done <<< "$AUDIT_RESULT"
+else
+  echo "⚪ [SKIP] python 명령을 찾을 수 없어 AST 의존성 점검을 건너뜁니다."
+fi
+
+# --------------------------------------------------------------------------
+# 제출 직전 확인 지침
 # --------------------------------------------------------------------------
 echo -e "\n=========================================================="
 echo "🧹 [제출 직전(12:40) 필수 확인 지침]"

@@ -11,7 +11,7 @@ git clone https://github.com/chichochoi/sk.git /tmp/probe-kit && bash /tmp/probe
 ## 🛡️ 제출 직전 사전 감사 및 하네스 영구 보존
 
 ```bash
-# 사전 무감점 감사 (Git Bash / WSL / Linux: PASS 6건 확인)
+# 사전 무감점 감사 (Git Bash / WSL / Linux: PASS 8대 항목 확인)
 bash .probe-kit/scripts/pre_submit_audit.sh
 
 # 범용 Python 3 버전 직접 실행:
@@ -58,8 +58,8 @@ python3 .probe-kit/scripts/pre_submit_audit.py
 | `scripts/sample_check_template.py` | 검증 도구 | 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 교차 검증 템플릿 (Case 1) |
 | `scripts/sample_check_opt.py` | 검증 도구 | 최적화/CSP 하드제약 및 목적함수 15건 표본 수동 대조 검증 스크립트 (Case 5) |
 | `scripts/sample_check_spc.py` | 검증 도구 | 반도체 CoA/SPC 통계/웨이퍼 오버레이/재무 정규화 15건 표본 수동 대조 검증 스크립트 (Case 6) |
-| `scripts/pre_submit_audit.sh` | 검증 도구 | Git Bash/WSL/Linux용 `git diff` 범위·민감정보·`localhost` 바인딩·리소스 일괄 점검 감사 스크립트 |
-| `scripts/pre_submit_audit.py` | 검증 도구 | 범용 Python 3 버전 사전 감사 스크립트 (`python3 scripts/pre_submit_audit.py [dir]`) |
+| `scripts/pre_submit_audit.sh` | 검증 도구 | Git Bash/WSL/Linux용 8대 무감점 사전 감사 (git diff·민감정보·바인딩·메모리·격리·보존·센티널·requirements.txt AST 자동 검사) |
+| `scripts/pre_submit_audit.py` | 검증 도구 | 범용 Python 3 버전 8대 무감점 사전 감사 스크립트 (requirements.txt 누락 패키지 AST 자동 검사 포함) |
 
 ---
 # 🎯 SK하이닉스 AI 해커톤 2차 예선 (Cofa Probe) 최종 통합 마스터 플레이북 & 메인/서브 Git 하네스
@@ -150,8 +150,8 @@ probe-kit/
     ├── sample_check_template.py  # [표본 대조] 10~20건 샘플 수동 기댓값 vs 스크립트 출력값 검증 템플릿 (Case 1)
     ├── sample_check_opt.py       # [표본 대조] 최적화/CSP 하드 제약 및 목적함수 15건 표본 수동 대조 (Case 5)
     ├── sample_check_spc.py       # [표본 대조] 반도체 CoA/SPC 통계/웨이퍼 오버레이/재무 15건 표본 수동 대조 (Case 6)
-    ├── pre_submit_audit.sh       # [제출 전 감사] Git Bash/WSL/Linux용 git diff 범위·민감정보·localhost 바인딩·리소스 점검
-    └── pre_submit_audit.py       # [제출 전 감사] 범용 Python 3 버전 사전 감사 스크립트
+    ├── pre_submit_audit.sh       # [제출 전 감사] Git Bash/WSL/Linux용 8대 사전 감사 (requirements.txt AST 자동 검사 포함)
+    └── pre_submit_audit.py       # [제출 전 감사] 범용 Python 3 버전 8대 사전 감사 스크립트 (requirements.txt AST 자동 검사 포함)
 ```
 
 ---
@@ -753,7 +753,7 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
   - 12:15(125분 경과)부터는 무리한 새 기능 추가를 멈추고 완성도와 검증에 집중.
   - 내장 Browser(`0.0.0.0` 바인딩) 직접 클릭 조작 검증 및 데이터 표본 수동 대조 테스트 실행.
   - 터미널 1(`Sol 6.1 xhigh`)과 함께 **제출용 계획/협업 문서** 완성.
-  - `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 `python3 .probe-kit/scripts/pre_submit_audit.py`) 실행하여 `git diff`·민감정보·`localhost`·메모리·하네스 영구 보존 상태 최종 점검 (PASS 6건 확인).
+  - `bash .probe-kit/scripts/pre_submit_audit.sh` (또는 `python3 .probe-kit/scripts/pre_submit_audit.py`) 실행하여 `git diff`·민감정보·`localhost`·메모리·하네스 보존·센티널·requirements.txt AST 상태 최종 점검 (PASS 8대 확인).
   - **.git/info/exclude에 의한 하네스 안전 격리 상태 및 git status 클린 여부 확인** (시험 중 `git add`/`commit`/`reset`/`clean` 금지 준수, 채점관 가점 확보를 위해 `.probe-kit` 및 `HANDOFF.md`는 디스크에 영구 보존) → **모든 파일 `Ctrl+S` ('저장됨' 상태)** 최종 확인.
 - [ ] **12:50 ~ 13:00 [제출 확정 & 서술형 대기]**
   - `제출하고 문제풀기` → `제출물 확정하고 문제풀기` 클릭.

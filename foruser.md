@@ -23,7 +23,7 @@
 | **10:25** | **10:25** | **[6단계]** 솔루션 브레인스토밍 | N단계 분할 ➔ 트레이드오프 ➔ 주도적 결정 | 3-Part 메인 프롬프트 & 결정 로깅 |
 | **10:35** | **10:45** | **[6.5단계]** 구현 & 온더플라이 검증 | `TASK_SPEC` 발행 ➔ 서브 구현 ➔ `/clear` | 터미널 1 ↔ 터미널 2 핑퐁 반복 |
 | **상시** | **상시** | **[7단계]** 다음 단계 전환 시그널 | ALL PASS / FAIL / Drift 상황별 액션 | 전환 시그널 판정표 |
-| **12:20** | **14:40** | **[8단계]** 마무리 검증 & 사전 감사 | 🏆 알고리즘 vs 백그라운드 ML 챔피언 비교·채택 + 표본 검증 + 사전 감사 | `python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv` / `sample_check_*.py` / `pre_submit_audit.py` |
+| **12:20** | **14:40** | **[8단계]** 마무리 검증 & 사전 감사 | 🏆 알고리즘 vs 백그라운드 ML 챔피언 비교·채택 + 표본 검증 + 8대 사전 감사(requirements.txt AST 자동 검사 포함) | `python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv` / `sample_check_*.py` / `pre_submit_audit.py` |
 | **12:45** | **15:30** | **[9단계]** 실무자 DM 최종 완료 보고 | 검증 결과 보고 및 만족도 확인 요청 | 메인 초안 작성 ➔ 우측 DM 전송 |
 | **12:47** | **15:35** | **[10단계]** 제출 보고서 3대 요소 점검 | [판단·근거]-[검증]-[남은 한계] 점검 | 메인 보고서 검토 프롬프트 |
 | **12:50** | **15:45** | **[11단계]** 보안 취약점 전수 점검 | API 키, 0.0.0.0 바인딩, 로그 누출 점검 | 메인 보안 감사 프롬프트 |
@@ -335,6 +335,19 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 
 범용 질문 외에 각 Case별로 특화된 심층 질문은 `.probe-kit/dm_question.md`에서 확인하여 추가 질의합니다.
 
+### 📋 실전 복사용 원클릭 프롬프트 2종 (터미널 1 메인 에이전트 주입용)
+수험생이 수십 페이지의 질문 뱅크를 일일이 찾지 않고, 메인 에이전트에게 맞춤 질문을 도출하여 `dm_question.md` 최상단에 바로 기록하게 할 때 아래 문구를 그대로 복사해 터미널 1에 입력합니다:
+
+1. **과제 착수 시 (도메인 맞춤 질문 탐색 및 상단 배치):**
+```text
+dm_question.md를 읽고, 주어진 과제에 쓸만한 질문을 찾아서 dm_question.md의 맨 위에 적어줘.
+```
+
+2. **1차 질의 진행 후 (미확인 예외 규칙/추가 질의 도출 및 상단 배치):**
+```text
+NOTES_TEMP.md를 읽고 지금까지 질문한거 외에 추가로 담당자에게 질문해야하는 내용을 dm_question.md 맨 위에 적어줘.
+```
+
 ### 👉 수행 행동:
 1. 에디터에서 `.probe-kit/dm_question.md` 파일을 엽니다.
 2. 3단계에서 식별한 유형에 따라 아래 **3초 직행 색인표**의 해당 섹션으로 이동합니다:
@@ -409,7 +422,9 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 *(수험생이 분석 결과를 확인한 후, 아래 템플릿의 대괄호 내용을 채워 터미널 1에 입력합니다)*
 
 ```text
-[MAIN] 네 분석을 검토했어. [외부 의존성 배제 및 실무자 DM의 취소·중복 예외 처리 신뢰성 보장] 장점 때문에 나는 [파이썬 표준 라이브러리(csv, json) 기반의 단일 스트림 파이프라인] 단계별 해결법을 쓰고 싶어. 가능해?
+[MAIN] 네 분석을 검토했어. 
+[Step 1]는 []때문에  []를 쓰자.
+가능해?
 가능하다면 내가 결정한 [채택한 방식]과 [배제한 대안 및 이유]를 NOTES_TEMP.md에 기록하고, 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "결정" "[선택한 해결법] 채택 확정 (이유: [장점 명시])"
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "결정" "[선택한 해결법] 채택 확정 (이유: [장점 명시])"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
@@ -515,7 +530,6 @@ bash .probe-kit/scripts/subagent.sh guide
 
 ```text
 [MAIN] .probe-kit/runtime/SUB_RESULT.md 와 git diff --stat 만 확인해서 Step N이 실무자 DM 조건에 맞게 검증되었는지 엣지 케이스 관점에서 비판적으로 검토해줘.
-(방향 수정이 필요한 경우) 테스트/검토 결과를 보니 기존 [A 방식]은 [메모리 초과 / 현업 예외 충돌 / 불필요한 복잡도] 문제가 있어서 제외하기로 결정했어. 우선순위를 조정해서 더 안정적이고 단순한 [B 방식]으로 방향을 바꿔서 다음 단계 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
 검토가 완료되면 다음 모듈인 [Step N+1]에 대한 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
 검수 및 다음 지시서 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및 의사결정 기록 완료"
@@ -760,13 +774,15 @@ bash .probe-kit/scripts/pre_submit_audit.sh
 # 범용 Python 3 버전 직접 실행 (WSL/Linux/Windows 공통):
 python3 .probe-kit/scripts/pre_submit_audit.py
 ```
-* **6대 PASS 확인 항목:**
+* **8대 PASS 확인 항목:**
   1. `git diff --stat`: 과제 범위 외 불필요한 파일이 수정되지 않았는가?
   2. 민감정보 노출: API 키, 패스워드, 개인정보가 하드코딩되지 않았는가?
-  3. 네트워크 바인딩: 웹 서버가 `0.0.0.0`으로 바인딩되어 있는가?
+  3. 네트워크 바인딩: 웹 서버가 `0.0.0.0`으로 바인딩되어 있는가? (localhost / 127.0.0.1 경고)
   4. 시스템 리소스: 메모리(RAM) 및 CPU가 정상 상태인가?
   5. 하네스 격리: `.git/info/exclude`로 하네스 및 런타임 파일이 안전 격리되었는가?
-  6. **하네스 디스크 영구 보존:** `.probe-kit` 및 `HANDOFF.md`가 디스크에 보존되어 있는가?
+  6. **하네스 디스크 영구 보존:** `.probe-kit` 및 `HANDOFF.md`가 디스크에 보존되어 있는가? (의도/인지 가점)
+  7. **도메인 산출물 센티널 잔존 및 무결성 점검:** 센티널(-999 등) 잔존 및 결측치 누수 방지 확인
+  8. **[8/8] requirements.txt 누락 패키지 AST 자동 검사:** 코드에 `import`된 외부 패키지가 `requirements.txt`에 빠졌는지 자동 검출하여 `ModuleNotFoundError` 0점 방지
 
 ### 3) Git 상태 읽기 전용 최종 확인
 ```bash
@@ -794,7 +810,7 @@ bash .probe-kit/scripts/handoff.sh
 * **모든 열린 탭 `Ctrl+S` 저장:** 에디터 상단 탭에 하얀 동그라미(미저장 상태)가 단 하나도 없도록 모든 탭을 확인하며 `Ctrl+S`를 누릅니다.
 
 ✅ **완료 시그널:**
-사전 감사 6대 PASS, `git status` 클린(테스트 코드 외 불필요 파일 없음), 제출 보고서 생성 완료, 모든 파일 저장 완료.
+사전 감사 8대 PASS (requirements.txt AST 정합성 포함), `git status` 클린(테스트 코드 외 불필요 파일 없음), 제출 보고서 생성 완료, 모든 파일 저장 완료.
 
 ---
 
@@ -840,23 +856,24 @@ bash .probe-kit/scripts/handoff.sh
 
 ---
 
-## 11단계: ⏱ 12:50 | 👉 보안 취약점 및 민감정보 전수 점검 프롬프트
+## 11단계: ⏱ 12:50 | 👉 보안 취약점·민감정보 및 의존성 전수 점검 프롬프트
 
-제출 전 코드와 설정 파일에 보안 취약점이 없는지 최종 점검합니다.
+제출 전 코드와 설정 파일에 보안 취약점이 없는지, 그리고 의존성(`requirements.txt`) 누락이 없는지 최종 점검합니다.
 
 터미널 1 (`Sol 6.1 xhigh`)에 아래 프롬프트를 입력합니다:
 
 ```text
-[MAIN] 워크스페이스 내 수정된 모든 소스 코드와 설정 파일, 테스트 코드에 대해 보안 감사를 수행해줘. 다음 4대 보안 취약점 여부를 확인하고 결과를 보고해줘:
+[MAIN] 워크스페이스 내 수정된 모든 소스 코드와 설정 파일, 테스트 코드에 대해 보안 및 제출 안정성 감사를 수행해줘. 다음 5대 점검 항목 여부를 확인하고 결과를 보고해줘:
 1. 민감정보 하드코딩: API 키, 패스워드, 시크릿 토큰, 사내 개인정보(주민등록번호 등)가 평문으로 남아있는가?
 2. 네트워크 바인딩: 웹 서버 호스트가 localhost/127.0.0.1 로 닫혀있지 않고 반드시 0.0.0.0 으로 바인딩되어 있는가?
 3. 로그 민감정보 유출: 콘솔 로그나 파일 로그에 비밀번호, 개인정보, 불필요한 대용량 원본 데이터가 출력되고 있는가?
 4. 취약한 호출: eval(), 미검증 셸 실행, 임의 파일 경로 조작(Directory Traversal) 위험이 있는가?
+5. 의존성 누락 (requirements.txt AST 점검): 코드에 import된 외부 패키지가 requirements.txt에 빠져 채점 환경에서 ModuleNotFoundError로 0점 탈락할 위험이 없는가?
 문제 발견 시 수정할 파일과 수정 코드를 제시하고 즉시 조치해줘.
 ```
 
 ✅ **완료 시그널:**
-보안 취약점 0건(PASS) 및 민감정보 평문 노출 없음 확인.
+보안 취약점 0건(PASS), 민감정보 평문 노출 없음, requirements.txt 의존성 정합성(ModuleNotFoundError 방지) 확인.
 
 ---
 
@@ -1054,6 +1071,6 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
     ├── sample_check_template.py     # Case 1 표본 15건 수동 기댓값 vs 스크립트 출력 교차 검증 도구
     ├── sample_check_opt.py          # Case 5 최적화 결과 표본·제약 검증 스크립트
     ├── sample_check_spc.py          # Case 6 반도체 SPC/오버레이/재무 표본 검증 스크립트
-    ├── pre_submit_audit.sh          # Linux/WSL/Git Bash용 종합 무감점 사전 감사 도구
-    └── pre_submit_audit.py          # 범용 Python 3 버전 사전 감사 도구
+    ├── pre_submit_audit.sh          # Linux/WSL/Git Bash용 종합 무감점 8대 사전 감사 도구
+    └── pre_submit_audit.py          # 범용 Python 3 버전 8대 사전 감사 도구 (requirements.txt 누락 패키지 AST 자동 검사 포함)
 ```

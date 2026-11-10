@@ -2,15 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 scripts/pre_submit_audit.py: 제출 직전(12:40) 종합 무감점 사전 점검 스크립트 (Windows/Linux 범용 Python 버전)
-- [1] Git 변경 범위(diff --stat) 점검
-- [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔
-- [3] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검 (0.0.0.0 바인딩 필수)
-- [4] 시스템 메모리 상태 점검
-- [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검
-- [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
-- [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)
+- [1/8] Git 변경 범위(diff --stat) 점검
+- [2/8] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔
+- [3/8] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검 (0.0.0.0 바인딩 필수)
+- [4/8] 시스템 메모리 상태 점검
+- [5/8] 임시 파일 및 하네스 파일 Git 격리 여부 점검
+- [6/8] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
+- [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)
+- [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)
 """
 
+import ast
 import os
 import sys
 import re
@@ -51,13 +53,14 @@ def find_workspace_root() -> Path:
 if any(arg in ("-h", "--help") for arg in sys.argv[1:]):
     print("사용법: python pre_submit_audit.py [WORKSPACE_ROOT]")
     print("제출 직전(12:40) 종합 무감점 사전 점검 스크립트 (Windows/Linux 범용)")
-    print("  [1] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)")
-    print("  [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔")
-    print("  [3] 웹 서버 네트워크 바인딩 점검 (localhost vs 0.0.0.0)")
-    print("  [4] 시스템 메모리 상태 점검")
-    print("  [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검 (.git/info/exclude)")
-    print("  [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)")
-    print("  [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)")
+    print("  [1/8] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)")
+    print("  [2/8] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔")
+    print("  [3/8] 웹 서버 네트워크 바인딩 점검 (localhost vs 0.0.0.0)")
+    print("  [4/8] 시스템 메모리 상태 점검")
+    print("  [5/8] 임시 파일 및 하네스 파일 Git 격리 여부 점검 (.git/info/exclude)")
+    print("  [6/8] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)")
+    print("  [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)")
+    print("  [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)")
     sys.exit(0)
 
 WORKSPACE_ROOT = (
@@ -106,6 +109,124 @@ def is_binary_file(path: Path) -> bool:
     return False
 
 
+STDLIB_FALLBACK = {
+    "abc", "aifc", "antigravity", "argparse", "array", "ast", "asynchat", "asyncio", "asyncore",
+    "base64", "bdb", "binascii", "binhex", "bisect", "builtins", "bz2",
+    "calendar", "cgi", "cgitb", "chunk", "cmath", "cmd", "code", "codecs", "codeop",
+    "collections", "colorsys", "compileall", "concurrent", "configparser", "contextlib",
+    "contextvars", "copy", "copyreg", "crypt", "csv", "ctypes", "curses",
+    "dataclasses", "datetime", "dbm", "decimal", "difflib", "dis", "distutils", "doctest",
+    "email", "encodings", "ensurepip", "enum", "errno",
+    "faulthandler", "fcntl", "filecmp", "fileinput", "fnmatch", "formatter", "fractions",
+    "ftplib", "functools",
+    "gc", "getopt", "getpass", "gettext", "glob", "graphlib", "grp", "gzip",
+    "hashlib", "heapq", "hmac", "html", "http",
+    "idlelib", "imaplib", "imghdr", "imp", "importlib", "inspect", "io", "ipaddress", "itertools",
+    "json",
+    "keyword",
+    "lib2to3", "linecache", "locale", "logging", "lzma",
+    "mailbox", "mailcap", "marshal", "math", "mimetypes", "mmap", "modulefinder", "msilib",
+    "msvcrt", "multiprocessing",
+    "netrc", "nis", "nntplib", "numbers",
+    "operator", "optparse", "os", "ossaudiodev",
+    "parser", "pathlib", "pdb", "pickle", "pickletools", "pipes", "pkgutil", "platform",
+    "plistlib", "poplib", "posix", "posixpath", "pprint", "profile", "pstats", "pty", "pwd",
+    "py_compile", "pyclbr", "pydoc", "pydoc_data", "pyexpat",
+    "queue", "quopri",
+    "random", "re", "readline", "reprlib", "resource", "rlcompleter", "runpy",
+    "sched", "secrets", "select", "selectors", "shelve", "shlex", "shutil", "signal",
+    "site", "smtpd", "smtplib", "sndhdr", "socket", "socketserver", "spwd", "sqlite3",
+    "sre_compile", "sre_constants", "sre_parse", "ssl", "stat", "statistics", "string",
+    "stringprep", "struct", "subprocess", "sunau", "symbol", "symtable", "sys",
+    "sysconfig", "syslog",
+    "tabnanny", "tarfile", "telnetlib", "tempfile", "termios", "test", "textwrap",
+    "this", "threading", "time", "timeit", "tkinter", "token", "tokenize", "tomllib",
+    "trace", "traceback", "tracemalloc", "tty", "turtle", "turtledemo", "types", "typing",
+    "unicodedata", "unittest", "urllib", "uu", "uuid",
+    "venv",
+    "warnings", "wave", "weakref", "webbrowser", "winreg", "winsound", "wsgiref",
+    "xdrlib", "xml", "xmlrpc", "zipapp", "zipfile", "zipimport", "zlib",
+    "_thread", "__future__"
+}
+
+DEPS_IGNORE = {"setuptools", "pip", "wheel", "pkg_resources", "distutils"}
+
+IMPORT_TO_PKG = {
+    "sklearn": "scikit-learn",
+    "PIL": "pillow",
+    "cv2": "opencv-python|opencv-python-headless",
+    "yaml": "pyyaml",
+    "bs4": "beautifulsoup4",
+    "dotenv": "python-dotenv",
+    "jwt": "pyjwt",
+    "dateutil": "python-dateutil",
+    "multipart": "python-multipart",
+}
+
+
+def parse_requirements_file(req_path: Path, visited=None) -> set:
+    """requirements.txt 파일 파싱 (재귀적 -r 포함 지시어 및 패키지 정규화 지원)"""
+    if visited is None:
+        visited = set()
+    req_path = req_path.resolve()
+    if req_path in visited or not req_path.is_file():
+        return set()
+    visited.add(req_path)
+
+    reqs = set()
+    try:
+        with open(req_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                m_inc = re.match(r"^(?:-r|--requirement)\s+(\S+)", line)
+                if m_inc:
+                    sub_file = (req_path.parent / m_inc.group(1)).resolve()
+                    reqs |= parse_requirements_file(sub_file, visited)
+                    continue
+                if line.startswith("-"):
+                    continue
+                m = re.match(r"^([A-Za-z0-9][A-Za-z0-9._-]*)", line)
+                if m:
+                    canon = re.sub(r"[-_.]+", "-", m.group(1).lower())
+                    reqs.add(canon)
+    except Exception:
+        pass
+    return reqs
+
+
+def parse_pyproject_dependencies(pyproject_path: Path) -> set:
+    """pyproject.toml 내 [project.dependencies] 선언 패키지 파싱"""
+    if not pyproject_path.is_file():
+        return set()
+    reqs = set()
+    try:
+        with open(pyproject_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        try:
+            import tomllib
+            data = tomllib.loads(content)
+            deps = data.get("project", {}).get("dependencies", [])
+            for dep in deps:
+                m = re.match(r"^([A-Za-z0-9][A-Za-z0-9._-]*)", str(dep).strip())
+                if m:
+                    reqs.add(re.sub(r"[-_.]+", "-", m.group(1).lower()))
+        except Exception:
+            in_deps = False
+            for line in content.splitlines():
+                if re.search(r"dependencies\s*=", line):
+                    in_deps = True
+                if in_deps:
+                    for m in re.finditer(r'["\']([A-Za-z0-9][A-Za-z0-9._-]*)', line):
+                        reqs.add(re.sub(r"[-_.]+", "-", m.group(1).lower()))
+                    if "]" in line:
+                        in_deps = False
+    except Exception:
+        pass
+    return reqs
+
+
 def main() -> None:
     print("==========================================================")
     print("🔍 [Cofa Probe 제출 전 최종 감사 (Pre-Submit Audit)]")
@@ -114,9 +235,9 @@ def main() -> None:
     print("==========================================================")
 
     # --------------------------------------------------------------------------
-    # [1] Git 저장소 상태 및 변경 범위 점검
+    # [1/8] Git 저장소 상태 및 변경 범위 점검
     # --------------------------------------------------------------------------
-    print("\n📌 [1] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)")
+    print("\n📌 [1/8] Git 변경 파일 범위 점검 (합의 범위 외 수정 여부)")
     is_git_repo = False
     try:
         chk = subprocess.run(
@@ -179,9 +300,9 @@ def main() -> None:
         print("⚪ [SKIP] 현재 디렉토리가 Git 저장소가 아닙니다 (git 저장소 아님). Git 점검을 건너뜁니다.")
 
     # --------------------------------------------------------------------------
-    # [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔
+    # [2/8] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔
     # --------------------------------------------------------------------------
-    print("\n📌 [2] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔")
+    print("\n📌 [2/8] 민감정보(API 키, 시크릿, 토큰, 비밀키) 평문 노출 스캔")
     sensitive_pattern = re.compile(
         r"sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|-----BEGIN .*PRIVATE KEY-----"
     )
@@ -220,9 +341,9 @@ def main() -> None:
         record_pass("민감정보 하드코딩 의심 패턴 없음")
 
     # --------------------------------------------------------------------------
-    # [3] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검 (0.0.0.0 바인딩 필수)
+    # [3/8] 웹 서버 localhost / 127.0.0.1 바인딩 경고 점검 (0.0.0.0 바인딩 필수)
     # --------------------------------------------------------------------------
-    print("\n📌 [3] 웹 서버 네트워크 바인딩 점검 (localhost vs 0.0.0.0)")
+    print("\n📌 [3/8] 웹 서버 네트워크 바인딩 점검 (localhost vs 0.0.0.0)")
     binding_pattern = re.compile(
         r"(host\s*=\s*['\"](localhost|127\.0\.0\.1)['\"]|listen\s+.*(localhost|127\.0\.0\.1)|--host[=\s]+(localhost|127\.0\.0\.1))"
     )
@@ -260,9 +381,9 @@ def main() -> None:
         record_pass("localhost 하드코딩 없음 (0.0.0.0 권장 준수)")
 
     # --------------------------------------------------------------------------
-    # [4] 시스템 메모리 상태 점검
+    # [4/8] 시스템 메모리 상태 점검
     # --------------------------------------------------------------------------
-    print("\n📌 [4] 시스템 메모리 상태 점검")
+    print("\n📌 [4/8] 시스템 메모리 상태 점검")
     mem_checked = False
 
     # 1) Linux /proc/meminfo 검사
@@ -333,9 +454,9 @@ def main() -> None:
         record_pass("메모리 점검 완료 (비리눅스 환경)")
 
     # --------------------------------------------------------------------------
-    # [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검
+    # [5/8] 임시 파일 및 하네스 파일 Git 격리 여부 점검
     # --------------------------------------------------------------------------
-    print("\n📌 [5] 임시 파일 및 하네스 파일 Git 격리 여부 점검")
+    print("\n📌 [5/8] 임시 파일 및 하네스 파일 Git 격리 여부 점검")
     if is_git_repo:
         exposed_pattern = re.compile(
             r"(\.probe-kit|probe-kit|NOTES_TEMP\.md|TASK_SPEC\.md|SUB_RESULT\.md|HANDOFF\.md)"
@@ -366,9 +487,9 @@ def main() -> None:
         print("⚪ [SKIP] Git 저장소가 아닙니다 (git 저장소 아님). Git 격리 점검을 건너뜁니다.")
 
     # --------------------------------------------------------------------------
-    # [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
+    # [6/8] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)
     # --------------------------------------------------------------------------
-    print("\n📌 [6] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)")
+    print("\n📌 [6/8] 하네스 및 인수인계 기록 영구 보존 상태 점검 (의도/인지 가점)")
     harness_preserved = False
 
     if (
@@ -410,9 +531,9 @@ def main() -> None:
         record_warn("하네스(.probe-kit) 또는 HANDOFF.md를 찾을 수 없습니다. 평가 가점을 위해 디스크에 보존하는 것을 권장합니다.")
 
     # --------------------------------------------------------------------------
-    # [7] 도메인 산출물 센티널 잔존 및 무결성 점검
+    # [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검
     # --------------------------------------------------------------------------
-    print("\n📌 [7] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)")
+    print("\n📌 [7/8] 도메인 산출물 센티널 잔존 및 무결성 점검 (결측치/센티널 누수 방지)")
     output_dir_names = [
         "output", "outputs", "dist", "result", "results",
         "submission", "submissions", "artifacts"
@@ -496,7 +617,139 @@ def main() -> None:
         record_pass("산출물 파일 없음 또는 생성 전 (산출물 센티널 누수 없음)")
 
     # --------------------------------------------------------------------------
-    # [8] 제출 직전 확인 지침
+    # [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)
+    # --------------------------------------------------------------------------
+    print("\n📌 [8/8] 의존성(requirements.txt) AST 정합성 점검 (누락 패키지 감지)")
+
+    exclude_dirs_deps = {
+        ".git", ".probe-kit", "probe-kit", "__pycache__", "venv", ".venv", "env",
+        "node_modules", "dist", "build", ".pytest_cache", ".tox", ".mypy_cache"
+    }
+    exclude_files_deps = {"pre_submit_audit.py", "cofa_check.py", "test_cofa_check.py"}
+
+    py_files = []
+    for root, dirs, files in os.walk(str(WORKSPACE_ROOT)):
+        dirs[:] = [d for d in dirs if d not in exclude_dirs_deps and not d.startswith(".")]
+        for file in files:
+            if file in exclude_files_deps:
+                continue
+            if file.endswith(".py"):
+                py_files.append(Path(root) / file)
+
+    if not py_files:
+        record_pass("의존성 점검 완료 (.py 소스 코드 파일 없음)")
+    else:
+        # 워크스페이스 내 로컬 모듈 및 패키지 판별
+        local_modules = set()
+        for pf in py_files:
+            local_modules.add(pf.stem)
+            try:
+                rel = pf.relative_to(WORKSPACE_ROOT)
+                for part in rel.parts[:-1]:
+                    local_modules.add(part)
+            except Exception:
+                pass
+        try:
+            for entry in WORKSPACE_ROOT.iterdir():
+                if entry.is_dir() and entry.name not in exclude_dirs_deps and not entry.name.startswith("."):
+                    local_modules.add(entry.name)
+        except Exception:
+            pass
+
+        stdlib_modules = getattr(sys, "stdlib_module_names", set()) | STDLIB_FALLBACK
+
+        # AST 파싱을 통해 최상위 외부 import 추출
+        external_imports = {}  # mod_name -> (rel_path, lineno)
+        ast_errors = []
+
+        for pf in py_files:
+            try:
+                rel_path = pf.relative_to(WORKSPACE_ROOT)
+            except Exception:
+                rel_path = pf
+
+            try:
+                with open(pf, "r", encoding="utf-8", errors="ignore") as f:
+                    code = f.read()
+                tree = ast.parse(code, filename=str(pf))
+            except Exception:
+                ast_errors.append(str(rel_path))
+                continue
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        top = alias.name.split(".")[0]
+                        if top and top not in external_imports:
+                            external_imports[top] = (str(rel_path), node.lineno)
+                elif isinstance(node, ast.ImportFrom):
+                    if (node.level is None or node.level == 0) and node.module:
+                        top = node.module.split(".")[0]
+                        if top and top not in external_imports:
+                            external_imports[top] = (str(rel_path), node.lineno)
+
+        if ast_errors:
+            print(f"ℹ️ [알림] AST 파싱 건너뜀 (구문 오류 등): {', '.join(ast_errors[:5])}" + (" 외" if len(ast_errors) > 5 else ""))
+
+        # 외부 라이브러리만 선별 (표준 라이브러리, 로컬 모듈, 특수 도구 제외)
+        third_party_mods = {}
+        for mod, (fpath, lno) in external_imports.items():
+            if mod in stdlib_modules or mod in local_modules or mod in DEPS_IGNORE:
+                continue
+            third_party_mods[mod] = (fpath, lno)
+
+        req_file = WORKSPACE_ROOT / "requirements.txt"
+        pyp_file = WORKSPACE_ROOT / "pyproject.toml"
+
+        has_req = req_file.is_file()
+        has_pyp = pyp_file.is_file()
+
+        declared_reqs = set()
+        if has_req:
+            declared_reqs |= parse_requirements_file(req_file)
+        if has_pyp:
+            declared_reqs |= parse_pyproject_dependencies(pyp_file)
+
+        if has_req or has_pyp:
+            missing_pkgs = []
+            verified_count = 0
+            for mod, (fpath, lno) in sorted(third_party_mods.items()):
+                target_pkgs = [
+                    re.sub(r"[-_.]+", "-", p.lower())
+                    for p in IMPORT_TO_PKG.get(mod, mod).split("|")
+                ]
+                matched = any(
+                    r == cand or r.startswith(cand + "-") or cand.startswith(r + "-")
+                    for cand in target_pkgs
+                    for r in declared_reqs
+                )
+                if matched:
+                    verified_count += 1
+                else:
+                    primary_pkg = target_pkgs[0]
+                    missing_pkgs.append((fpath, lno, mod, primary_pkg))
+
+            if missing_pkgs:
+                print("⚠️ [주의] 코드에서 import 되었으나 requirements.txt에 누락된 외부 패키지가 감지되었습니다:")
+                for fpath, lno, mod, fix_pkg in missing_pkgs:
+                    print(f"   - {fpath}:{lno}: import {mod} → requirements.txt에 누락됨 (추천: requirements.txt에 `{fix_pkg}` 추가)")
+                record_warn(f"requirements.txt 누락 패키지 {len(missing_pkgs)}건 발견! requirements.txt에 패키지를 추가하세요.")
+            else:
+                record_pass(f"의존성(requirements.txt) AST 정합성 점검 통과 (외부 패키지 {verified_count}종 모두 선언됨)")
+        else:
+            if third_party_mods:
+                print("⚠️ [주의] 코드에서 외부 패키지를 import하고 있으나 requirements.txt(또는 pyproject.toml)가 존재하지 않습니다:")
+                for mod, (fpath, lno) in sorted(third_party_mods.items())[:10]:
+                    primary_pkg = re.sub(r"[-_.]+", "-", IMPORT_TO_PKG.get(mod, mod).split("|")[0].lower())
+                    print(f"   - {fpath}:{lno}: import {mod} (추천 패키지명: `{primary_pkg}`)")
+                if len(third_party_mods) > 10:
+                    print(f"   ... 외 {len(third_party_mods) - 10}건")
+                record_warn("프로젝트에 requirements.txt가 없습니다. 재현성 및 채점 환경을 위해 requirements.txt를 생성하세요.")
+            else:
+                record_pass("의존성 점검 통과 (표준 라이브러리 및 로컬 모듈만 사용됨, 외부 의존성 없음)")
+
+    # --------------------------------------------------------------------------
+    # 제출 직전 확인 지침
     # --------------------------------------------------------------------------
     print("\n==========================================================")
     print("🧹 [제출 직전(12:40) 필수 확인 지침]")

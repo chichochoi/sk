@@ -103,7 +103,6 @@ bash .probe-kit/scripts/handoff.sh log "서브 구현 완료" "Step N 구현 및
 
 ```text
 [MAIN] .probe-kit/runtime/SUB_RESULT.md 와 git diff --stat 만 확인해서 Step N이 실무자 DM 조건에 맞게 검증되었는지 엣지 케이스 관점에서 비판적으로 검토해줘.
-(방향 수정이 필요한 경우) 테스트/검토 결과를 보니 기존 [A 방식]은 [메모리 초과 / 현업 예외 충돌 / 불필요한 복잡도] 문제가 있어서 제외하기로 결정했어. 우선순위를 조정해서 더 안정적이고 단순한 [B 방식]으로 방향을 바꿔서 다음 단계 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
 검토가 완료되면 다음 모듈인 [Step N+1]에 대한 .probe-kit/runtime/TASK_SPEC.md 를 작성해줘.
 검수 및 다음 지시서 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및 의사결정 기록 완료"
