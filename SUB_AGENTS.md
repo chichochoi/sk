@@ -1,6 +1,6 @@
-# Cofa Probe Sub-Agent Operating Guidelines (Worker: GPT 5.6-terra medium)
+# Cofa Probe Sub-Agent Operating Guidelines (Worker: GPT 5.6-terra xhigh)
 
-본 문서는 Cofa Probe 시험 환경에서 서브 에이전트(`GPT 5.6-terra medium`)가 독립적이고 정확하게 작업을 수행하기 위한 전용 실행 헌법입니다.
+본 문서는 Cofa Probe 시험 환경에서 서브 에이전트(`GPT 5.6-terra xhigh`)가 독립적이고 정확하게 작업을 수행하기 위한 전용 실행 헌법입니다.
 
 ---
 

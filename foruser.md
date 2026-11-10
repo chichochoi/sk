@@ -232,11 +232,11 @@ python3 .probe-kit/scripts/ml_feasibility_check.py
    - [혼합형 (Case 9, 예: 알고리즘/데이터 파이프라인 + 웹 UI/RAG 등)]: 주력(Primary) Case 1개 + 보조(Secondary) Case 1개를 결합 매칭하고, 반드시 "Step 1: 백엔드 코어 엔진/데이터 출력 완성 및 단독 검증 ➔ Step 2: 프론트엔드 UI/API 결합" 순서의 Core-First 아키텍처로 설계
    - [완전 신규 유형 (Novel Case 0 — 기존 Case 1~7에 없는 새로운 문제)]: 억지로 기존 스킬에 끼워 맞추지 말고 전용 스킬(.probe-kit/skills/case0_novel_first_principles.md)을 바탕으로 [제1원칙 분해(First-Principles Decomposition)]를 가동하여 ① 채점기 입출력 계약(I/O Contract), ② 위반 시 0점 되는 Hard 제약 vs 점수 극대화 Soft 목적함수, ③ 15분 내 동작하는 최소 베이스라인(Tier 1) ➔ 핵심 알고리즘 고도화(Tier 2) ➔ 엣지케이스 방어(Tier 3)의 3-Tier 계획으로 직접 구조화
 2. 스킬 및 DM 질문 선택:
-   - [단일형 (Case 1~7) / 혼합형 (Case 9)]: 매칭된 전용 스킬 파일(.probe-kit/skills/case1~7_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
-   - [완전 신규 유형 (Novel Case 0)]: 억지로 기존 스킬을 읽지 말고 .probe-kit/skills/case0_novel_first_principles.md 스킬 1개만 온디맨드로 읽은 뒤, .probe-kit/dm_question.md의 "## Case 0. 완전 신규 미출제 유형" 섹션 안내와 함께 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개] 및 [자체 표본 검증 스크립트(tests/custom_sample_check.py) 설계안]을 이 브리핑에 즉시 출력해줘.
+   - [단일형 (Case 1~7) / 혼합형 (Case 9)]: 매칭된 전용 스킬 파일(.probe-kit/skills/case1~7_*.md) 최대 1~2개만(혼합형의 경우 최대 4개) 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
+   - [완전 신규 유형 (Novel Case 0)]: 억지로 기존 스킬을 읽지 말고 .probe-kit/skills/case0_novel_first_principles.md 스킬 1개만 온디맨드로 읽은 뒤, .probe-kit/dm_question.md의 "## Case 0. 완전 신규 미출제 유형" 섹션 안내와 함께 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 10개] 및 [자체 표본 검증 스크립트(tests/custom_sample_check.py) 설계안]을 이 브리핑에 즉시 출력해줘.
 3. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
 4. 절대 변경하면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 규격, 함수 시그니처, 파일 경로 등)
-5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 핵심 기능(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
+5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra xhigh)에게 단계별로 위임할 최소 핵심 기능(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
 6. 기존 단위 테스트 스위트가 존재한다면 사전 베이스라인 실행 결과(PASS/FAIL 및 실패 내역)도 NOTES_TEMP.md에 함께 기록해줘.
 7. [ML 트랙 적합성 교차 의견]: 과제 요구사항(README.md)과 데이터 구조로 볼 때 백그라운드 경량 ML/하이브리드 모델(터미널 4) 적용이 유의미한지(GO/SKIP) 한 줄 의견
 브리핑과 NOTES_TEMP.md 기록이 끝나면 터미널에서 다음 명령어를 실행해줘:
@@ -457,7 +457,7 @@ sequenceDiagram
 ### 1) 📋 [메인 프롬프트 2] 터미널 1 (메인 Sol 6.1 xhigh) — 서브 작업 지시서(TASK_SPEC.md) 발행
 ```text
 [MAIN] 비즈니스 코드는 절대 직접 작성하거나 수정하지 마.
-우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(GPT 5.6-terra medium)가 수행할 이번 단계(Step 1, 이후 반복 시 Step 2, Step 3...) [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
+우리가 확정한 의사결정과 실무자 DM 조건을 반영하여, 서브 에이전트(GPT 5.6-terra xhigh)가 수행할 이번 단계(Step 1, 이후 반복 시 Step 2, Step 3...) [Step N: X 모듈] 작업 명세서를 .probe-kit/runtime/TASK_SPEC.md 파일에 작성해줘.
 TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 바탕으로 다음 7대 표준 섹션을 누락 없이 포함해야 해:
 1. [시작 / Start]: 이번 단계 단일 목표(MVP), 직전 단계 선행 완료 상태 확인, 착수 전 기존 베이스라인 테스트 100% PASS 확인
 2. [통제 / Scope]: 변경 허용 파일 및 절대 수정 금지 파일 범위, 5대 금지 사항(오버엔지니어링 금지, API 키 하드코딩 금지, 웹 서버 0.0.0.0 바인딩, .gitignore 수정 금지, git add/commit/reset/clean 금지)
@@ -563,7 +563,7 @@ bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및
 
 ```text
 [MAIN] 비즈니스 코드는 절대 직접 작성하거나 수정하지 마.
-서브 에이전트(GPT 5.6-terra medium)가 멈춤 조건을 발동하여 [차단(블로커)]을 보고하고 구현을 중단했어.
+서브 에이전트(GPT 5.6-terra xhigh)가 멈춤 조건을 발동하여 [차단(블로커)]을 보고하고 구현을 중단했어.
 .probe-kit/runtime/SUB_RESULT.md 의 차단 사유와 관련 파일/에러 로그를 분석해줘:
 1. 차단 원인 분석 (허용 파일 범위 확장 필요 여부, 스키마/요구사항 모호성, 베이스라인 충돌 원인 등)
 2. 실무자 DM 확인이 필요한 사항이 있다면 구체적인 질문 1~2개 제시
@@ -600,7 +600,7 @@ bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및
 먼저 워크스페이스의 HANDOFF.md 와 .probe-kit/runtime/TASK_SPEC.md 를 읽고 다음 사항을 간결하게 복창해줘:
 1. 이전 세션에서 확정한 현재 시스템 상태 및 핵심 구현 방식
 2. 실무자 DM에서 확정한 절대 위반하면 안 되는 불변 제약 사항들
-3. 네가 지금 즉시 서브 에이전트(GPT 5.6-terra medium)를 위해 작성할 Next Actions 1~3
+3. 네가 지금 즉시 서브 에이전트(GPT 5.6-terra xhigh)를 위해 작성할 Next Actions 1~3
 복창이 끝나면 코드를 작성하지 말고 인간 아키텍트의 [승인(Approved)]을 대기해.
 ```
 
