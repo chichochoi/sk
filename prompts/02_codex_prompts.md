@@ -36,10 +36,10 @@
 1. EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 과제 지시서(README.md)를 분석하여 이번 과제를 아래 3가지 중 하나로 분류해줘:
    - [단일형 (Case 1~7)]: 가장 일치하는 Case 1개와 SK하이닉스 도메인 아키타입(#6~#15 직무) 매칭
    - [혼합형 (Case 9, 예: 알고리즘/데이터 파이프라인 + 웹 UI/RAG 등)]: 주력(Primary) Case 1개 + 보조(Secondary) Case 1개를 결합 매칭하고, 반드시 "Step 1: 백엔드 코어 엔진/데이터 출력 완성 및 단독 검증 ➔ Step 2: 프론트엔드 UI/API 결합" 순서의 Core-First 아키텍처로 설계
-   - [완전 신규 유형 (Novel Case 0 — 기존 Case 1~7에 없는 새로운 문제)]: 억지로 기존 스킬에 끼워 맞추지 말고 [제1원칙 분해(First-Principles Decomposition)]를 가동하여 ① 채점기 입출력 계약(I/O Contract), ② 위반 시 0점 되는 Hard 제약 vs 점수 극대화 Soft 목적함수, ③ 15분 내 동작하는 최소 베이스라인(Tier 1) ➔ 핵심 알고리즘 고도화(Tier 2) ➔ 엣지케이스 방어(Tier 3)의 3-Tier 계획으로 직접 구조화
+   - [완전 신규 유형 (Novel Case 0 — 기존 Case 1~7에 없는 새로운 문제)]: 억지로 기존 스킬에 끼워 맞추지 말고 전용 스킬(.probe-kit/skills/case0_novel_first_principles.md)을 바탕으로 [제1원칙 분해(First-Principles Decomposition)]를 가동하여 ① 채점기 입출력 계약(I/O Contract), ② 위반 시 0점 되는 Hard 제약 vs 점수 극대화 Soft 목적함수, ③ 15분 내 동작하는 최소 베이스라인(Tier 1) ➔ 핵심 알고리즘 고도화(Tier 2) ➔ 엣지케이스 방어(Tier 3)의 3-Tier 계획으로 직접 구조화
 2. 스킬 및 DM 질문 선택:
-   - 단일형/혼합형이면 매칭된 전용 스킬 파일(.probe-kit/skills/caseX_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
-   - 만약 혼합형이거나 기존에 없는 [완전 신규 유형(Novel Case 0)]이어서 기존 DM 카드가 딱 맞지 않는다면, 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개]와 [자체 표본 검증 기준(custom_sample_check.py 설계안)]을 이 브리핑에 즉시 생성해줘.
+   - [단일형 (Case 1~7) / 혼합형 (Case 9)]: 매칭된 전용 스킬 파일(.probe-kit/skills/case1~7_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
+   - [완전 신규 유형 (Novel Case 0)]: 억지로 기존 스킬을 읽지 말고 .probe-kit/skills/case0_novel_first_principles.md 스킬 1개만 온디맨드로 읽은 뒤, .probe-kit/dm_question.md의 "## Case 0. 완전 신규 미출제 유형" 섹션 안내와 함께 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개] 및 [자체 표본 검증 스크립트(tests/custom_sample_check.py) 설계안]을 이 브리핑에 즉시 출력해줘.
 3. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
 4. 절대 변경하면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 규격, 함수 시그니처, 파일 경로 등)
 5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 핵심 기능(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
@@ -64,13 +64,14 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
 3. [정의 / Definition]: 도메인 핵심 용어 정의, 상태 코드(Status/State) 의미, 입·출력 데이터 스키마 및 계약(반환 타입, 정렬, 반올림 등)
 4. [기준 / Criteria]: 실무자 DM 확인 비즈니스 판정 규칙(예: 취소 건 분모 제외, 중복 최신화 등), 수치 경계값/부등호(>= vs >) 판정 기준, 결측치·이상치 격리 기준, 기준 충돌 시 우선순위(데이터 정합성 최우선)
    - [도메인 핵심 규칙 알림]
+     * Case 0 (완전 신규 유형): 입출력 불변 계약 검증기(validate_output_contract) 최우선 분리, 15분 내 동작하는 Tier 1 최소 베이스라인 우선 확보, 자체 표본 검증 스크립트(tests/custom_sample_check.py) 즉석 작성 및 검증
      * Case 5 (최적화/CSP): 하드 제약과 소프트 목적함수 물리적 분리, is_valid(candidate, constraints) -> tuple[bool, list[str]] 독립 불리언 검증 필수, 실행가능 베이스라인 우선 확보, 30초 타임아웃 페일세이프 가드
      * Case 6 (반도체/SPC/오버레이): < DL/ND 보수적 대치, 치명 불순물 초과 즉시 REJECT, Edge Exclusion(147mm) 마진 필터링, 6-Param OLS 잔차 및 제조공장 변경 PCN HOLD 인터락
      * Case 7 (FDE/밸류체인 앱): 백엔드 수리 연산(DAG 충격전파/수율곱/병목클리핑)과 프론트 UI 분리, HTTP 500 방어(400/422 Bad Request), 웹 서버 0.0.0.0 바인딩 필수
 5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 사용 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
 6. [DoD]: 완료 정의 체크리스트 (베이스라인 100% 통과, 스키마 계약 일치, 비즈니스 규칙 및 경계값 검증 통과, git diff 범위 준수)
 7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 서브 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "서브 구현 완료" "Step N 구현 및 자체 검증 완료" 실행 (실패 시 python3 .probe-kit/scripts/handoff.py log "서브 구현 완료" "Step N 구현 및 자체 검증 완료") -> 서브 터미널 /clear 실행 대기)
-- 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
+- 참고할 스킬 파일: .probe-kit/skills/[case0_novel_first_principles.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
 TASK_SPEC.md 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)

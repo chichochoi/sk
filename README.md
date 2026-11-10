@@ -26,7 +26,7 @@ python3 .probe-kit/scripts/pre_submit_audit.py
 | 파일 경로 | 구분 | 설명 |
 | :--- | :--- | :--- |
 | `foruser.md` | 수험생 실전 매뉴얼 | 시험 당일 10:00부터 13:30까지 그대로 따라 하는 인간 주도형 올인원 시나리오 |
-| `dm_question.md` | DM 질문 뱅크 | Case 1~4별 실무자 DM 맞춤형 심층 질문 뱅크 & 평가 에이전트 대응 가이드 |
+| `dm_question.md` | DM 질문 뱅크 | Case 0~7별 실무자 DM 맞춤형 심층 질문 뱅크 & 평가 에이전트 대응 가이드 |
 | `init.sh` | 하네스 설치 | 하네스 배포 + `.git/info/exclude` 오염 방지 + 초기 EDA + `templates/HANDOFF.md` 복사 원클릭 실행 |
 | `config.toml` | 모델 프리셋 | 기본 모델(`Sol 6.1 xhigh`) 및 서브 프로필(`GPT 5.6-terra medium`) 설정 |
 | `AGENTS.md` | 공통 헌법 | 메인(`Sol 6.1 xhigh`) 설계/지시 전담 헌법 및 오케스트레이션 통제 규칙 |
@@ -34,6 +34,7 @@ python3 .probe-kit/scripts/pre_submit_audit.py
 | `runtime/TASK_SPEC.md` | 작업 큐 | 메인이 작성하는 모듈별 작업 명세서 ([시작 · 정의 · 기준 · 종료] 4대 축 기반 7대 섹션) |
 | `runtime/SUB_RESULT.md` | 결과 버퍼 | 서브가 구현/검증 후 남기는 핵심 요약 보고서 (변경 파일·테스트 결과) |
 | `runtime/HANDOFF.md` | 인수인계서 | 세션 간 무손실 인수인계서 (init.sh가 templates에서 복사 후 매 단계 및 세션 전환 시 실시간 갱신) |
+| `skills/case0_novel_first_principles.md` | 온디맨드 스킬 | Case 0: 완전 신규 미출제 유형 — 제1원칙 구조 분해·불변 계약·3-Tier 베이스라인 지침 |
 | `skills/case1_data_pipeline.md` | 온디맨드 스킬 | Case 1: 데이터 정제·집계·임계값 판정·표본 수동 대조 지침 |
 | `skills/case2_web_service.md` | 온디맨드 스킬 | Case 2: `0.0.0.0` 바인딩·핵심 동선 수직 완성·예외 UI 방어 지침 |
 | `skills/case3_legacy_debug.md` | 온디맨드 스킬 | Case 3: 베이스라인 테스트·인터페이스 유지·최소 범위 디버깅 지침 |
@@ -107,7 +108,7 @@ python3 .probe-kit/scripts/pre_submit_audit.py
 probe-kit/
 ├── README.md                     # 이 마스터 플레이북 전문 (에디터 우측에 띄워둘 총사령부 문서)
 ├── foruser.md                    # [수험생 실전 매뉴얼] 10:00~13:30 인간 주도형 올인원 시나리오
-├── dm_question.md                # [DM 질문 뱅크] Case 1~4별 실무자 DM 맞춤형 심층 질문 모음
+├── dm_question.md                # [DM 질문 뱅크] Case 0~7별 실무자 DM 맞춤형 심층 질문 모음
 ├── init.sh                       # [원클릭 장착] 하네스 배포 + Git 보호 + 무토큰 EDA + templates/HANDOFF.md 복사 (root 또는 scripts/init.sh)
 ├── config.toml                   # [모델 설정] 기본 모델(Sol 6.1 xhigh) 및 서브 프로필(GPT 5.6-terra medium) 프리셋
 ├── AGENTS.md                     # [메인+공통 헌법] 역할 분담(Architect vs Worker) 및 오케스트레이션 통제 규칙
@@ -120,6 +121,7 @@ probe-kit/
 │
 ├── skills/                       # [온디맨드 스킬] 판별된 케이스 파일만 서브 에이전트에게 읽히는 도메인 지침
 │   ├── handoff.md                # Handoff 4대 골든 타이밍, 단계별 실시간 로그 및 3단계 표준 프로토콜 지침
+│   ├── case0_novel_first_principles.md # Case 0: 완전 신규 미출제 유형 — 제1원칙 구조 분해·불변 계약·3-Tier
 │   ├── case1_data_pipeline.md    # Case 1: 데이터 정제·집계·임계값 판정·표본 수동 대조
 │   ├── case2_web_service.md      # Case 2: 0.0.0.0 바인딩·핵심 동선 수직 완성·예외 UI 방어
 │   ├── case3_legacy_debug.md     # Case 3: 베이스라인 테스트·인터페이스 유지·최소 범위 디버깅
@@ -244,9 +246,10 @@ model_reasoning_effort = "medium"
 1. **직접 코드 구현 및 반복 디버깅 금지 (토큰 절약 핵심):**
    - 당신은 비즈니스 소스 코드나 대용량 데이터 파일을 직접 읽고 수정하거나, 긴 테스트 에러 로그를 반복 디버깅하는 데 토큰을 소모하지 마세요.
    - 초기 탐색은 `.probe-kit/runtime/EDA_SUMMARY.txt`와 `README.md`, 그리고 사용자가 정리한 `NOTES_TEMP.md`(실무자 DM 확인 조건)만 읽고 수행하세요.
-   - **온디맨드 케이스 스킬 라우팅 (Case 1~7 선별 로드 & 토큰 예산 절대 보호):**
-     * 초기 탐색 시 `.probe-kit/runtime/EDA_SUMMARY.txt`의 `[CASE_SIGNAL]`과 과제 지시서(`README.md`) 키워드를 먼저 확인하여 이번 과제의 유형을 **Case 1~7(또는 복합형)** 중 하나로 신속히 분류합니다.
-     * **[토큰 보호 절대 규칙] 7개 스킬 파일을 한꺼번에 사전 로드(Preload)하는 행위는 엄격히 금지됩니다.** 메인(`Sol 6.1 xhigh`)의 컨텍스트 윈도우와 토큰 예산을 보호하기 위해, 판별된 유형과 일치하는 **단 1~2개의 매칭 스킬 파일만 온디맨드로 선별 로드**하세요:
+   - **온디맨드 케이스 스킬 라우팅 (Case 0~7 선별 로드 & 토큰 예산 절대 보호):**
+     * 초기 탐색 시 `.probe-kit/runtime/EDA_SUMMARY.txt`의 `[CASE_SIGNAL]`과 과제 지시서(`README.md`) 키워드를 먼저 확인하여 이번 과제의 유형을 **Case 0~7(또는 복합형 Case 9)** 중 하나로 신속히 분류합니다. (※ `Case 8`은 2.5단계 터미널 4 전용 백그라운드 AutoML 트랙이므로 메인 과제 분류 번호와 구분)
+     * **[토큰 보호 절대 규칙] 여러 스킬 파일을 한꺼번에 사전 로드(Preload)하는 행위는 엄격히 금지됩니다.** 메인(`Sol 6.1 xhigh`)의 컨텍스트 윈도우와 토큰 예산을 보호하기 위해, 판별된 유형과 일치하는 **단 1~2개의 매칭 스킬 파일만 온디맨드로 선별 로드**하세요:
+       - **Case 0 (완전 신규 미출제 유형 / 제1원칙 분해):** `.probe-kit/skills/case0_novel_first_principles.md`
        - **Case 1 (데이터 파이프라인/배치/정제):** `.probe-kit/skills/case1_data_pipeline.md`
        - **Case 2 (실무형 웹 서비스/대시보드/0.0.0.0):** `.probe-kit/skills/case2_web_service.md`
        - **Case 3 (레거시 코드 디버깅/인터페이스 불변):** `.probe-kit/skills/case3_legacy_debug.md`
@@ -254,7 +257,7 @@ model_reasoning_effort = "medium"
        - **Case 5 (수리·조합 최적화/CSP/배차·스케줄링):** `.probe-kit/skills/case5_optimization_csp.md`
        - **Case 6 (반도체 CoA·SPC 통계/웨이퍼 오버레이/재무 정규화):** `.probe-kit/skills/case6_semicon_data_spc.md`
        - **Case 7 (FDE/풀스택 밸류체인 시뮬레이터 & 교육 AI 웹앱):** `.probe-kit/skills/case7_fde_valuechain_app.md`
-       - **Case 8 (경량화 자율 머신러닝 트랙 / Shadow AutoML — 백그라운드 터미널 4 전용):** `.probe-kit/skills/case8_lightweight_automl_track.md` *(※ 주의: 터미널 4 전용 스킬. 메인 에이전트는 시험 후반 챔피언 비교·채택 전까지 `.probe-kit/ml_track/` 디렉토리를 일절 건드리거나 수정하지 말고 완전히 독립된 자율 학습에 맡깁니다.)*
+       - **Case 8 (경량화 자율 머신러닝 트랙 / Shadow AutoML — 백그라운드 터미널 4 전용, 실무자 DM 불필요):** `.probe-kit/skills/case8_lightweight_automl_track.md` *(※ 주의: 터미널 4 전용 스킬. 실무자 DM 불필요. 메인 에이전트는 시험 후반 챔피언 비교·채택 전까지 `.probe-kit/ml_track/` 디렉토리를 일절 건드리거나 수정하지 말고 완전히 독립된 자율 학습에 맡깁니다.)*
 2. **작업 명세서(`.probe-kit/runtime/TASK_SPEC.md`) 작성으로 위임 — [시작 · 정의 · 기준 · 종료] 4대 축 체계화:**
    - 사용자가 모듈 구현이나 수정을 요청하면, 직접 비즈니스 코드를 고치는 대신 **서브 에이전트(`GPT 5.6-terra medium`)가 읽고 즉시 실행할 수 있는 `.probe-kit/runtime/TASK_SPEC.md`** 파일만 작성(또는 갱신)하세요.
    - `TASK_SPEC.md`에는 반드시 **[시작 · 정의 · 기준 · 종료]** 4대 핵심 개념을 중심으로 다음 7대 표준 섹션을 체계적으로 명시합니다:
@@ -440,7 +443,7 @@ echo "⚠️ 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 
 
 * ❌ **절대 금지 (감점 및 답변 거부):** *"제가 당장 해야 할 일을 1, 2, 3번 순서로 정리해 주세요."*, *"어떻게 구현하면 될까요?"* (할 일 정리와 판단은 본인이 하고, 에이전트에게는 정보와 조건만 캐내야 합니다.)
 * 💡 **막혔을 때의 비상 질문 (설계자 공인 힌트 유도):** *"과제 맥락을 정확히 파악하고 싶습니다. 현업 관점에서 제가 무엇을 먼저 물어봐야 할까요? 어떤 영역이나 조건에 대해 확인하면 좋을지 힌트를 주실 수 있나요?"*
-* 💬 **케이스별 심층 질문:** Case 1~4별 구체적인 실무자 맞춤형 심층 질문은 `.probe-kit/dm_question.md`를 열어 복사하여 활용하세요.
+* 💬 **케이스별 심층 질문:** Case 0~7별 구체적인 실무자 맞춤형 심층 질문은 `.probe-kit/dm_question.md`를 열어 복사하여 활용하세요.
 
 | 단계 | 카테고리 | 실전 질문 리스트 (상황에 맞게 복사·변형하여 하나씩 질문) |
 | :--- | :--- | :--- |
@@ -478,8 +481,8 @@ echo "⚠️ 에디터의 모든 열린 탭이 '저장됨(Ctrl+S)' 상태인지 
 [MAIN] 먼저 .probe-kit/AGENTS.md를 읽고 그 규칙을 따라줘.
 아직 비즈니스 코드는 절대 작성하거나 수정하지 마.
 현재 워크스페이스 루트에 있는 과제 지시서(README.md)와 .probe-kit/runtime/EDA_SUMMARY.txt(초기 스캔 결과 및 [CASE_SIGNAL]), 그리고 주요 설정/인터페이스 파일 구조만 최소한의 토큰으로 확인해서 다음 사항을 핵심 위주로 간결하고 명확하게 브리핑하고 워크스페이스 루트의 NOTES_TEMP.md에 기록해줘:
-1. EDA_SUMMARY.txt의 [CASE_SIGNAL] 및 과제 지시서 키워드를 분석하여 이번 과제가 Case 1~7 (또는 복합형) 중 어느 유형인지 분류하고, 연관된 SK하이닉스 도메인 아키타입(#6~#15, 예: #6 시장전략/경쟁사, #7 원소재 CoA/SPC, #8 통근버스 VRP, #9 식단 CSP, #10 CCTV 기하, #13 포토/웨이퍼 오버레이, #14 밸류체인 시뮬레이터, #15 교육 튜터 등)과 매칭해줘.
-2. 매칭된 단 1~2개의 전용 스킬 파일(.probe-kit/skills/caseX_*.md)과 .probe-kit/dm_question.md의 해당 질문 카드를 선택해줘. (Sol 토큰 예산 보호를 위해 7개 스킬 전체를 읽지 말고 판별된 스킬 1~2개만 온디맨드로 로드)
+1. EDA_SUMMARY.txt의 [CASE_SIGNAL] 및 과제 지시서 키워드를 분석하여 이번 과제가 Case 0~7 (또는 복합형 Case 9) 중 어느 유형인지 분류하고, 연관된 SK하이닉스 도메인 아키타입(#6~#15, 예: #6 시장전략/경쟁사, #7 원소재 CoA/SPC, #8 통근버스 VRP, #9 식단 CSP, #10 CCTV 기하, #13 포토/웨이퍼 오버레이, #14 밸류체인 시뮬레이터, #15 교육 튜터 등)과 매칭해줘. (※ Case 8은 2.5단계 터미널 4 전용 백그라운드 AutoML 트랙)
+2. 매칭된 단 1~2개의 전용 스킬 파일(.probe-kit/skills/caseX_*.md)과 .probe-kit/dm_question.md의 해당 질문 카드를 선택해줘. (Sol 토큰 예산 보호를 위해 전체 스킬을 다 읽지 말고 판별된 스킬 1~2개만 온디맨드로 로드)
 3. 우리가 해결해야 할 핵심 문제, 입·출력 포맷, 작업 대상 파일 범위
 4. 절대 건드리면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 인터페이스, 함수 시그니처, 파일 경로 등)
 5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 구현(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
@@ -494,13 +497,14 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
 3. [정의 / Definition]: 도메인 핵심 용어 정의, 상태 코드(Status/State) 의미, 입·출력 데이터 스키마 및 계약(반환 타입, 정렬, 반올림 등)
 4. [기준 / Criteria]: 실무자 DM 확인 비즈니스 판정 규칙(예: 취소 건 분모 제외, 중복 최신화 등), 수치 경계값/부등호(>= vs >) 판정 기준, 결측치·이상치 격리 기준, 기준 충돌 시 우선순위(데이터 정합성 최우선)
    - [도메인 핵심 규칙 알림]
+     * Case 0 (신유형/제1원칙): 입출력 불변 계약 고정, validate_output_contract() 0점 방지 하드 제약 분리, 15분 Tier 1 서바이벌 베이스라인 우선 확보, tests/custom_sample_check.py 12건 표본 검증
      * Case 5 (최적화/CSP): 하드 제약과 소프트 목적함수 물리적 분리, is_valid(candidate, constraints) -> tuple[bool, list[str]] 독립 불리언 검증 필수, 실행가능 베이스라인 우선 확보, 30초 타임아웃 페일세이프 가드
      * Case 6 (반도체/SPC/오버레이): < DL/ND 보수적 대치, 치명 불순물 초과 즉시 REJECT, Edge Exclusion(147mm) 마진 필터링, 6-Param OLS 잔차 및 제조공장 변경 PCN HOLD 인터락
      * Case 7 (FDE/밸류체인 앱): 백엔드 수리 연산(DAG 충격전파/수율곱/병목클리핑)과 프론트 UI 분리, HTTP 500 방어(400/422 Bad Request), 웹 서버 0.0.0.0 바인딩 필수
 5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
 6. [DoD]: 완료 정의 체크리스트 (베이스라인 100% 통과, 스키마 계약 일치, 비즈니스 규칙 및 경계값 검증 통과, git diff 범위 준수)
 7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "sub done: <요약>" -> 서브 터미널 /clear 실행 대기)
-- 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case8_lightweight_automl_track.md 중 매칭 파일 1~2개]
+- 참고할 스킬 파일: .probe-kit/skills/[case0_novel_first_principles.md ~ case8_lightweight_automl_track.md 중 매칭 파일 1~2개]
 ```
 
 #### 📋 [서브 프롬프트 3 — `GPT 5.6-terra medium`] 작업 지시서 실행 및 검증 보고 (구현·실행 전담)

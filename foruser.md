@@ -19,7 +19,7 @@
 | **10:04** | **09:40** | **[2.5단계]** 초반 5분 (09:40) | 🧪 경량 ML 해결 가능성 10초 판별 & 백그라운드 Sol 6.1 (터미널 4) 5시간 자율 학습 가동 | `python3 .probe-kit/scripts/ml_feasibility_check.py` |
 | **10:05** | **09:45** | **[3단계]** 문제 탐색 & Case 식별 | 과제 README·[CASE_SIGNAL] 분석 및 Case 1~7 식별 (및 복합 Case 9 / 신규 Case 0 분기) | 메인 프롬프트 (`NOTES_TEMP.md` 기록) |
 | **10:10** | **09:55** | **[4단계]** DM 실무자 만능 질의 | 목표, 입출력, 결측/중복, 인터페이스 질의 | 우측 DM 창 (범용 템플릿) |
-| **10:20** | **10:10** | **[5단계]** 케이스별 DM 질문 질의 | Case 1~8 / #6~#15 전용 DM 질문 및 스킬 온디맨드 로드 | `.probe-kit/dm_question.md` |
+| **10:20** | **10:10** | **[5단계]** 케이스별 DM 질문 질의 | Case 0~7·복합 9 / #6~#15 전용 DM 질문 및 스킬 온디맨드 로드 | `.probe-kit/dm_question.md` |
 | **10:25** | **10:25** | **[6단계]** 솔루션 브레인스토밍 | N단계 분할 ➔ 트레이드오프 ➔ 주도적 결정 | 3-Part 메인 프롬프트 & 결정 로깅 |
 | **10:35** | **10:45** | **[6.5단계]** 구현 & 온더플라이 검증 | `TASK_SPEC` 발행 ➔ 서브 구현 ➔ `/clear` | 터미널 1 ↔ 터미널 2 핑퐁 반복 |
 | **상시** | **상시** | **[7단계]** 다음 단계 전환 시그널 | ALL PASS / FAIL / Drift 상황별 액션 | 전환 시그널 판정표 |
@@ -230,10 +230,10 @@ python3 .probe-kit/scripts/ml_feasibility_check.py
 1. EDA_SUMMARY.txt 상단의 [CASE_SIGNAL] 및 과제 지시서(README.md)를 분석하여 이번 과제를 아래 3가지 중 하나로 분류해줘:
    - [단일형 (Case 1~7)]: 가장 일치하는 Case 1개와 SK하이닉스 도메인 아키타입(#6~#15 직무) 매칭
    - [혼합형 (Case 9, 예: 알고리즘/데이터 파이프라인 + 웹 UI/RAG 등)]: 주력(Primary) Case 1개 + 보조(Secondary) Case 1개를 결합 매칭하고, 반드시 "Step 1: 백엔드 코어 엔진/데이터 출력 완성 및 단독 검증 ➔ Step 2: 프론트엔드 UI/API 결합" 순서의 Core-First 아키텍처로 설계
-   - [완전 신규 유형 (Novel Case 0 — 기존 Case 1~7에 없는 새로운 문제)]: 억지로 기존 스킬에 끼워 맞추지 말고 [제1원칙 분해(First-Principles Decomposition)]를 가동하여 ① 채점기 입출력 계약(I/O Contract), ② 위반 시 0점 되는 Hard 제약 vs 점수 극대화 Soft 목적함수, ③ 15분 내 동작하는 최소 베이스라인(Tier 1) ➔ 핵심 알고리즘 고도화(Tier 2) ➔ 엣지케이스 방어(Tier 3)의 3-Tier 계획으로 직접 구조화
+   - [완전 신규 유형 (Novel Case 0 — 기존 Case 1~7에 없는 새로운 문제)]: 억지로 기존 스킬에 끼워 맞추지 말고 전용 스킬(.probe-kit/skills/case0_novel_first_principles.md)을 바탕으로 [제1원칙 분해(First-Principles Decomposition)]를 가동하여 ① 채점기 입출력 계약(I/O Contract), ② 위반 시 0점 되는 Hard 제약 vs 점수 극대화 Soft 목적함수, ③ 15분 내 동작하는 최소 베이스라인(Tier 1) ➔ 핵심 알고리즘 고도화(Tier 2) ➔ 엣지케이스 방어(Tier 3)의 3-Tier 계획으로 직접 구조화
 2. 스킬 및 DM 질문 선택:
-   - 단일형/혼합형이면 매칭된 전용 스킬 파일(.probe-kit/skills/caseX_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
-   - 만약 혼합형이거나 기존에 없는 [완전 신규 유형(Novel Case 0)]이어서 기존 DM 카드가 딱 맞지 않는다면, 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개]와 [자체 표본 검증 기준(custom_sample_check.py 설계안)]을 이 브리핑에 즉시 생성해줘.
+   - [단일형 (Case 1~7) / 혼합형 (Case 9)]: 매칭된 전용 스킬 파일(.probe-kit/skills/case1~7_*.md) 최대 1~2개만 온디맨드로 읽고, .probe-kit/dm_question.md에서 복사할 정확한 섹션/카드 명칭을 출력해줘.
+   - [완전 신규 유형 (Novel Case 0)]: 억지로 기존 스킬을 읽지 말고 .probe-kit/skills/case0_novel_first_principles.md 스킬 1개만 온디맨드로 읽은 뒤, .probe-kit/dm_question.md의 "## Case 0. 완전 신규 미출제 유형" 섹션 안내와 함께 과제 README.md의 모호한 정책/제약/예외처리를 파고드는 [실무자 전송용 맞춤형 DM 질문 3개] 및 [자체 표본 검증 스크립트(tests/custom_sample_check.py) 설계안]을 이 브리핑에 즉시 출력해줘.
 3. 과제 요구사항 요약 (필수 제출 파일명, 입출력 포맷, 대상 파일 범위)
 4. 절대 변경하면 안 되는 기존 시스템의 불변 제약 조건 (인증 방식, API 규격, 함수 시그니처, 파일 경로 등)
 5. 불필요한 오버엔지니어링을 배제하고, 서브 에이전트(GPT 5.6-terra medium)에게 단계별로 위임할 최소 핵심 기능(MVP) 모듈 분할 계획 (Step 1, Step 2, Step 3)
@@ -250,12 +250,13 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 > 2. **완전 신규 유형 (Novel Case 0):** 억지로 기존 케이스에 맞추지 말고 제1원칙(입출력 계약 ➔ 0점 방지 Hard 제약 ➔ 3-Tier 점수 최적화)으로 분해합니다.  
 > 3. **맞춤형 DM 질문:** 기존 카드가 안 맞을 경우 메인이 생성해 준 3개 DM 질문으로 실무자의 예외 처리 정책을 캐내어 공략합니다.
 
-### 🗺️ 1-Page Quick Router (Case 1~8 및 SK하이닉스 #6~#15 즉시 매핑표)
+### 🗺️ 1-Page Quick Router (Case 0~7, 복합 Case 9 및 백그라운드 Case 8 즉시 매핑표)
 
 `EDA_SUMMARY.txt` 상단의 `[CASE_SIGNAL]` 및 과제 지시서의 키워드를 대조하여, 로드할 스킬과 DM 질문, 검증 도구를 즉시 결정합니다:
 
 | 키워드 / 데이터 특징 | 추정 과제 / 페르소나 | 로드할 스킬 (`.probe-kit/skills/...`) | DM 질문 섹션 (`.probe-kit/dm_question.md`) | 검증 스크립트 |
 | :--- | :--- | :--- | :--- | :--- |
+| **Case 0**<br>기존 Case 1~7과 50% 이상 불일치하는 신규 미출제 유형 (커스텀 시뮬레이터, 게임/상태머신 규칙 엔진, 신규 그래프/파서 등) | 완전 신규 도메인 과제 (제1원칙 분해 모드) | `case0_novel_first_principles.md` | `dm_question.md`<br>▶ **Case 0 섹션** + 터미널 1이 즉석 생성한 **맞춤 DM 질문 3개** | `python3 tests/custom_sample_check.py`<br>+ `python3 .probe-kit/scripts/sample_check_template.py <산출물경로>` |
 | **Case 1**<br>CSV/JSON, wafer_id, lot_id, 센티널(-999), 결측치·중복행, 수율(Yield), 배치 집계·정제 | 범용 제조 데이터 정제, 수율 판정, 배치 집계 파이프라인 | `case1_data_pipeline.md` | `dm_question.md`<br>▶ **Case 1 섹션** (행 정의, 결측/중복, 경계값, 집계 단위) | `python3 .probe-kit/scripts/sample_check_template.py`<br>(또는 `--demo`) |
 | **Case 2**<br>Web/HTML, REST API, 대시보드, 등록/수정 폼, 단일 유저 동선 MVP, 0.0.0.0 바인딩 | 사내 운영 웹 서비스, 현황 모니터링 대시보드 구축 | `case2_web_service.md` | `dm_question.md`<br>▶ **Case 2 섹션** (핵심 유저 동선, 권한/인증, API 불변, 영속성) | `0.0.0.0:포트` 바인딩 + `curl` / 플랫폼 내장 Browser 직접 클릭·조작 |
 | **Case 3**<br>기존 `tests/`, 레거시 코드베이스, API 엔드포인트 유지, 하위 호환성, Zero Regression | 기존 레거시 시스템 버그 픽스, 신규 파라미터/기능 확장 | `case3_legacy_debug.md` | `dm_question.md`<br>▶ **Case 3 섹션** (인터페이스 불변, 기존 실패 테스트 분별, 회귀 방지) | `pytest` / `npm test`<br>(베이스라인 100% PASS 유지) |
@@ -263,10 +264,11 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 | **Case 5**<br>배차/배치/편성/스케줄링, VRP, ILP, CSP, Hard vs Soft 제약, Makespan, 28초 타임아웃 | **[기출 3종 + 미출제 4종]**<br>• **#8 이천 HR운영팀 책임** (통근버스 VRP/CSP)<br>• **#9 이천 식단운영 영양사** (월간 식단 CSP/ILP)<br>• **#10 안전 모니터링팀 TL & #11 Safety Monitoring TL** (CCTV Set Cover)<br>• **#13-A 이천 포토기술팀 TL** (노광기 배정 & PM 스케줄링)<br>• **#7-A 소재품질팀 책임매니저** (원자재 공급사 쿼터 LP)<br>• **#6-B 시장전략팀 책임매니저** (HBM/DDR5 Product Mix LP)<br>• **#15-B 반도체 산업교육 TL** (선수지식 DAG 커리큘럼) | `case5_optimization_csp.md` | `dm_question.md`<br>▶ **Case 5 섹션**<br>(또는 페르소나별 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_opt.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
 | **Case 6**<br>화학 단위(ppm/ppb/ppt), `< DL`, Cpk, Nelson Rules, PCN, 좌표 $(x, y)$, $\Delta x, \Delta y$, 6-Param OLS, ADI/AEI, FY/CY 보간, Bit*ASP, DOI | **[반도체 특화 3종]**<br>• **#7-B 소재품질팀 책임매니저** (원소재 CoA 성적서, Cpk, PCN 3단 인터락)<br>• **#13-B 이천 포토기술팀 TL** (웨이퍼 Overlay 6-Param OLS, ADI REWORK vs AEI SCRAP)<br>• **#6-A 시장전략팀 책임매니저** (경쟁사 실적 CY 보간, 환율 분리, Waterfall, DOI) | `case6_semicon_data_spc.md` | `dm_question.md`<br>▶ **Case 6 섹션**<br>(또는 반도체 도메인 특화 질문 카드) | `python3 .probe-kit/scripts/sample_check_spc.py --demo`<br>(타깃 함수 연동: `TARGET_MODULE=... TARGET_FUNC=...`) |
 | **Case 7**<br>밸류체인 DAG 수급 충격, HBM/CoWoS 후공정 병목 클리핑, 오개념 진단 튜터, `FAIL_INTERLOCK`, Role Switcher, `0.0.0.0` | **[FDE / Full-Stack 웹앱]**<br>• **#14 경영전략팀 시장분석 TL** (밸류체인 수급 충격 전파 What-If 시뮬레이터)<br>• **#15 반도체 산업교육 TL** (반도체 지식그래프 오개념 진단 AI 튜터)<br>• **#14+#15 듀얼 모드** (전략 분석가 ↔ 산업 교육자 통합 웹앱)<br>• **#6-C / #7-C / #13-C / #12** (FDE 인터랙티브 대시보드 확장) | `case7_fde_valuechain_app.md`<br>(보조: `case2_web_service.md`, `case4_policy_rag_doc.md`) | `dm_question.md`<br>▶ **Case 7 섹션**<br>(또는 FDE 밸류체인 특화 질문 카드) | `0.0.0.0:8000` 백그라운드 바인딩<br>+ `curl /api/simulate`<br>+ 내장 Browser `Role Switcher`·슬라이더·`FAIL_INTERLOCK` 직접 점검 |
-| **Case 8**<br>정형 테이블(Tabular), 센서/장비 시계열 로그, 수율/불량 예측, 웨이퍼 잔차 회귀, 리드타임/수요 예측, `GO — DIRECT_ML`, `GO — HYBRID_ML` | 경량 머신러닝 자율 트랙 & 챔피언 솔루션 패키징 | `case8_lightweight_automl_track.md` | (독립 백그라운드 트랙 — 실무자 DM 불필요) | `python3 .probe-kit/scripts/ml_feasibility_check.py`<br>`python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv` |
+| **Case 9 (복합형)**<br>알고리즘/데이터 파이프라인 + 웹 대시보드/RAG 등 2개 이상 결합 과제 | 복합 엔지니어링 과제 (Core-First 순차 구현) | 주력 1개 + 보조 1개 조합<br>(최대 2개 스킬 로드) | `dm_question.md`<br>▶ **Case 판별이 안 될 때(Case 9)** + 주력 Case 질문 | 백엔드 표본 검증(`sample_check_*.py`) 선행 완결 후<br>`0.0.0.0:8000` 웹/브라우저 검증 |
+| **[터미널 4 전용] Case 8**<br>정형 테이블(Tabular), 센서/장비 시계열 로그, 수율/불량 예측, 웨이퍼 잔차 회귀, 리드타임/수요 예측, `GO — DIRECT_ML`, `GO — HYBRID_ML` | 경량 머신러닝 자율 트랙 & 챔피언 솔루션 패키징 | `case8_lightweight_automl_track.md` | (독립 백그라운드 트랙 — 실무자 DM 불필요 / 5단계 생략) | `python3 .probe-kit/scripts/ml_feasibility_check.py`<br>`python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_출력파일> .probe-kit/ml_track/ml_submission_ready.csv` |
 
 ✅ **완료 시그널:**
-메인 에이전트가 과제 유형(Case 1~8 및 매핑 페르소나 #6~#15)과 로드할 스킬 파일명을 보고하고, `NOTES_TEMP.md`에 문제 개요가 기록되며, `HANDOFF.md`에 탐색 로그가 추가됨.
+메인 에이전트가 과제 유형(Case 0~7, 복합 Case 9 및 매핑 페르소나 #6~#15)과 로드할 스킬 파일명을 보고하고, `NOTES_TEMP.md`에 문제 개요가 기록되며, `HANDOFF.md`에 탐색 로그가 추가됨.
 
 ---
 
@@ -335,14 +337,18 @@ bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 �
 
 ### 👉 수행 행동:
 1. 에디터에서 `.probe-kit/dm_question.md` 파일을 엽니다.
-2. 3단계에서 식별한 Case(1~7, 복합형 Case 9) 또는 페르소나(#6~#15) 섹션으로 이동합니다 (아래 3초 직행 색인표 참조).
-3. **식별된 Case(1~7) 또는 페르소나(#6~#15)에 해당하는 `.probe-kit/dm_question.md` 전용 질문 카드를 복사해 DM하고, `.probe-kit/skills/caseX_*.md`를 온디맨드로 딱 1개(복합형은 최대 2개)만 로드한다.**
+2. 3단계에서 식별한 유형에 따라 아래 **3초 직행 색인표**의 해당 섹션으로 이동합니다:
+   - **Case 1~7 또는 페르소나(#6~#15):** 해당 Case 섹션 또는 `[카드 #6~#15]` 질문을 복사해 우측 실무자 DM에 전송하고, 매칭된 스킬 파일 1개를 로드합니다.
+   - **복합형 (Case 9):** `## Case 판별이 안 될 때 (복합형 및 모호한 상황 긴급 대응)` 질문으로 1순위 채점 산출물과 인터페이스 규격을 먼저 확인하고, 주력+보조 스킬(최대 2개)을 로드합니다.
+   - **완전 신규 유형 (Case 0):** ① `.probe-kit/dm_question.md`의 **`## Case 0. 완전 신규 미출제 유형 (제1원칙 First-Principles 심층 질의문)`**에서 입출력 계약·Hard 제약·Tie-breaking 질문을 복사해 전송하고, ② 3단계에서 터미널 1(`Sol 6.1`)이 브리핑에 생성해 준 **`[맞춤형 DM 질문 3개]`**를 추가로 전송하며, ③ 전용 스킬은 **`.probe-kit/skills/case0_novel_first_principles.md` 단 1개**만 로드합니다.
+   - *(참고: 2.5단계의 터미널 4 **Case 8 AutoML 트랙**은 백그라운드 자율 학습 트랙이므로 실무자 DM 질의를 수행하지 않습니다.)*
    > ⚠️ **토큰 절약 및 환각 방지 필수 규칙:** 모든 스킬을 한꺼번에 컨텍스트에 쏟아붓지 마세요. 식별된 단 1개(복합형은 최대 2개)의 전용 스킬만 온디맨드로 참조시켜야 에이전트의 컨텍스트 오염을 원천 차단할 수 있습니다.
 
 #### 📇 `.probe-kit/dm_question.md` 3초 직행 색인표 (Exact Section & Card Headers)
 
 | 구분 | dm_question.md 파일 내 정확한 헤더명 | 주요 대상 및 도메인 |
 | :--- | :--- | :--- |
+| **Case 0** | `## Case 0. 완전 신규 미출제 유형 (제1원칙 First-Principles 심층 질의문)` | 신규 미출제 과제 입출력 계약, Hard/Soft 경계, Tie-breaking, 3단계 생성 맞춤 질문 3개 병행 |
 | **Case 1** | `## Case 1. 데이터 파이프라인 정제·집계 및 반도체/제조 판정` | 제조 데이터 정제, 수율 판정, 배치 집계 파이프라인 |
 | **Case 2** | `## Case 2. 실무형 웹 서비스 / 웹앱 구축` | 실무 웹 대시보드, 등록/조회 단일 동선 MVP |
 | **Case 3** | `## Case 3. 레거시 코드베이스 디버깅 및 신규 기능 확장` | 기존 테스트 보존, 무회귀 버그 픽스/파라미터 확장 |
@@ -458,13 +464,14 @@ TASK_SPEC.md 에는 [시작 · 정의 · 기준 · 종료] 4대 핵심 축을 �
 3. [정의 / Definition]: 도메인 핵심 용어 정의, 상태 코드(Status/State) 의미, 입·출력 데이터 스키마 및 계약(반환 타입, 정렬, 반올림 등)
 4. [기준 / Criteria]: 실무자 DM 확인 비즈니스 판정 규칙(예: 취소 건 분모 제외, 중복 최신화 등), 수치 경계값/부등호(>= vs >) 판정 기준, 결측치·이상치 격리 기준, 기준 충돌 시 우선순위(데이터 정합성 최우선)
    - [도메인 핵심 규칙 알림]
+     * Case 0 (완전 신규 유형): 입출력 불변 계약 검증기(validate_output_contract) 최우선 분리, 15분 내 동작하는 Tier 1 최소 베이스라인 우선 확보, 자체 표본 검증 스크립트(tests/custom_sample_check.py) 즉석 작성 및 검증
      * Case 5 (최적화/CSP): 하드 제약과 소프트 목적함수 물리적 분리, is_valid(candidate, constraints) -> tuple[bool, list[str]] 독립 불리언 검증 필수, 실행가능 베이스라인 우선 확보, 30초 타임아웃 페일세이프 가드
      * Case 6 (반도체/SPC/오버레이): < DL/ND 보수적 대치, 치명 불순물 초과 즉시 REJECT, Edge Exclusion(147mm) 마진 필터링, 6-Param OLS 잔차 및 제조공장 변경 PCN HOLD 인터락
      * Case 7 (FDE/밸류체인 앱): 백엔드 수리 연산(DAG 충격전파/수율곱/병목클리핑)과 프론트 UI 분리, HTTP 500 방어(400/422 Bad Request), 웹 서버 0.0.0.0 바인딩 필수
 5. [검증 / Verification]: 베이스라인 회귀 검증 명령 + 매 태스크별 DM 맞춤 온더플라이 ad-hoc 테스트 코드(tests/test_*.py 등) 즉석 작성 및 실행(고정 템플릿 사용 금지, git commit 없이 untracked 유지) + 정상 경로 및 예외/경계값 검증 명령어 (표본 수동 대조 스크립트 활용: Case 1 sample_check_template.py, Case 5 sample_check_opt.py, Case 6 sample_check_spc.py)
 6. [DoD]: 완료 정의 체크리스트 (베이스라인 100% 통과, 스키마 계약 일치, 비즈니스 규칙 및 경계값 검증 통과, git diff 범위 준수)
 7. [종료 / End]: 멈춤 조건(범위 밖 수정 불가피·스키마 모호성·베이스라인 원인불명 실패 시 즉시 구현 중단 후 보고) 및 서브 완료 후 조치(SUB_RESULT.md 요약 보고서 작성 -> bash .probe-kit/scripts/handoff.sh log "서브 구현 완료" "Step N 구현 및 자체 검증 완료" 실행 (실패 시 python3 .probe-kit/scripts/handoff.py log "서브 구현 완료" "Step N 구현 및 자체 검증 완료") -> 서브 터미널 /clear 실행 대기)
-- 참고할 스킬 파일: .probe-kit/skills/[case1_data_pipeline.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
+- 참고할 스킬 파일: .probe-kit/skills/[case0_novel_first_principles.md ~ case7_fde_valuechain_app.md 중 매칭 파일 1~2개]
 TASK_SPEC.md 작성이 끝나면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "TASK_SPEC 발행" "Step N 작업 지시서 발행 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
@@ -522,6 +529,7 @@ bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및
 
 | 케이스 구분 | 연동 스킬 | 서브 지시 시 반드시 포함해야 할 특화 지침 |
 | :--- | :--- | :--- |
+| **Case 0**<br>(완전 신규 유형 / 제1원칙) | `case0_novel_first_principles.md` | - **입출력 계약 검증 함수(`validate_output_contract`) 최우선 격리 구현 및 100% 검증**<br>- **0점 방지용 Tier 1 최소 베이스라인(탐욕/결정론) 15분 내 우선 구현** 후 점진적 고도화<br>- 정상 5 + 경계 3 + 예외 4 + 계약 1개 총 13건 자체 표본 스크립트(`tests/custom_sample_check.py`) 실행 검증 |
 | **Case 1**<br>(데이터 파이프라인 / 반도체 판정) | `case1_data_pipeline.md` | - 대용량 데이터를 프롬프트에 덤프하지 말고 `EDA_SUMMARY.txt` 참조<br>- 전처리 단계별(중복 제거 건수, 취소 건수, 유효 행 수) 필터링 로그 출력<br>- 15건 표본 수동 대조(`sample_check_template.py`)로 기댓값과 100% 일치 증명 |
 | **Case 2**<br>(실무형 웹 서비스) | `case2_web_service.md` | - 서버 기동 시 반드시 **`0.0.0.0` 호스트 바인딩** (`127.0.0.1` 금지)<br>- 서버 터미널 탭 유지, 플랫폼 내장 Browser에서 직접 클릭·입력 동작 수행 (클릭 로그가 채점됨)<br>- 회원가입 등 부가기능 제외, 핵심 유저 동선 1개(입력->처리->화면) 수직 완성 |
 | **Case 3**<br>(레거시 코드 디버깅) | `case3_legacy_debug.md` | - 코드 수정 전 기존 테스트 스위트 1회 먼저 실행하여 **베이스라인 로그 보존**<br>- 기존 API URL 엔드포인트, 응답 JSON 스키마, 함수 시그니처 100% 불변 유지<br>- `git diff`로 합의된 최소 범위(1~3개 파일) 외 무단 변경 절대 차단 |
@@ -529,6 +537,7 @@ bash .probe-kit/scripts/handoff.sh log "검수 완료" "Step N 메인 검수 및
 | **Case 5**<br>(최적화 / CSP 스케줄링) | `case5_optimization_csp.md` | - **하드 제약(`is_valid`)과 소프트 목적함수 물리적 분리** (하드 제약 1개라도 위반 시 즉시 0점)<br>- 가장 단순한 결정론적/탐욕적 **실행가능 베이스라인(`generate_feasible_baseline`) 5분 내 우선 확보**<br>- **30초 채점 타임아웃 페일세이프**: `time.perf_counter()` 감시 25~28초 도달 시 Best Feasible 즉시 반환 |
 | **Case 6**<br>(반도체 SPC / Overlay / 재무) | `case6_semicon_data_spc.md` | - **전처리 5단계 건수 로깅(`[PIPELINE_STEP_1_LOAD]` ~ `[PIPELINE_STEP_5_FINAL]`) 콘솔 출력 필수**<br>- `< DL` 보수적 대치, Cpk 공식, Nelson Rules 1~4 및 PCN 3단 인터락(PASS/HOLD/REJECT) 분기<br>- 웨이퍼 에지 제외($r > 147\text{mm}$), 6-Param OLS 잔차 $3\sigma$, ADI(REWORK) vs AEI(SCRAP) 분기 |
 | **Case 7**<br>(밸류체인 / FDE 웹앱) | `case7_fde_valuechain_app.md` | - 서버 기동 시 반드시 **`0.0.0.0` 호스트 바인딩** (`uvicorn --host 0.0.0.0 --port 8000`)<br>- 순수 Python 백엔드 연산 엔진(`engine/`)과 FastAPI 엔드포인트/UI 관심사 철저 분리<br>- 상단 `Role Switcher` 토글, What-If 슬라이더, `FAIL_INTERLOCK` 경고 모달, 내장 Browser 직접 조작 |
+| **Case 9**<br>(복합형: 파이프라인 + 웹앱) | 주력 1개 + 보조 1개<br>(최대 2개 스킬 로드) | - **Core-First 원칙**: Step 1 백엔드 코어 연산 엔진/데이터 정합성 완성 및 표본 15건 검증 선행<br>- Step 2 웹 UI/API 바인딩 시 반드시 **`0.0.0.0`** 호스트로 바인딩 및 내장 Browser 실조작<br>- 백엔드-프론트엔드 간 JSON 인터페이스 불변 계약 엄수 |
 
 ✅ **완료 시그널:**
 `TASK_SPEC.md` 작성 ➔ 서브 구현 및 온더플라이 테스트 통과 ➔ `SUB_RESULT.md` 기록 ➔ 터미널 2 `/clear` 실행 완료.
@@ -647,7 +656,16 @@ python3 .probe-kit/scripts/ml_feasibility_check.py --compare <내_알고리즘_�
 
 ### 1) 케이스별 표본 수동 대조 교차 검증 (Case-Specific Verification)
 
-과제 유형(Case 1~7)에 맞춰 해당하는 표본 대조 검증 스크립트 또는 브라우저 조작을 실행합니다:
+과제 유형(Case 0~7, 복합 Case 9)에 맞춰 해당하는 표본 대조 검증 스크립트 또는 브라우저 조작을 실행합니다:
+
+#### [완전 신규 유형: Case 0] 제1원칙 입출력 계약 및 맞춤형 표본 대조 검증
+```bash
+# 1) 6.5단계에서 과제 규칙(정상 5 + 경계 3 + 예외 4 + 불변 계약)에 맞춰 작성한 자체 표본 검증 스크립트 실행:
+python3 tests/custom_sample_check.py
+
+# 2) 최종 산출물 파일(CSV/JSON/JSONL/TSV)의 0바이트 여부 및 미정제 결측/센티널(-999, NaN, null) 누출 0건 검증:
+python3 .probe-kit/scripts/sample_check_template.py <최종_산출물_파일경로>
+```
 
 #### [Case 1] 데이터 파이프라인 / 반도체 품질 판정
 ```bash
@@ -903,7 +921,15 @@ bash .probe-kit/scripts/handoff.sh
 
 #### 📋 도메인별 실전 4문장 직접 타이핑 치트시트 (Ready-to-Type Cheat-Sheet)
 
-후속 서술형 창이 열리면 아래 3대 도메인 예시를 참고하여 본인의 실제 함수명과 수치로 변형하여 즉시 타이핑하세요:
+후속 서술형 창이 열리면 아래 4대 도메인 예시를 참고하여 본인의 실제 함수명과 수치로 변형하여 즉시 타이핑하세요:
+
+##### 🅾️ [Case 0] 완전 신규 유형 / 제1원칙 분해 (Novel Problem Decomposition)
+```text
+저는 기존 정형 패턴에 없는 신규 유형임에 따라 오버엔지니어링을 철저히 배제하고 채점기 입출력 계약 준수와 Hard 제약 100% 만족을 최우선으로 하는 제1원칙 3-Tier 아키텍처를 선택하여 구현했습니다.
+구체적으로 src/solution.py의 validate_output_contract를 통해 산출물 스키마를 엄격히 고정하고, 15분 내 동작하는 Tier 1 최소 베이스라인 위에 핵심 연산/상태머신 로직을 구현했습니다.
+정합성을 보장하기 위해 과제 규칙에서 도출한 정상·경계·예외 케이스를 포괄하는 자체 표본 검증 스크립트(tests/custom_sample_check.py)와 산출물 0바이트/결측치 검사(sample_check_template.py)를 터미널에서 실행하여 100% PASS함을 확인했습니다.
+다만 현재 구현은 복잡한 다중 제약 상충 시 전역 최적화 대신 결정론적 룰 기반으로 해를 도출하므로 극단적인 엣지 케이스에서의 점수 극대화를 위해 향후 추가 최적화 및 동적 프로그래밍 기법을 보강할 수 있습니다.
+```
 
 ##### 🅰️ [Case 1 / Case 6] 데이터 파이프라인 · 반도체 CoA/SPC · 2D Overlay
 ```text
@@ -1003,6 +1029,7 @@ ls .probe-kit/runtime/ ; head -5 .probe-kit/runtime/EDA_SUMMARY.txt ; which pyth
 │   └── 03_post_qna_formula.md       # 후속 서술형 4문장 타이핑 공식 & 방어문
 │
 ├── skills/                          # [도메인 지침] 문제 유형별 전문 규칙
+│   ├── case0_novel_first_principles.md # Case 0: 완전 신규 미출제 유형 제1원칙 분해 및 자체 검증 스킬
 │   ├── case1_data_pipeline.md       # Case 1: 데이터 정제·집계·반도체 품질 판정 지침
 │   ├── case2_web_service.md         # Case 2: 0.0.0.0 바인딩·핵심 동선 수직 완성 지침
 │   ├── case3_legacy_debug.md        # Case 3: 베이스라인 테스트·인터페이스 불변 디버깅 지침
