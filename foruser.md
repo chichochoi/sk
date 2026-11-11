@@ -251,6 +251,7 @@ python3 .probe-kit/scripts/ml_feasibility_check.py
 브리핑과 NOTES_TEMP.md 기록이 끝나면 터미널에서 다음 명령어를 실행해줘:
 bash .probe-kit/scripts/handoff.sh log "탐색" "Case 식별 및 초기 분석 완료"
 (실패 시 `python3 .probe-kit/scripts/handoff.py log "탐색" "Case 식별 및 초기 분석 완료"` 사용. 그래도 안 되면 runtime/HANDOFF.md 표에 직접 한 줄 추가)
+대회 일정이 달라졌어. 한국시간 15:00가 제출 마감
 ```
 
 > [!TIP]
